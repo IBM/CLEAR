@@ -46,13 +46,33 @@ CLEAR takes a **CSV file** as input, with each row representing a single instanc
 
 ## 🚀 Usage
 
-Run via CLI:
+You can run CLEAR either by specifying a **YAML config file** (`--config_path`) or by providing **individual CLI arguments**.  
+If both are used, CLI arguments take precedence and override values in the config.
+
+### 📦 Option 1: Using a Config File
+
+#### Command Line
 
 ```bash
-python src/clear_ai/cli.py run-analysis --data-path=data/my_data.csv --provider=openai --eval-model-name=gpt-4o --output-dir=results --perform-generations=True
+run-analysis --config_path=configs/sample_demo.yaml
 ```
 
----
+#### Python
+
+```python
+from clear_ai.analysis_runner import run_analysis_pipeline
+
+run_analysis_pipeline(config_path="configs/sample_demo.yaml")
+```
+
+### 📊 Launching the Dashboard
+
+```bash
+run-clear-ai-dashboard
+```
+
+Upload the ZIP file generated in your `--output-dir` when prompted.
+
 
 ## 🎛 CLI Arguments
 
