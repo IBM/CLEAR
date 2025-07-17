@@ -132,5 +132,4 @@ If you use CLEAR, please cite:
 
 ## 🤝 Acknowledgments
 
-Developed by IBM Research & Hebrew University of Jerusalem.
-
+Developed by IBM Research
