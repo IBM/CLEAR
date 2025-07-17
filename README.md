@@ -115,39 +115,6 @@ Depending on your selected `--provider`:
 
 ---
 
-## 📊 Launch the Dashboard
-
-After a run completes:
-
-```bash
-python src/clear_ai/cli.py run-clear-ai-dashboard
-```
-
-Then upload the generated ZIP file from your output directory to view:
-
-- Issue frequencies
-- Score distributions
-- Instance-level breakdown
-- Filters by score or issue type
-
----
-
-## 🧪 Example (with generation)
-
-```bash
-run-analysis \
-  --data-path=data/math.csv \
-  --provider=openai \
-  --eval-model-name=gpt-4o \
-  --gen-model-name=gpt-3.5-turbo \
-  --output-dir=results/math \
-  --perform-generations=True \
-  --is-reference-based=True \
-  --input_columns=question,document
-```
-
----
-
 ## 📚 Citation
 
 If you use CLEAR, please cite:
