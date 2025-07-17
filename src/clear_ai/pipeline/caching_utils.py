@@ -19,7 +19,6 @@ def resolve_data_path(input_path: str) -> Path:
     if fallback_path.exists():
         return str(fallback_path)
     else:
-        print(fallback_path)
         raise FileNotFoundError(f"Could not find data file: {input_path}")
 
 
