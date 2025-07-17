@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clear_ai"
+version = "1.0.0"
+description = "A python API sdk for lm-critique"
+readme = "README.md"
+authors = [{ name = "Lilach Eden", email = "lilache@il.ibm.com"},
+            {name = "Asaf Yehudai", email = "asaf.yehudai@ibm.com"}]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "python-dotenv",
+    "langchain",
+    "langgraph",
+    "langchain_openai",
+    "langchain_ibm",
+    "ibm_watsonx_ai>=1.2.8",
+    "openai",
+    "pyyaml",
+    "pandas",
+    "tqdm",
+    "pyyaml",
+    "streamlit",
+    "matplotlib",
+    "seaborn",
+    "langchain_community",
+    "numpy"
+]
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["clear_ai"]
+
+[tool.setuptools.package-data]
+clear_ai = ["*.yaml"]
+where = ["src"]
+
+[project.scripts]
+run-analysis = "clear_ai.cli:main"
+run-genration = "clear_ai.cli:run_generation"
+run-aggregation = "clear_ai.cli:run_aggregation"
+run-dashboard = "clear_ai.cli:run_dashboard"

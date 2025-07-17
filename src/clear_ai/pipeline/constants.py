@@ -1,0 +1,12 @@
+IDENTIFIED_SHORTCOMING_COL = "identified_shortcomings"
+EVALUATION_TEXT_COL = "evaluation_text"
+EVALUATION_SUMMARY_COL = "evaluation_summary"
+SCORE_COL = "score"
+SHORTCOMING_PREFIX ='shortcoming_'
+GENERATION_FILE_PREFIX = "dataset_with_generations"
+EVALUATION_FILE_PREFIX_NO_SUMMARIES = "per_record_evaluations_no_summaries"
+EVALUATION_FILE_PREFIX_WITH_SUMMARIES = "per_record_evaluations"
+SHORTCOMING_LIST_FILE_PREFIX = "shortcoming_list"
+MAPPING_FILE_PREFIX = "mapping_results"
+MAPPING_NO_ISSUES = "NO_ISSUES"
+ANALYSIS_SKIPPED = "Analysis Skipped"

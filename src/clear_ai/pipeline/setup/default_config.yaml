@@ -1,0 +1,46 @@
+# supported: rits, azure, watsonx, openai
+provider: rits
+eval_model_name: meta-llama/llama-3-3-70b-instruct
+gen_model_name: ibm-granite/granite-3.3-8b-instruct
+
+# unique run_ identifier (to appear in file name)
+run_name: gsm8k
+
+# whether to perform generation or take existing ones from data
+perform_generation: true
+
+# full path to cinput sv
+data_path:  "gsm8k/gsm8k_granite_3_1_8b_instruct_predictions.csv"
+#full path to output dr
+output_dir: "gsm8k/sample_output/"
+
+max_examples_to_analyze: null # for debugging
+
+# whether to use reference in the evaluations.
+is_reference_based: false
+
+#use cached results if available
+resume_enabled: true
+
+# dict {criteria_name: criteria_desc}, specific
+evaluation_criteria: null
+
+use_general_prompt: true
+perform_clustering: true
+
+#general, rag, math
+task: math
+
+question_column: question
+model_output_column: response
+reference_column: ground_truth # required when is_reference_based is true
+model_input_column: model_input # optional
+qid_column: id # optional
+documents_column: documents # required for rag
+
+use_full_text_for_analysis: false
+max_workers: 20
+max_shortcomings: 15
+min_shortcomings: 3
+max_eval_text_for_synthesis: 150
+

@@ -1,0 +1,15 @@
+python-dotenv
+langchain
+langgraph
+pyyaml
+pandas
+streamlit
+matplotlib
+seaborn
+langchain_openai
+langchain_ibm
+langchain_community
+openai
+ibm_watsonx_ai>=1.2.8
+tqdm
+numpy
