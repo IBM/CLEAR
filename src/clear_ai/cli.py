@@ -35,25 +35,28 @@ def parse_args():
                         help="Unique identifier for the run")
     parser.add_argument("--evaluation_criteria", type=parse_dict, help="Json of a dictionary of evaluation criteria for"
                                                 "the judge. Example: --evaluation_criteria '{\"correction\": 0.\"Response is factually correct\"}'")
+    parser.add_argument("--max_examples_to_analyze", type=int, help="Analyze only the specified number of examples")
+    parser.add_argument("--input_columns", nargs='+', help="List of column names to present in the ui")
+
     args = parser.parse_args()
 
     # Only keep explicitly passed args (ignore None)
     overrides = {
         k: v for k, v in vars(args).items()
-        if v is not None and k != "config"
+        if v is not None
     }
-    return args, overrides
+    return overrides
 
 def main():
-    args, overrides = parse_args()
+    overrides = parse_args()
     run_analysis_pipeline(**overrides)
 
 def run_generation():
-    args, overrides = parse_args()
+    overrides = parse_args()
     run_gen_pipeline(**overrides)
 
 def run_aggregation():
-    args, overrides = parse_args()
+    overrides = parse_args()
     run_agg_pipeline(**overrides)
 
 def run_dashboard():
