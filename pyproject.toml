@@ -44,6 +44,7 @@ where = ["src"]
 
 [project.scripts]
 run-analysis = "clear_ai.cli:main"
-run-genration = "clear_ai.cli:run_generation"
-run-aggregation = "clear_ai.cli:run_aggregation"
-run-dashboard = "clear_ai.cli:run_dashboard"
+run-clear-ai-analysis = "clear_ai.cli:main"
+run-clear-ai-genration = "clear_ai.cli:run_generation"
+run-clear-ai-aggregation = "clear_ai.cli:run_aggregation"
+run-clear-ai-dashboard = "clear_ai.cli:run_dashboard"

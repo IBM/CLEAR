@@ -111,7 +111,7 @@ Depending on your selected `--provider`:
 | `openai`   | `OPENAI_API_KEY`                                                    |
 | `azure`    | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`                     |
 | `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `PROJECT_ID` |
-| `rits`     | `RITS_APIKEY`                                                        |
+| `rits`     | `RITS_API_KEY`                                                      |
 
 ---
 
