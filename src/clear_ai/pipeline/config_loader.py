@@ -23,6 +23,13 @@ def merge_configs(defaults, overrides):
             defaults[key] = value
     return defaults
 
+def resolve_provider_config(merged_config):
+    provider = merged_config["provider"]
+    provider_defaults = merged_config.get("provider_defaults", {}).get(provider, {})
+    for k, v in provider_defaults.items():
+        if k not in merged_config:
+            merged_config[k] = v
+    return merged_config
 
 def load_config(default_configs_path, user_config_path=None, **overrides):
     """Load and merge configuration."""
@@ -36,5 +43,8 @@ def load_config(default_configs_path, user_config_path=None, **overrides):
 
     if overrides:
         merged_config = merge_configs(merged_config, overrides)
-
+    
+    merged_config = resolve_provider_config(merged_config)
     return merged_config
+
+

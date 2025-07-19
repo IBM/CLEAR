@@ -1,7 +1,23 @@
 # supported: rits, azure, watsonx, openai
-provider: rits
-eval_model_name: meta-llama/llama-3-3-70b-instruct
-gen_model_name: ibm-granite/granite-3.3-8b-instruct
+provider: watsonx
+provider_defaults:
+  openai:
+    eval_model_name: gpt-4o
+    gen_model_name: gpt-3.5-turbo
+    max_workers: 10
+  azure:
+    eval_model_name: gpt-4o-2024-08-06
+    gen_model_name: gpt-4o-mini-2024-07-18
+    max_workers: 20
+  watsonx:
+    gen_model_name: ibm/granite-3-3-8b-instruct
+    eval_model_name: meta-llama/llama-3-3-70b-instruct
+    max_workers: 5
+  rits:
+    gen_model_name: ibm-granite/granite-3.3-8b-instruct
+    eval_model_name: meta-llama/llama-3-3-70b-instruct
+    max_workers: 20
+
 
 # unique run_ identifier (to appear in file name)
 run_name: gsm8k
@@ -39,7 +55,7 @@ qid_column: id # optional
 documents_column: documents # required for rag
 
 use_full_text_for_analysis: false
-max_workers: 20
+#max_workers: 20
 max_shortcomings: 15
 min_shortcomings: 3
 max_eval_text_for_synthesis: 150
