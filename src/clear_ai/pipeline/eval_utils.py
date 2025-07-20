@@ -380,11 +380,11 @@ def load_inputs(config, data_path, load_predictions, task_data):
         raise ValueError(f"Reference column {config['reference_column']} not found in data and is_reference_based is true")
 
     if load_predictions and config["model_output_column"] not in list(data_df.columns):
-        ValueError(f"Response column {config['model_output_column']} not found in data and perform_generations is False."
+        ValueError(f"Response column {config['model_output_column']} not found in data and perform_generation is False."
                          f"Cannot read previous predictions")
 
     if not load_predictions and config["model_output_column"] in list(data_df.columns):
-        print("WARNING: Model output column exists in data but perform_generations is True: overriding existing generations.")
+        print("WARNING: Model output column exists in data but perform_generation is True: overriding existing generations.")
 
     if config['qid_column'] not in list(data_df.columns):
         print(f"question_id column {config['qid_column']} not found in data")

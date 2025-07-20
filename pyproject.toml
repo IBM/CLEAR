@@ -30,7 +30,8 @@ dependencies = [
     "matplotlib",
     "seaborn",
     "langchain_community",
-    "numpy"
+    "numpy",
+    "argparse"
 ]
 requires-python = ">=3.10"
 
@@ -45,6 +46,7 @@ where = ["src"]
 [project.scripts]
 run-analysis = "clear_ai.cli:main"
 run-clear-ai-analysis = "clear_ai.cli:main"
-run-clear-ai-genration = "clear_ai.cli:run_generation"
-run-clear-ai-aggregation = "clear_ai.cli:run_aggregation"
-run-clear-ai-dashboard = "clear_ai.cli:run_dashboard"
+run-clear-ai-generation = "clear_ai.cli:run_generation_cli"
+run-clear-ai-evaluation = "clear_ai.cli:run_evaluation_cli"
+run-clear-ai-aggregation = "clear_ai.cli:run_aggregation_cli"
+run-clear-ai-dashboard = "clear_ai.cli:run_dashboard_cli"
