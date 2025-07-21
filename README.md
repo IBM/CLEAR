@@ -42,7 +42,7 @@ CLEAR requires a supported LLM provider and credentials to run analysis. [See su
 The sample dataset is a small subset of the **GSM8K math problems**.
 For running on the sample data and default configuration, you simpy have to set your provider and run
 ```bash
-run-analysis --provider=openai # or rits, watsonx
+run-clear-ai-analysis --provider=openai # or rits, watsonx
 ```
 
 This will:
@@ -79,13 +79,13 @@ CLEAR takes a **CSV file** as input, with each row representing a single instanc
 
 #### Required Columns
 
-| Column        | Used When                           | Description                                                       |
-|---------------|-------------------------------------|-------------------------------------------------------------------|
-| `id`          | Always                              | Unique identifier for the instance                                |
-| `model_input` | Always                              | Prompt provided to the generation model                           |
-| `response`    | Using pre-generated responses       | Pre-generated model response (ignored if generation is enabled)   |
-| `reference`   | Performing reference based analysis | Ground-truth answer for evaluation (optional)                     |
-| _others_      | `--input_columns` is used           | Additional input columns to show in dashboard (e.g. `question`)   |
+| Column         | Used When                           | Description                                                       |
+|----------------|-------------------------------------|-------------------------------------------------------------------|
+| `id`           | Always                              | Unique identifier for the instance                                |
+| `model_input`  | Always                              | Prompt provided to the generation model                           |
+| `response`     | Using pre-generated responses       | Pre-generated model response (ignored if generation is enabled)   |
+| `ground_truth` | Performing reference based analysis | Ground-truth answer for evaluation (optional)                     |
+| _others_       | `--input_columns` is used           | Additional input columns to show in dashboard (e.g. `question`)   |
 
 ---
 
