@@ -93,7 +93,7 @@ CLEAR takes a **CSV file** as input, with each row representing a single instanc
 
 CLEAR can be run via the CLI or Python API.
 
-### Option 1: CLI commands
+#### Option 1: CLI commands
 
 Each stage has its own entry point:
 
@@ -107,7 +107,7 @@ run-clear-ai-dashboard
 - If `--config_path` is specified, **all parameters are taken from the config** unless explicitly overridden
 - CLI flags passed directly override corresponding config values
 
-### Option 2: Python API
+#### Option 2: Python API
 
 ```python
 from clear_ai.analysis_runner import run_analysis, run_generation, run_evaluation
@@ -171,6 +171,3 @@ Depending on your selected `--provider`:
 
 ---
 
-## 🤝 Acknowledgments
-
-Developed by IBM Research
