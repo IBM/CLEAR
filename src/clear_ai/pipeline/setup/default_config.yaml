@@ -45,7 +45,7 @@ use_general_prompt: true
 perform_clustering: true
 
 #general, rag, math
-task: math
+task: general
 
 question_column: question
 model_output_column: response
