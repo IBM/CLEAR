@@ -1,5 +1,7 @@
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from tqdm import tqdm
+logger = logging.getLogger(__name__)
 
 def run_func_in_threads(func, input_list, max_workers=10, error_prefix="Error: ", progress_desc="Processing tasks",
                         task_timeout=300):  # Default 5 min timeout per task
@@ -50,12 +52,12 @@ def run_func_in_threads(func, input_list, max_workers=10, error_prefix="Error: "
             try:
                 result_val = future.result(timeout=task_timeout)
             except TimeoutError:
-                print(f"Task for ID {item_id} timed out after {task_timeout} seconds.")
+                logger.error(f"Task for ID {item_id} timed out after {task_timeout} seconds.")
                 future.cancel()  # Attempt to cancel the timed-out task
                 result_val = f"{error_prefix}ID {item_id}: Task timed out after {task_timeout} seconds."
             except Exception as e:
                 # This catches exceptions raised by the function `func` itself if not caught internally by func
-                print(f"Task for ID {item_id} raised an exception: {e}")
+                logger.error(f"Task for ID {item_id} raised an exception: {e}")
                 result_val = f"{error_prefix}ID {item_id}: {e}"
             results[idx] = result_val
         return results

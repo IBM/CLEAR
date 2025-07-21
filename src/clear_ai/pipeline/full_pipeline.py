@@ -1,7 +1,9 @@
 import json
+import logging
 import sys
 import os
 import zipfile
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 
@@ -79,9 +81,9 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     # step5 : convert to ui format and save
     output_df = convert_results_to_ui_input(mapped_data_df, config, required_input_fields)
     output_path = f"{output_dir}/analysis_results_{file_name_info}.csv"
-    print(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
+    logger.error(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
     save_dataframe_to_cache(output_df, output_path)
-    print(f"Custom formatted analysis results saved to {output_path}")
+    logger.info(f"Custom formatted analysis results saved to {output_path}")
 
     # save outputs to zip
     csv_bytes = output_df.to_csv(index=False).encode()
@@ -92,10 +94,10 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     with zipfile.ZipFile(zip_output_path, mode="w") as zf:
         zf.writestr("results.csv", csv_bytes)
         zf.writestr("metadata.json", json_bytes)
-    print(f"Results for uploading to ui are saved to {zip_output_path}")
+    logger.info(f"Results for uploading to ui are saved to {zip_output_path}")
 
 def run_aggregation_pipeline(config):
-    print(f"run_aggregation_pipeline received run config: {config}")
+    logger.info(f"run_aggregation_pipeline received run config: {config}")
     input_file = config["input_path"] # todo - force conventions?
     eval_df = pd.read_csv(input_file)
     file_name_info = input_file.split("/")[-1].replace(f"EVALUATION_FILE_PREFIX_WITH_SUMMARIES_", "")
@@ -122,7 +124,7 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
 
 def run_eval_pipeline(config):
     # initialize
-    print(f"run_eval_pipeline received run config: {config}")
+    logger.info(f"run_eval_pipeline received run config: {config}")
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
@@ -154,7 +156,7 @@ def run_eval_pipeline(config):
 
     # step 1: perform generation (if needed)
     if perform_generation:
-        print(f"Performing generation analysis on {len(data_df)} examples")
+        logger.info(f"Performing generation analysis on {len(data_df)} examples")
         gen_df = None
         gen_file_name = get_gen_file_name(run_name, gen_model)
         gen_output_path = f"{output_dir}/{gen_file_name}"
@@ -166,7 +168,7 @@ def run_eval_pipeline(config):
             resume_enabled = False
     else:
         gen_df = data_df
-        print(f"Using input generation results for {len(data_df)} examples")
+        logger.info(f"Using input generation results for {len(data_df)} examples")
 
     # step2: generate evaluations + scores per single records
     evaluation_output_path_0 = f"{output_dir}/{EVALUATION_FILE_PREFIX_NO_SUMMARIES}_{run_info}.csv"

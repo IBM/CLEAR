@@ -1,10 +1,12 @@
 import json
+import logging
 import os
 import sys
 from pathlib import Path
 
 import pandas as pd
 from clear_ai.pipeline.constants import SCORE_COL
+logger = logging.getLogger(__name__)
 
 
 
@@ -28,9 +30,9 @@ def ensure_dir(directory_path):
     if not os.path.exists(directory_path):
         try:
             os.makedirs(directory_path)
-            print(f"Created directory: {directory_path}")
+            logger.info(f"Created directory: {directory_path}")
         except OSError as e:
-            print(f"Error creating directory {directory_path}: {e}")
+            logger.error(f"Error creating directory {directory_path}: {e}")
             sys.exit(1)  # Exit if we can't create essential directory
 
 
@@ -40,17 +42,17 @@ def load_dataframe_from_cache(path, expected_rows=None):
         try:
             df = pd.read_csv(path)
             if expected_rows is not None and len(df) != expected_rows:
-                print(f"Cache miss for {path}: Expected {expected_rows} rows, got {len(df)}. Recomputing.")
+                logger.info(f"Cache miss for {path}: Expected {expected_rows} rows, got {len(df)}. Recomputing.")
                 return None
-            print(f"Loaded DataFrame from cache: {path}")
+            logger.info(f"Loaded DataFrame from cache: {path}")
             # Convert potential string "NA" back to actual pd.NA for score columns
             if SCORE_COL in df.columns:
                 df[SCORE_COL] = df[SCORE_COL].astype('Float64')
             return df
         except Exception as e:
-            print(f"Error loading DataFrame from cache {path}: {e}. Recomputing.")
+            logger.error(f"Error loading DataFrame from cache {path}: {e}. Recomputing.")
             return None
-    print(f"Cache miss for {path}. Recomputing.")
+    logger.info(f"Cache miss for {path}. Recomputing.")
     return None
 
 
@@ -58,9 +60,9 @@ def save_dataframe_to_cache(df, path):
     """Saves a DataFrame to cache."""
     try:
         df.to_csv(path, index=False)
-        print(f"Saved DataFrame to cache: {path}")
+        logger.info(f"Saved DataFrame to cache: {path}")
     except Exception as e:
-        print(f"Error saving DataFrame to cache {path}: {e}")
+        logger.error(f"Error saving DataFrame to cache {path}: {e}")
 
 
 def load_json_from_cache(path):
@@ -68,10 +70,10 @@ def load_json_from_cache(path):
         try:
             with open(path, 'r') as f:
                 data = json.load(f)
-            print(f"Loaded JSON from cache: {path}")
+            logger.info(f"Loaded JSON from cache: {path}")
             return data
         except Exception as e:
-            print(f"Error loading JSON from cache {path}: {e}. Recomputing.")
+            logger.error(f"Error loading JSON from cache {path}: {e}. Recomputing.")
             return None
     return None
 
@@ -81,8 +83,8 @@ def save_json_to_cache(data, path):
     try:
         with open(path, 'w') as f:
             json.dump(data, f, indent=4)
-        print(f"Saved JSON to cache: {path}")
+        logger.info(f"Saved JSON to cache: {path}")
     except Exception as e:
-        print(f"Error saving JSON to cache {path}: {e}")
+        logger.error(f"Error saving JSON to cache {path}: {e}")
 
 

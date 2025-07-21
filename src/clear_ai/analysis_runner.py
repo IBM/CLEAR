@@ -1,6 +1,8 @@
 import os
 from clear_ai.pipeline.full_pipeline import run_eval_pipeline, run_generation_pipeline, run_aggregation_pipeline
 from clear_ai.pipeline.config_loader import load_config
+from clear_ai.logging_config import setup_logging
+setup_logging()
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 

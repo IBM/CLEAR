@@ -1,3 +1,4 @@
+import logging
 import os
 from clear_ai.pipeline.caching_utils import save_dataframe_to_cache
 from clear_ai.pipeline.llm_chat_utils import get_chat_llm
@@ -11,6 +12,7 @@ from clear_ai.pipeline.propmts import get_summarization_prompt, get_shortcomings
     get_shortcomings_mapping_human_prompt
 import re
 from clear_ai.pipeline.threading_utils import run_func_in_threads
+logger = logging.getLogger(__name__)
 
 def get_model_name_for_file(model_name):
     if not model_name:
@@ -30,10 +32,10 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
 
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func):
     """Evaluates predictions and adds scores."""
-    print(f"\n--- Evaluating Predictions ---")
+    logger.info(f"\n--- Evaluating Predictions ---")
 
     if llm is None:
-        print("Error: Evaluation LLM not initialized. Skipping evaluation.")
+        logger.error("Error: Evaluation LLM not initialized. Skipping evaluation.")
         df[EVALUATION_TEXT_COL] = "Error: LLM not available"
         df[SCORE_COL] = pd.NA
         return df
@@ -60,7 +62,7 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func):
         df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
         df.at[df.index[i], SCORE_COL] = score if pd.isna(score) else float(score)
 
-    print("Finished evaluating predictions.")
+    logger.info("Finished evaluating predictions.")
     # Convert score column to nullable float type
     df[SCORE_COL] = df[SCORE_COL].astype('Float64')
     return df
@@ -72,7 +74,7 @@ def produce_summaries_per_record(df, llm, config):
         inputs_for_summary.append((row.get(EVALUATION_TEXT_COL), llm, row.get(config['qid_column'], 'N/A')))
 
     # Use run_func_in_threads for parallel summary generation
-    print(f"Generating evaluation summaries for {len(inputs_for_summary)} items ...")
+    logger.info(f"Generating evaluation summaries for {len(inputs_for_summary)} items ...")
     results = run_func_in_threads(
         generate_evaluation_summary,
         inputs_for_summary,
@@ -88,7 +90,7 @@ def predict_row(llm, model_input, question_id):
         response = llm.invoke(model_input)
         return response.content
     except Exception as e:
-        print(f"Error processing example ({question_id}): {e}")
+        logger.error(f"Error processing example ({question_id}): {e}")
         return f"Error: {str(e)}"
 
 
@@ -128,7 +130,7 @@ def parse_evaluation_response(response_content):
                 continue
 
     if score is None:
-        print(f"Warning: Could not extract valid score from evaluation response: {response_content}")
+        logger.warning(f"Warning: Could not extract valid score from evaluation response: {response_content}")
 
     # Clean up common artifacts if needed
     text = text.replace("--- Begin Evaluation ---", "").replace("Textual Evaluation:", "").strip()
@@ -141,7 +143,7 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
     if not evaluation_text or pd.isna(evaluation_text) or evaluation_text.strip() == "":
         return "Evaluation text was empty or missing."
     if llm is None:
-        print(f"Skipping summary generation for QID {question_id} as LLM is not available.")
+        logger.warning(f"Skipping summary generation for QID {question_id} as LLM is not available.")
         return "LLM not available for summary."
 
     prompt = get_summarization_prompt(evaluation_text)
@@ -151,7 +153,7 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
         summary = response.content.strip()
         return summary
     except Exception as e:
-        print(f"Error generating evaluation summary for QID {question_id}: {e}")
+        logger.error(f"Error generating evaluation summary for QID {question_id}: {e}")
         return "Error during summary generation."
 
 
@@ -160,7 +162,7 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col):
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     valid_eval_texts = df[df[score_col] < 1][evaluation_text_col].dropna().tolist()
     valid_eval_texts = [t for t in valid_eval_texts if t and not t.startswith("Error:") and not t.startswith("Skipped")]
-    print(f"returning {len(valid_eval_texts)}/{len(df)} valid evaluation texts")
+    logger.info(f"returning {len(valid_eval_texts)}/{len(df)} valid evaluation texts")
     return valid_eval_texts
 
 def synthesize_shortcomings_from_df(df, llm, config):
@@ -172,18 +174,18 @@ def synthesize_shortcomings_from_df(df, llm, config):
 
 def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, min_shortcomings=None, max_eval_text_for_synthesis=None):
     """Analyzes evaluation texts to identify common shortcomings."""
-    print(f"\nSynthesizing Shortcomings List")
+    logger.info(f"\nSynthesizing Shortcomings List")
 
     if llm is None:
-        print("Error: LLM not initialized. Cannot synthesize shortcomings.")
+        logger.error("Error: LLM not initialized. Cannot synthesize shortcomings.")
         return None
     if not evaluation_text_list:
-        print("No valid evaluation texts found to analyze for shortcomings.")
+        logger.info("No valid evaluation texts found to analyze for shortcomings.")
         return []
 
     # Sample texts if there are too many
     if max_eval_text_for_synthesis and len(evaluation_text_list) > max_eval_text_for_synthesis:
-        print(f"Sampling {max_eval_text_for_synthesis} evaluation texts out of {len(evaluation_text_list)} for synthesis.")
+        logger.info(f"Sampling {max_eval_text_for_synthesis} evaluation texts out of {len(evaluation_text_list)} for synthesis.")
         texts_to_analyze = random.sample(evaluation_text_list, max_eval_text_for_synthesis)
     else:
         texts_to_analyze = evaluation_text_list
@@ -194,7 +196,7 @@ def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, mi
     # Create the prompt for synthesis
     synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts)
 
-    print(f"Sending {len(texts_to_analyze)} evaluation texts to LLM for shortcoming synthesis...")
+    logger.info(f"Sending {len(texts_to_analyze)} evaluation texts to LLM for shortcoming synthesis...")
 
     try:
         messages = [
@@ -204,24 +206,24 @@ def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, mi
         ]
         response = llm.invoke(messages).content.strip()
 
-        print("Received synthesis response. Parsing list...")
+        logger.info("Received synthesis response. Parsing list...")
         synthesized_list = parse_shortcoming_list_response(response)
 
         if synthesized_list:
             if max_shortcomings and len(synthesized_list) > max_shortcomings:
-                print(f"Limiting to top {max_shortcomings} most significant shortcomings")
+                logger.warning(f"Limiting to top {max_shortcomings} most significant shortcomings")
                 synthesized_list = synthesized_list[:max_shortcomings]
             elif min_shortcomings and len(synthesized_list) < min_shortcomings:
-                print(
+                logger.warning(
                     f"Warning: Only {len(synthesized_list)} shortcomings identified, below minimum of {min_shortcomings}")
 
             return synthesized_list
         else:
-            print("Failed to parse a valid list from the synthesis response.")
+            logger.warning("Failed to parse a valid list from the synthesis response.")
             return None
 
     except Exception as e:
-        print(f"LLM synthesis failed: {e}")
+        logger.error(f"LLM synthesis failed: {e}")
         return None
 
 def parse_shortcoming_list_response(response_content):
@@ -238,30 +240,30 @@ def parse_shortcoming_list_response(response_content):
             if shortcomings:
                 return shortcomings
             else:
-                print(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
+                logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
                 return None
         else:
-            print(f"Warning: Could not find a valid Python list format in response: {response_content}")
+            logger.warning(f"Warning: Could not find a valid Python list format in response: {response_content}")
             return None
     except Exception as e:
-        print(f"Error parsing shortcoming list response: {e}\nResponse: {response_content}")
+        logger.error(f"Error parsing shortcoming list response: {e}\nResponse: {response_content}")
         return None
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list, config):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
-    print(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
+    logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
     use_full_text = config['use_full_text_for_analysis']
     qid_col = config['qid_column']
     max_workers = config['max_workers']
     df[IDENTIFIED_SHORTCOMING_COL] = ""
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     if shortcomings_list is None:
-        print("Error: Shortcomings list was not generated successfully. Skipping analysis.")
+        logger.error("Error: Shortcomings list was not generated successfully. Skipping analysis.")
         df[IDENTIFIED_SHORTCOMING_COL] = "Error: Synthesis failed"
         return df
     if not shortcomings_list:
-        print("Warning: Synthesized shortcomings list is empty. Skipping analysis.")
+        logger.warning("Warning: Synthesized shortcomings list is empty. Skipping analysis.")
         return df
 
     num_shortcomings = len(shortcomings_list)
@@ -303,23 +305,23 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
                             try:
                                 parsed_list = [int(value) for value in binary_values]
                             except ValueError:
-                                print(
+                                logger.warning(
                                     f"Warning: Could not convert parsed list values to int for {question_id}: {binary_values}")
                         else:
-                            print(
+                            logger.warning(
                                 f"Warning: Parsed list length mismatch for {question_id}. Expected {num_shortcomings}, got {len(binary_values)}. Response: {response}")
                     else:  # Handle empty list '[]'
                         if num_shortcomings == 0:  # If expecting 0 shortcomings, empty list is correct
                             parsed_list = []
                         else:  # If expecting > 0 shortcomings, empty list is wrong
-                            print(
+                            logger.warning(
                                 f"Warning: Parsed empty list '[]' but expected {num_shortcomings} shortcomings for {question_id}. Response: {response}")
 
                 if parsed_list is not None:
                     shortcomings_result = parsed_list
                 else:
                     # Fallback if parsing fails
-                    print(
+                    logger.warning(
                         f"Could not parse LLM response list format for {question_id}: {response}. Defaulting to zeros.")
                     shortcomings_result = [0] * num_shortcomings
 
@@ -329,7 +331,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
                 return shortcomings_result, identified_shortcomings_names
 
             except Exception as e:
-                print(f"LLM analysis failed for {question_id}: {e}")
+                logger.error(f"LLM analysis failed for {question_id}: {e}")
                 shortcomings_result = [0] * num_shortcomings
                 identified_shortcomings_names = ["Analysis Error"]
                 return shortcomings_result, identified_shortcomings_names
@@ -344,7 +346,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
         else:
             n_records_to_map += 1
             inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}")))
-    print(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
+    logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
     results = run_func_in_threads(
         analyze_shortcoming_row,
         inputs_for_threading,
@@ -384,10 +386,10 @@ def load_inputs(config, data_path, load_predictions, task_data):
                          f"Cannot read previous predictions")
 
     if not load_predictions and config["model_output_column"] in list(data_df.columns):
-        print("WARNING: Model output column exists in data but perform_generation is True: overriding existing generations.")
+        logger.warning("WARNING: Model output column exists in data but perform_generation is True: overriding existing generations.")
 
     if config['qid_column'] not in list(data_df.columns):
-        print(f"question_id column {config['qid_column']} not found in data")
+        logger.info(f"question_id column {config['qid_column']} not found in data")
         data_df[config['qid_column']] = list(range(len(data_df)))
 
     model_input_column = config["model_input_column"]
@@ -395,13 +397,13 @@ def load_inputs(config, data_path, load_predictions, task_data):
         data_df.loc[:, model_input_column] = data_df.apply(lambda row: task_data.get_default_generation_model_inputs(row, config), axis=1)
 
     for c in task_data.required_input_fields:
-        print(c, config.get(c))
+        #print(c, config.get(c))
         if config[c] not in list(data_df.columns):
               raise ValueError(f"Required column {config[c]} not found in data")
 
     max_samples = config["max_examples_to_analyze"]
     if max_samples and max_samples < len(data_df):
-        print(f"Selecting first {max_samples}/{len(data_df)} examples to analyze")
+        logger.info(f"Selecting first {max_samples}/{len(data_df)} examples to analyze")
         data_df = data_df.head(max_samples)
 
     return data_df
@@ -415,13 +417,13 @@ def run_predictions_generation_save_results(data_df, config, output_path):
 
 def generate_model_predictions(df, llm, config):
     """Generates model responses for the formatted data."""
-    print(f"\n--- Running Predictions ---")
+    logger.info(f"\n--- Running Predictions ---")
     if llm is None:
-        print("Error: Prediction LLM not initialized. Skipping prediction step.")
+        logger.error("Error: Prediction LLM not initialized. Skipping prediction step.")
         df['model_output'] = "Error: LLM not available"
         return df
 
-    print(f"Generating responses for {len(df)} examples")
+    logger.info(f"Generating responses for {len(df)} examples")
 
     inputs_for_threading = []
     for i, row in df.iterrows():
@@ -441,20 +443,20 @@ def generate_model_predictions(df, llm, config):
     return df
 
 def remove_duplicates_shortcomings(shortcoming_list, llm):
-    print("Removing duplications from list of shortcomings")
+    logger.info("Removing duplications from list of shortcomings")
     try:
         clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list)
         analysis_result = llm.invoke(clustering_prompt).content
         new_shortcoming_list = parse_shortcoming_list_response(analysis_result)
 
         if not analysis_result or analysis_result == '' or "LLM Error:" in analysis_result:
-            print("Failed to get shortcomings without duplications, returning original shortcomings list")
+            logger.error("Failed to get shortcomings without duplications, returning original shortcomings list")
             return shortcoming_list
         else:
             return new_shortcoming_list
 
     except Exception as e:
-       print("Failed to get shortcomings without duplications, returning original shortcomings list")
+       logger.warning("Failed to get shortcomings without duplications, returning original shortcomings list")
        return shortcoming_list
 
 def convert_results_to_ui_input(df, config, required_input_fields):
@@ -502,7 +504,7 @@ def convert_results_to_ui_input(df, config, required_input_fields):
         custom_output_df = custom_output_df[required_cols]
         return custom_output_df
     except Exception as e:
-        print(f"Warning: Error converting custom analysis results CSV to: {e}")
+        logger.error(f"Warning: Error converting custom analysis results to CSV: {e}")
         return None
 
 def get_llm(provider, model_name):
