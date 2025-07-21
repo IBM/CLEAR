@@ -71,13 +71,13 @@ Then you can load the pre-generated sample output zip from [here](https://github
 ---
 
 
-## 📂 Running on your own data
+## 📂 Analyzing your own data
 
-## 📄 Input Data Format
+### 📄 Input Data Format
 
 CLEAR takes a **CSV file** as input, with each row representing a single instance to be evaluated.
 
-### Required Columns
+#### Required Columns
 
 | Column        | Used When                           | Description                                                                |
 |---------------|-------------------------------------|----------------------------------------------------------------------------|
@@ -89,27 +89,47 @@ CLEAR takes a **CSV file** as input, with each row representing a single instanc
 
 ---
 
-## 🚀 Usage
+### 🚀 Running the analysis
 
-You can run CLEAR either by specifying a **YAML config file** (`--config_path`) or by providing **individual CLI arguments**.  
-If both are used, CLI arguments take precedence and override values in the config.
+CLEAR can be run via the CLI or Python API.
 
-### 📦 Option 1: Using a Config File
+### Option 1: CLI commands
 
-#### Command Line
+Each stage has its own entry point:
 
 ```bash
-run-clear-ai-analysis --config_path=configs/sample_demo.yaml
+run-clear-ai-analysis --config_path path/to/config.yaml    # run full pypeline
+run-clear-ai-generation --config_path path/to/config.yaml  # run generation only
+run-clear-ai-evaluation --config_path path/to/config.yaml  # Assume generation responses are given, run evaluation
+run-clear-ai-dashboard
 ```
 
-#### Python
+- If `--config_path` is specified, **all parameters are taken from the config** unless explicitly overridden
+- CLI flags passed directly override corresponding config values
+
+### Option 2: Python API
+
+```python
+from clear_ai.analysis_runner import run_analysis, run_generation, run_evaluation
+run_analysis(
+    config_path="configs/sample_run_config.yaml"
+)
+```
+
+You may also pass overrides instead of using a config file:
 
 ```python
 from clear_ai.analysis_runner import run_analysis
-
-run_analysis(config_path="configs/sample_demo.yaml")
+run_analysis(
+    provider="openai",
+    data_path="data.csv",
+    gen_model_name="gpt-3.5-turbo",
+    eval_model_name="gpt-4",
+    output_dir="results/gsm8k/",
+    perform_generations=False,
+    input_columns=["question"]
+)
 ```
-
 ### 📊 Launching the Dashboard
 
 ```bash
@@ -118,32 +138,24 @@ run-clear-ai-dashboard
 
 Upload the ZIP file generated in your `--output-dir` when prompted.
 
+### 🎛 Supported CLI Arguments
 
-## 🎛 CLI Arguments
+Can be supplied either via the yaml or as cli params:
 
-CLEAR supports two ways to provide parameters:  
-- A **YAML config file** (`--config_path`)  
-- Individual **CLI arguments**  
-
-If `--config_path` is provided, all parameters are loaded from the config file by default.  
-However, any parameters also specified directly via the CLI will **override** their values from the config.
-
-### Supported CLI Arguments
-
-| Argument               | Description                                                                                    |
-|------------------------|------------------------------------------------------------------------------------------------|
-| `--data-path`          | Path to input CSV file                                                                         |
-| `--output-dir`         | Output directory to write results                                                              |
-| `--provider`           | Model provider: `openai`, `watsonx`, `rits`                                            |
-| `--eval-model-name`    | Name of judge model (e.g. `gpt-4o`)                                                             |
-| `--gen-model-name`     | Name of generation model (used if `--perform-generations=True`)                               |
-| `--config_path`        | Path to a YAML config file (all values loaded unless overridden by CLI args)                   |
-| `--perform-generations`| Whether to generate responses (`True`) or use existing `response` column                       |
-| `--is-reference-based` | Use reference-based evaluation (requires `reference` column)                                   |
-| `--resume-enabled`     | Whether to reuse intermediate outputs from previous runs                                       |
-| `--run-name`           | Unique run ID (tag)                                                                            |
-| `--evaluation_criteria`| Custom criteria for scoring, passed as a JSON string                                           |
-| `--input_columns`      | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`)     |
+| Argument              | Description                                                                                                  |
+|-----------------------|--------------------------------------------------------------------------------------------------------------|
+| `--config_path`        | Path to a YAML config file (all values loaded unless overridden by CLI args)                                 |
+| `--data-path`         | Path to input CSV file                                                                                       |
+| `--output-dir`        | Output directory to write results                                                                            |
+| `--provider`          | Model provider: `openai`, `watsonx`, `rits`                                                                  |
+| `--eval-model-name`   | Name of judge model (e.g. `gpt-4o`)                                                                          |
+| `--gen-model-name`    | Name of the generator model to evaluate                                                                      |
+| `--perform-generations`| Whether to generate responses or use existing `response` column  (default = True)                            |
+| `--is-reference-based` | Use reference-based evaluation (requires `reference` column in input)                                        |
+| `--resume-enabled`    | Whether to reuse intermediate outputs from previous runs                                                     |
+| `--run-name`          | Unique run ID (used in result file names)                                                                    |
+| `--evaluation_criteria`| Custom criteria dictionary for scoring individual scores, passed as a JSON string (cli) or dictionary (yaml) |
+| `--input_columns`     | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`)                   |
 
 ---
 
