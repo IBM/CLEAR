@@ -1,6 +1,6 @@
 # CLEAR: Error Analysis via LLM-as-a-Judge Made Easy
 
-**CLEAR** (Comprehensive LLM Error Analysis and Reporting) is an interactive, open-source package for **LLM-based error analysis**. It helps surface meaningful, recurring issues in model outputs by combining automated evaluation with powerful visualization tools.
+**CLEAR (Comprehensive LLM Error Analysis and Reporting)** is an interactive, open-source package for **LLM-based error analysis**. It helps surface meaningful, recurring issues in model outputs by combining automated evaluation with powerful visualization tools.
 
 The workflow consists of two main phases:
 
@@ -33,11 +33,11 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-### 2. Set provider type and credentials
+ 2. ### Set provider type and credentials
 CLEAR requires a supported LLM provider and credentials to run analysis. [See supported providers ↓](#supported-providers-and-credentials)
-> ⚠️ Using a private proxy or openai deployment? You must configure your model names explicitly (see below). Otherwise, default model names will be used automatically for supported providers (`openai`, `watsonx`, `ritz`).
+> ⚠️ Using a private proxy or openai deployment? You must configure your model names explicitly (see below). Otherwise, default model names will be used automatically for supported providers.
 
-### 3. **Run on sample data:**
+3. ### **Run on sample data:**
 
 The sample dataset is a small subset of the **GSM8K math problems**.
 For running on the sample data and default configuration, you simpy have to set your provider and run
@@ -49,7 +49,7 @@ This will:
 - Run the full CLEAR pipeline
 - Save results under: `results/gsm8k/sample_output/`
 
-### 4. **View results in the interactive dashboard:**
+4. ###  **View results in the interactive dashboard:**
 
 ```bash
 run-clear-ai-dashboard
@@ -59,13 +59,13 @@ Then:
 - Upload the generated ZIP file from `results/gsm8k/sample_output/`
 - Explore issues, scores, filters, and drill into examples
 
-### 5. **To explore the dashboard without running any analysis:**
+5. ###  **To explore the dashboard without running any analysis:**
 Run the dashboard:
 ```bash
 run-clear-ai-dashboard
 ```
 
-Then you can load the pre-generated sample output zip from [here](https://github.com/IBM/CLEAR/tree/main/results/input_for_ui), without running any analysis. 
+Then you can load the pre-generated sample output zip from [here](results/input_for_ui), without running any analysis. 
 
 
 ---
@@ -79,13 +79,13 @@ CLEAR takes a **CSV file** as input, with each row representing a single instanc
 
 #### Required Columns
 
-| Column        | Used When                           | Description                                                                |
-|---------------|-------------------------------------|----------------------------------------------------------------------------|
-| `id`          | Always                              | Unique identifier for the instance                                         |
-| `model_input` | Always                              | Prompt provided to the generation model                                    |
-| `response`    | Using pre-generated responses       | Pre-generated model response (ignored if generation is enabled)            |
-| `reference`   | Performing reference based analysis | Ground-truth answer for evaluation (optional)                              |
-| _others_      | `--input_columns` is used           | Additional input columns to show in dashboard (e.g. `question`) |
+| Column        | Used When                           | Description                                                       |
+|---------------|-------------------------------------|-------------------------------------------------------------------|
+| `id`          | Always                              | Unique identifier for the instance                                |
+| `model_input` | Always                              | Prompt provided to the generation model                           |
+| `response`    | Using pre-generated responses       | Pre-generated model response (ignored if generation is enabled)   |
+| `reference`   | Performing reference based analysis | Ground-truth answer for evaluation (optional)                     |
+| _others_      | `--input_columns` is used           | Additional input columns to show in dashboard (e.g. `question`)   |
 
 ---
 
@@ -140,22 +140,29 @@ Upload the ZIP file generated in your `--output-dir` when prompted.
 
 ### 🎛 Supported CLI Arguments
 
-Can be supplied either via the yaml or as cli params:
+Arguments can be provided via:
+- A YAML config file (`--config_path`)
+- CLI flags
+- Python function parameters (when using the API)
 
-| Argument              | Description                                                                                                  |
-|-----------------------|--------------------------------------------------------------------------------------------------------------|
-| `--config_path`        | Path to a YAML config file (all values loaded unless overridden by CLI args)                                 |
-| `--data-path`         | Path to input CSV file                                                                                       |
-| `--output-dir`        | Output directory to write results                                                                            |
-| `--provider`          | Model provider: `openai`, `watsonx`, `rits`                                                                  |
-| `--eval-model-name`   | Name of judge model (e.g. `gpt-4o`)                                                                          |
-| `--gen-model-name`    | Name of the generator model to evaluate                                                                      |
-| `--perform-generations`| Whether to generate responses or use existing `response` column  (default = True)                            |
-| `--is-reference-based` | Use reference-based evaluation (requires `reference` column in input)                                        |
-| `--resume-enabled`    | Whether to reuse intermediate outputs from previous runs                                                     |
-| `--run-name`          | Unique run ID (used in result file names)                                                                    |
-| `--evaluation_criteria`| Custom criteria dictionary for scoring individual scores, passed as a JSON string (cli) or dictionary (yaml) |
-| `--input_columns`     | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`)                   |
+> ⚠️ **Boolean arguments** (`perform_generations`, `is_reference_based`, `resume_enabled`)  
+> These must be set explicitly to `true` or `false` in YAML, CLI, or Python.  
+> On the CLI, use `--flag True` or `--flag False` (case-insensitive).
+
+| Argument                | Description                                                                                | Default |
+|-------------------------|--------------------------------------------------------------------------------------------|---------|
+| `--config_path`         | Path to a YAML config file (all values loaded unless overridden by CLI args)               |         |
+| `--data-path`           | Path to input CSV file                                                                     |         |
+| `--output-dir`          | Output directory to write results                                                          |         |
+| `--provider`            | Model provider: `openai`, `watsonx`, `rits`                                                |         |
+| `--eval-model-name`     | Name of judge model (e.g. `gpt-4o`)                                                        |         |
+| `--gen-model-name`      | Name of the generator model to evaluate                                                    |         |
+| `--perform-generations` | Whether to generate responses or use existing `response` column                            | True    |  
+| `--is-reference-based`  | Use reference-based evaluation (requires `reference` column in input)                      | False   |
+| `--resume-enabled`      | Whether to reuse intermediate outputs from previous runs stored in output_dir              | True    |
+| `--run-name`            | Unique run ID (used in result file names)                                                  | None    |
+| `--evaluation_criteria` | Custom criteria dictionary for scoring individual scores, passed as a JSON string for cli  | None    |
+| `--input_columns`       | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`) | None    | 
 
 ---
 
@@ -165,7 +172,7 @@ Depending on your selected `--provider`:
 
 | Provider   | Required Environment Variables                                      |
 |------------|---------------------------------------------------------------------|
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                                                  |
+| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]              |                                   |
 | `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `PROJECT_ID` |
 | `rits`     | `RITS_API_KEY`                                                      |
 

@@ -8,6 +8,14 @@ def parse_dict(arg: str) -> dict:
     except json.JSONDecodeError as e:
         raise argparse.ArgumentTypeError(f"Invalid JSON format: {e}")
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "0"):
+        return False
+    raise argparse.ArgumentTypeError("Boolean value expected.")
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -20,11 +28,11 @@ def parse_args():
                         default=None)
 
     parser.add_argument("--config_path", default=None, help="Optional: path to the config file")
-    parser.add_argument("--perform-generations", default=True, help="Whether to perform generations or"
-                                                                    "to use existing generations")
-    parser.add_argument("--is-reference-based", action='store_true',
+    parser.add_argument("--perform-generations", type=str2bool, default=True, help="Whether to perform generations or"
+                                                                    "use existing generations")
+    parser.add_argument("--is-reference-based", type=str2bool, default=False,
                         help="Whether to use use references for the evaluations (if true, references must be stored in the 'reference' column of the input.")
-    parser.add_argument("--resume-enabled", default=True,
+    parser.add_argument("--resume-enabled", type=str2bool, default=True,
                         help="Whether to use use intermediate results found in the output dir")
     parser.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
