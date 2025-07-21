@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument("--gen-model-name", help="Name of the generator model whose responses are evaluated (e.g. gpt-3.5-turbo)",
                         default=None)
 
-    parser.add_argument("--config_path", default=None, help="Optional: path to the config file")
+    parser.add_argument("--config-path", default=None, help="Optional: path to the config file")
     parser.add_argument("--perform-generations", type=str2bool, default=True, help="Whether to perform generations or"
                                                                     "use existing generations")
     parser.add_argument("--is-reference-based", type=str2bool, default=False,
@@ -36,10 +36,10 @@ def parse_args():
                         help="Whether to use use intermediate results found in the output dir")
     parser.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
-    parser.add_argument("--evaluation_criteria", type=parse_dict, help="Json of a dictionary of evaluation criteria for"
-                                                "the judge. Example: --evaluation_criteria '{\"correction\": 0.\"Response is factually correct\"}'")
-    parser.add_argument("--max_examples_to_analyze", type=int, help="Analyze only the specified number of examples")
-    parser.add_argument("--input_columns", nargs='+', help="List of column names to present in the ui")
+    parser.add_argument("--evaluation-criteria", type=parse_dict, help="Json of a dictionary of evaluation criteria for"
+                                                "the judge. Example: --evaluation-criteria '{\"correction\": 0.\"Response is factually correct\"}'")
+    parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
+    parser.add_argument("--input-columns", nargs='+', help="List of column names to present in the ui")
 
     args = parser.parse_args()
 
