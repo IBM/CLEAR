@@ -126,7 +126,7 @@ run_analysis(
     gen_model_name="gpt-3.5-turbo",
     eval_model_name="gpt-4",
     output_dir="results/gsm8k/",
-    perform_generations=False,
+    perform_generation=False,
     input_columns=["question"]
 )
 ```
@@ -145,31 +145,31 @@ Arguments can be provided via:
 - CLI flags
 - Python function parameters (when using the API)
 
-> ⚠️ **Boolean arguments** (`perform_generations`, `is_reference_based`, `resume_enabled`)  
+> ⚠️ **Boolean arguments** (`perform_generation`, `is_reference_based`, `resume_enabled`)  
 > These must be set explicitly to `true` or `false` in YAML, CLI, or Python.  
 > On the CLI, use `--flag True` or `--flag False` (case-insensitive).
 
 > ⚠️ **Naming Convention**  
 > Parameter names use `snake_case` in YAML and Python, but use `--kebab-case` in CLI.  
 > For example:  
-> - YAML: `perform_generations: true`  
-> - Python: `perform_generations=True`  
-> - CLI: `--perform-generations True`
+> - YAML: `perform_generation: true`  
+> - Python: `perform_generation=True`  
+> - CLI: `--perform-generation True`
 
-| Argument                | Description                                                                                | Default |
-|-------------------------|--------------------------------------------------------------------------------------------|---------|
-| `--config_path`         | Path to a YAML config file (all values loaded unless overridden by CLI args)               |         |
-| `--data_path`           | Path to input CSV file                                                                     |         |
-| `--output_dir`          | Output directory to write results                                                          |         |
-| `--provider`            | Model provider: `openai`, `watsonx`, `rits`                                                |         |
-| `--eval_model_name`     | Name of judge model (e.g. `gpt-4o`)                                                        |         |
-| `--gen_model_name`      | Name of the generator model to evaluate                                                    |         |
-| `--perform_generations` | Whether to generate responses or use existing `response` column                            | True    |  
-| `--is_reference_based`  | Use reference-based evaluation (requires `ground_truth` column in input)                   | False   |
-| `--resume_enabled`      | Whether to reuse intermediate outputs from previous runs stored in output_dir              | True    |
-| `--run_name`            | Unique run ID (used in result file names)                                                  | None    |
+| Argument               | Description                                                                                | Default |
+|------------------------|--------------------------------------------------------------------------------------------|---------|
+| `--config_path`        | Path to a YAML config file (all values loaded unless overridden by CLI args)               |         |
+| `--data_path`          | Path to input CSV file                                                                     |         |
+| `--output_dir`         | Output directory to write results                                                          |         |
+| `--provider`           | Model provider: `openai`, `watsonx`, `rits`                                                |         |
+| `--eval_model_name`    | Name of judge model (e.g. `gpt-4o`)                                                        |         |
+| `--gen_model_name`     | Name of the generator model to evaluate                                                    |         |
+| `--perform_generation` | Whether to generate responses or use existing `response` column                            | True    |  
+| `--is_reference_based` | Use reference-based evaluation (requires `ground_truth` column in input)                   | False   |
+| `--resume_enabled`     | Whether to reuse intermediate outputs from previous runs stored in output_dir              | True    |
+| `--run_name`           | Unique run ID (used in result file names)                                                  | None    |
 | `--evaluation_criteria` | Custom criteria dictionary for scoring individual scores, passed as a JSON string for cli  | None    |
-| `--input_columns`       | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`) | None    | 
+| `--input_columns`      | Comma-separated list of additional input fields to show in the dashboard (e.g. `question`) | None    | 
 
 ---
 
