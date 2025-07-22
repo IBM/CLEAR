@@ -545,9 +545,9 @@ def qa_instance_row_format(x):
 def print_experiment_metadata():
     metadata = st.session_state.get("metadata", {})
     st.sidebar.title(f"Metadata:")
-    st.sidebar.markdown(f"Dataset: `{metadata.get('dataset_name', 'N/A')}`")
-    st.sidebar.markdown(f"Model: `{metadata.get('gen_model', 'N/A')}`")
-    st.sidebar.markdown(f"Judge: `{metadata.get('eval_model', 'N/A')}`")
+    st.sidebar.markdown(f"Run Name: `{metadata.get('run_name', 'N/A')}`")
+    st.sidebar.markdown(f"Model: `{metadata.get('gen_model_name', 'N/A')}`")
+    st.sidebar.markdown(f"Judge: `{metadata.get('eval_model_name', 'N/A')}`")
 
 
 def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
