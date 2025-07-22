@@ -28,7 +28,7 @@ def parse_args():
                         default=None)
 
     parser.add_argument("--config-path", default=None, help="Optional: path to the config file")
-    parser.add_argument("--perform-generations", type=str2bool, default=True, help="Whether to perform generations or"
+    parser.add_argument("--perform-generation", type=str2bool, default=True, help="Whether to perform generations or"
                                                                     "use existing generations")
     parser.add_argument("--is-reference-based", type=str2bool, default=False,
                         help="Whether to use use references for the evaluations (if true, references must be stored in the 'reference' column of the input.")
