@@ -6,7 +6,7 @@ from clear_ai.pipeline.evaluation_criteria import EvaluationCriteria, get_defaul
 from clear_ai.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
     get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
-from pipeline.constants import ANALYSIS_SKIPPED
+from clear_ai.pipeline.constants import ANALYSIS_SKIPPED
 
 
 class EvalUseCase:
