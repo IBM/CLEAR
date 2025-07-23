@@ -54,11 +54,17 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func):
         evaluate_row,
         inputs_for_threading,
         max_workers=config['max_workers'],  # Or make this configurable
-        error_prefix="Evaluation Error for ",
+        error_prefix="Error: Evaluation Error for ",
         progress_desc=f"Evaluating predictions "
     )
+    for i, result in enumerate(results):
+        if result.is_success:
+            (eval_text, score) = result.result
+            score = score if pd.isna(score) else float(score)
+        else:
+            eval_text = result.error
+            score = None
 
-    for i, (eval_text, score) in enumerate(results):
         df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
         df.at[df.index[i], SCORE_COL] = score if pd.isna(score) else float(score)
 
@@ -75,13 +81,14 @@ def produce_summaries_per_record(df, llm, config):
 
     # Use run_func_in_threads for parallel summary generation
     logger.info(f"Generating evaluation summaries for {len(inputs_for_summary)} items ...")
-    results = run_func_in_threads(
+    thread_results = run_func_in_threads(
         generate_evaluation_summary,
         inputs_for_summary,
         max_workers=config['max_workers'],  # Or make this configurable
-        error_prefix="Summary Generation Error for ",
+        error_prefix="Error: Summary Generation Error for ",
         progress_desc=f"Generating evaluation summaries"
     )
+    results = [r.result if r.is_success else r.error for r in thread_results]
     df[EVALUATION_SUMMARY_COL] = results
     return df
 
@@ -347,21 +354,26 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
             n_records_to_map += 1
             inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}")))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
-    results = run_func_in_threads(
+    thread_results = run_func_in_threads(
         analyze_shortcoming_row,
         inputs_for_threading,
         max_workers=max_workers,
-        error_prefix="Shortcoming Analysis Error for ",
+        error_prefix="Error: Shortcoming Analysis Error for ",
         progress_desc=f"Analyzing shortcomings"
     )
 
-    for i, (shortcomings_result, identified_shortcomings_names) in enumerate(results):
+    for i, result in enumerate(thread_results):
+        if result.is_success:
+            (shortcomings_result, identified_shortcomings_names) = result.result
+        else:
+            shortcomings_result = [0] * num_shortcomings
+            identified_shortcomings_names = [ANALYSIS_SKIPPED]
         # Store results back into DataFrame
         for j in range(num_shortcomings):
             # Use .iloc for setting value by position to avoid index alignment issues if df index isn't standard range
             df.iloc[i, df.columns.get_loc(f'{SHORTCOMING_PREFIX}{j + 1}')] = shortcomings_result[j]
         df.iloc[i, df.columns.get_loc(IDENTIFIED_SHORTCOMING_COL)] = '; '.join(
-            identified_shortcomings_names) if identified_shortcomings_names else ''
+                identified_shortcomings_names) if identified_shortcomings_names else ''
 
     return df
 
@@ -429,15 +441,16 @@ def generate_model_predictions(df, llm, config):
     for i, row in df.iterrows():
         inputs_for_threading.append((llm, row[config['model_input_column']], row[config['qid_column']]))
 
-    results = run_func_in_threads(
+    thread_results = run_func_in_threads(
         predict_row,
         inputs_for_threading,
         max_workers=config["max_workers"],  # Or make this configurable
-        error_prefix="Prediction Error for ",
+        error_prefix="Error: Prediction Error for ",
         progress_desc=f"Generating predictions"
     )
 
-    for i, result in enumerate(results):
+    for i, result in enumerate(thread_results):
+        result = result.result if result.is_success else result.error
         df.at[df.index[i], config["model_output_column"]] = result
 
     return df
