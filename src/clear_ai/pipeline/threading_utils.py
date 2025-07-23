@@ -25,9 +25,9 @@ def run_func_in_threads(func, input_list, max_workers=10, error_prefix="Error: "
                result = func(*item_args)
             else:
                result = func(item_args)
-            return [ThreadResult(result=result)]
+            return [ThreadResult(result=result, is_success=True)]
         except Exception as e:
-            return [ThreadResult(error= f"{error_prefix}: {e}")]
+            return [ThreadResult(error= f"{error_prefix}: {e}", is_success=False)]
 
     results = [None] * len(input_list)
     with ThreadPoolExecutor(max_workers) as executor:
