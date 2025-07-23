@@ -26,8 +26,15 @@ def run_aggregation_cli():
     run_aggregation(**overrides)
 
 def run_dashboard_cli():
+    parser = argparse.ArgumentParser(description="Run the dashboard.")
+    parser.add_argument("--port", type=int, help="Optional port to run the dashboard on.")
+    args = parser.parse_args()
+
     streamlit_app = Path(__file__).parent / "load_ui.py"
     sys.argv = ["streamlit", "run", str(streamlit_app)]
+    if args.port:
+        sys.argv += ["--server.port", str(args.port)]
+
     stcli.main()
 
 if __name__ == "__main__":

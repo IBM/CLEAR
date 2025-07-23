@@ -55,6 +55,10 @@ This will:
 run-clear-ai-dashboard
 ```
 
+Or set the port with 
+```bash
+run-clear-ai-dashboard --port <port>
+```
 Then:
 - Upload the generated ZIP file from `results/gsm8k/sample_output/`
 - Explore issues, scores, filters, and drill into examples
@@ -101,7 +105,6 @@ Each stage has its own entry point:
 run-clear-ai-analysis --config_path path/to/config.yaml    # run full pypeline
 run-clear-ai-generation --config_path path/to/config.yaml  # run generation only
 run-clear-ai-evaluation --config_path path/to/config.yaml  # Assume generation responses are given, run evaluation
-run-clear-ai-dashboard
 ```
 
 - If `--config_path` is specified, **all parameters are taken from the config** unless explicitly overridden
