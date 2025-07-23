@@ -6,6 +6,7 @@ from clear_ai.pipeline.evaluation_criteria import EvaluationCriteria, get_defaul
 from clear_ai.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
     get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
+from pipeline.constants import ANALYSIS_SKIPPED
 
 
 class EvalUseCase:
@@ -27,11 +28,11 @@ class EvalUseCase:
         model_input = row[config['model_input_column']]
 
         if  pd.isna(model_input) or pd.isna(model_answer):
-            return "Skipped - Missing Input"
+            return f"{ANALYSIS_SKIPPED} - Missing Input"
 
         # Check if model output indicates a previous error
         if isinstance(model_answer, str) and model_answer.startswith("Error:"):
-            return "Skipped - Prediction Error"
+            return f"{ANALYSIS_SKIPPED} - Prediction Error"
 
         evaluation_criteria = config.get('evaluation_criteria')
         if not evaluation_criteria:
@@ -43,7 +44,7 @@ class EvalUseCase:
         if config["is_reference_based"]:
             reference = row[config['reference_column']]
             if pd.isna(reference):
-                return "Skipped - Missing reference"
+                return f"{ANALYSIS_SKIPPED} - Missing reference"
             return get_general_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
         else:
             return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
@@ -81,16 +82,16 @@ class MathUseCase(EvalUseCase):
 
         # Basic check for valid inputs needed for evaluation
         if pd.isna(question) or pd.isna(model_answer):
-            return "Skipped - Missing Input"
+            return f"{ANALYSIS_SKIPPED} - Missing Input"
 
         # Check if model output indicates a previous error
         if isinstance(model_answer, str) and model_answer.startswith("Error:"):
-            return "Skipped - Prediction Error"
+            return f"{ANALYSIS_SKIPPED} - Prediction Error"
 
         if config["is_reference_based"]:
             reference = row[config['reference_column']]
             if pd.isna(reference):
-                return "Skipped - Missing reference"
+                return f"{ANALYSIS_SKIPPED} - Missing reference"
             return get_math_evaluation_prompt_reference_based(question, model_answer, reference)
         else:
             return get_math_evaluation_prompt_reference_less(question, model_answer)
@@ -121,16 +122,16 @@ class RAGUseCase(EvalUseCase):
 
         # Basic check for valid inputs needed for evaluation
         if pd.isna(question) or pd.isna(documents) or pd.isna(model_answer):
-            return "Skipped - Missing Input"
+            return f"{ANALYSIS_SKIPPED} - Missing Input"
 
         # Check if model output indicates a previous error
         if isinstance(model_answer, str) and model_answer.startswith("Error:"):
-            return "Skipped - Prediction Error"
+            return f"{ANALYSIS_SKIPPED} - Prediction Error"
 
         if config["is_reference_based"]:
             reference = row[config['reference_column']]
             if pd.isna(reference):
-                return "Skipped - Missing reference"
+                return f"{ANALYSIS_SKIPPED} - Missing reference"
             return get_rag_evaluation_prompt_reference_based(question, model_answer, reference)
         else:
             return get_rag_evaluation_prompt_reference_free(question, documents, model_answer)

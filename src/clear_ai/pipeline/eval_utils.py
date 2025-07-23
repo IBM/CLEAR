@@ -14,6 +14,12 @@ import re
 from clear_ai.pipeline.threading_utils import run_func_in_threads
 logger = logging.getLogger(__name__)
 
+def is_missing_or_error(eval_text):
+    if not eval_text.strip() or eval_text.startswith(ANALYSIS_SKIPPED) or \
+            eval_text.startswith("Error:") or pd.isnull(eval_text):
+        return True
+    return False
+
 def get_model_name_for_file(model_name):
     if not model_name:
         return "none"
@@ -21,7 +27,7 @@ def get_model_name_for_file(model_name):
 
 def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
         prompt = generate_evaluation_model_prompt_func(row, config)
-        if prompt.startswith("SKIPPED:"):
+        if prompt.startswith(ANALYSIS_SKIPPED):
             return prompt, pd.NA
         try:
             response = llm.invoke(prompt)
@@ -147,11 +153,11 @@ def parse_evaluation_response(response_content):
 
 def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
     """Generates a concise summary of the evaluation text using an LLM."""
-    if not evaluation_text or pd.isna(evaluation_text) or evaluation_text.strip() == "":
+    if is_missing_or_error(evaluation_text):
         return "Evaluation text was empty or missing."
     if llm is None:
         logger.warning(f"Skipping summary generation for QID {question_id} as LLM is not available.")
-        return "LLM not available for summary."
+        return "Error: LLM not available for summary."
 
     prompt = get_summarization_prompt(evaluation_text)
     try:
@@ -168,7 +174,7 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col):
     # Get valid evaluation texts from evaluation texts with score < 1
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     valid_eval_texts = df[df[score_col] < 1][evaluation_text_col].dropna().tolist()
-    valid_eval_texts = [t for t in valid_eval_texts if t and not t.startswith("Error:") and not t.startswith("Skipped")]
+    valid_eval_texts = [t for t in valid_eval_texts if not is_missing_or_error(t)]
     logger.info(f"returning {len(valid_eval_texts)}/{len(df)} valid evaluation texts")
     return valid_eval_texts
 
@@ -286,9 +292,9 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
 
     def analyze_shortcoming_row(eval_text, question_id):
         # Skip analysis if eval text is invalid or indicates prior errors
-        if pd.isna(eval_text) or not eval_text or eval_text.startswith("Error:") or eval_text.startswith("Skipped"):
+        if is_missing_or_error(eval_text):
             shortcomings_result = [0] * num_shortcomings
-            identified_shortcomings_names = [ANALYSIS_SKIPPED]
+            identified_shortcomings_names = []
             return shortcomings_result, identified_shortcomings_names
         elif eval_text.startswith(MAPPING_NO_ISSUES):
             shortcomings_result = [0] * num_shortcomings
@@ -462,7 +468,7 @@ def remove_duplicates_shortcomings(shortcoming_list, llm):
         analysis_result = llm.invoke(clustering_prompt).content
         new_shortcoming_list = parse_shortcoming_list_response(analysis_result)
 
-        if not analysis_result or analysis_result == '' or "LLM Error:" in analysis_result:
+        if is_missing_or_error(analysis_result):
             logger.error("Failed to get shortcomings without duplications, returning original shortcomings list")
             return shortcoming_list
         else:
