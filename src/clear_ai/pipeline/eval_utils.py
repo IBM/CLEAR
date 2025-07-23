@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
     if not eval_text.strip() or eval_text.startswith(ANALYSIS_SKIPPED) or \
-            eval_text.startswith("Error:") or pd.isnull(eval_text):
+            eval_text.startswith("Error:") or pd.isna(eval_text):
         return True
     return False
 
