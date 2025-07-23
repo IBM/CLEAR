@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
     parser.add_argument("--evaluation-criteria", type=parse_dict, help="Json of a dictionary of evaluation criteria for"
-                                                "the judge. Example: --evaluation-criteria '{\"correction\": 0.\"Response is factually correct\"}'")
+                                                "the judge. Example: --evaluation-criteria '{\"correction\": \"Response is factually correct\"}'")
     parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
     parser.add_argument("--input-columns", nargs='+', help="List of column names to present in the ui")
 
