@@ -17,7 +17,7 @@ def load_yaml(filepath):
 def merge_configs(defaults, overrides):
     """Recursively merge two dictionaries (user config overrides defaults)."""
     for key, value in overrides.items():
-        if isinstance(value, dict) and key in defaults:
+        if isinstance(value, dict) and isinstance(defaults.get(key), dict):
             defaults[key] = merge_configs(defaults.get(key, {}), value)
         else:
             defaults[key] = value
