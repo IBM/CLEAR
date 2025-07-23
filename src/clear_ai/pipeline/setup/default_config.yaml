@@ -20,7 +20,7 @@ provider_defaults:
 
 
 # unique run_ identifier (to appear in file name)
-run_name: gsm8k
+run_name: null
 
 # whether to perform generation or take existing ones from data
 perform_generation: true

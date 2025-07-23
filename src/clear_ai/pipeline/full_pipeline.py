@@ -22,6 +22,15 @@ from clear_ai.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def get_run_name(config):
+    run_name = config.get("run_name")
+    if not run_name:
+        data_name = os.path.basename(config.get("data_path"))
+        run_name = data_name.replace(".csv", "").split("_")[0]
+    config["run_name"] = run_name
+    return run_name
+
+
 def run_generation_pipeline(config):
     task = config.get("task")
     if not task:
@@ -34,7 +43,7 @@ def run_generation_pipeline(config):
     gen_model = config.get('gen_model_name')
     output_dir = config['output_dir']
     ensure_dir(output_dir)
-    run_name = config["run_name"]
+    run_name = get_run_name(config)
     gen_file_name = get_gen_file_name(run_name, gen_model)
     gen_output_path = os.path.join(output_dir, gen_file_name)
     run_predictions_generation_save_results(data_df, config, gen_output_path)
@@ -143,9 +152,8 @@ def run_eval_pipeline(config):
     gen_model = config.get('gen_model_name')
     gen_model_str = get_model_name_for_file(gen_model)
     run_info = f"reference_{reference_str}_gen_{gen_model_str}_eval_{eval_model_str}"
-    run_name = config["run_name"]
-    if run_name:
-        run_info = f"{run_name}_{run_info}"
+    run_name = get_run_name(config)
+    run_info = f"{run_name}_{run_info}"
 
     with open(os.path.join(output_dir, f"config_{run_info}.json"), 'w') as f:
         json.dump(config, f)
