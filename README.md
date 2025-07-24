@@ -23,7 +23,8 @@ You can run CLEAR as a full pipeline, or reuse specific stages (generation, eval
 
 Requires Python 3.10+ and the necessary credentials for a supported provider.
 
-1. ### **Clone the repo and set up a virtual environment:**
+### 1. Installation 
+#### Option 1 (Recommended for development): **Clone the repo and set up a virtual environment:**
 
 ```bash
 git clone https://github.com/IBM/CLEAR.git
@@ -33,6 +34,12 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
+#### 📦 Option 2: Install via pip (Latest Release)
+
+```bash
+pip install clear-eval
+```
+`
  2. ### Set provider type and credentials
 CLEAR requires a supported LLM provider and credentials to run analysis. [See supported providers ↓](#supported-providers-and-credentials)
 > ⚠️ Using a private proxy or openai deployment? You must configure your model names explicitly (see below). Otherwise, default model names will be used automatically for supported providers.
