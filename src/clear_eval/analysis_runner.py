@@ -8,19 +8,22 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 DEFAULT_CONFIG_PATH = os.path.join(script_dir, "pipeline", "setup", "default_config.yaml")
 
-def run_analysis(config_path=None, **kwargs):
+def run_clear_eval_analysis(config_path=None, **kwargs):
     config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
     run_eval_pipeline(config_dict)
 
-def run_evaluation(config_path=None, **kwargs):
+def run_analysis_pipeline(config_path=None, **kwargs):
+    run_clear_eval_analysis(config_path, **kwargs)
+
+def run_clear_eval_evaluation(config_path=None, **kwargs):
     config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
     config_dict["perform_generation"] = False
     run_eval_pipeline(config_dict)
 
-def run_generation(config_path=None, **kwargs):
+def run_clear_eval_generation(config_path=None, **kwargs):
     config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
     run_generation_pipeline(config_dict)
 
-def run_aggregation(config_path=None, **kwargs):
+def run_clear_eval_aggregation(config_path=None, **kwargs):
     config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
     run_aggregation_pipeline(config_dict)

@@ -113,8 +113,9 @@ run-clear-eval-evaluation --config_path path/to/config.yaml  # Assume generation
 #### Option 2: Python API
 
 ```python
-from clear_eval.analysis_runner import run_analysis, run_generation, run_evaluation
-run_analysis(
+from clear_eval.analysis_runner import run_clear_eval_analysis, run_clear_eval_generation, run_clear_eval_evaluation
+
+run_clear_eval_analysis(
     config_path="configs/sample_run_config.yaml"
 )
 ```
@@ -122,9 +123,10 @@ run_analysis(
 You may also pass overrides instead of using a config file:
 
 ```python
-from clear_eval.analysis_runner import run_analysis
-run_analysis(
-    run_name = "my_data",
+from clear_eval.analysis_runner import run_clear_eval_analysis
+
+run_clear_eval_analysis(
+    run_name="my_data",
     provider="openai",
     data_path="my_data.csv",
     gen_model_name="gpt-3.5-turbo",

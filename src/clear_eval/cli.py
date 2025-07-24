@@ -4,26 +4,26 @@ import os
 import sys
 from pathlib import Path
 import streamlit.web.cli as stcli
-from clear_eval.analysis_runner import run_analysis, run_generation, run_aggregation
+from clear_eval.analysis_runner import run_clear_eval_analysis, run_clear_eval_generation, run_clear_eval_aggregation
 from clear_eval.args import parse_args
 
 
 def main():
     overrides = parse_args()
-    run_analysis(**overrides)
+    run_clear_eval_analysis(**overrides)
 
 def run_generation_cli():
     overrides = parse_args()
-    run_generation(**overrides)
+    run_clear_eval_generation(**overrides)
 
 def run_evaluation_cli():
     overrides = parse_args()
     overrides["perform_generation"] = False
-    run_analysis(**overrides)
+    run_clear_eval_analysis(**overrides)
 
 def run_aggregation_cli():
     overrides = parse_args()
-    run_aggregation(**overrides)
+    run_clear_eval_aggregation(**overrides)
 
 def run_dashboard_cli():
     parser = argparse.ArgumentParser(description="Run the dashboard.")
