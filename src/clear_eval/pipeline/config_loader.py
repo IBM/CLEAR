@@ -1,7 +1,8 @@
 import os
 import yaml
 from pathlib import Path
-
+import logging
+logger = logging.getLogger(__name__)
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 EXPERIMENTS_DIR = os.path.join(Path(CURRENT_DIR).parents[1], "experiments")
 
@@ -10,8 +11,11 @@ def load_yaml(filepath):
     """Load YAML file if it exists."""
     if filepath and os.path.exists(filepath):
         with open(filepath, "r") as file:
+            logger.info(f"Loading config file {filepath}")
             return yaml.safe_load(file) or {}  # Ensure it's a dict
-    return {}
+
+    else:
+        raise FileNotFoundError(f"File {filepath} not found")
 
 
 def merge_configs(defaults, overrides):
