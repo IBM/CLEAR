@@ -1,0 +1,3 @@
+from clear_eval.dashboard.show_analysis_dashboard import show_dashboard
+
+show_dashboard()

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from clear_ai.pipeline.constants import SCORE_COL
+from clear_eval.pipeline.constants import SCORE_COL
 logger = logging.getLogger(__name__)
 
 

@@ -42,7 +42,7 @@ CLEAR requires a supported LLM provider and credentials to run analysis. [See su
 The sample dataset is a small subset of the **GSM8K math problems**.
 For running on the sample data and default configuration, you simpy have to set your provider and run
 ```bash
-run-clear-ai-analysis --provider=openai # or rits, watsonx
+run-clear-eval-analysis --provider=openai # or rits, watsonx
 ```
 
 This will:
@@ -52,12 +52,12 @@ This will:
 4. ###  **View results in the interactive dashboard:**
 
 ```bash
-run-clear-ai-dashboard
+run-clear-eval-dashboard
 ```
 
 Or set the port with 
 ```bash
-run-clear-ai-dashboard --port <port>
+run-clear-eval-dashboard --port <port>
 ```
 Then:
 - Upload the generated ZIP file from `results/gsm8k/sample_output/`
@@ -66,7 +66,7 @@ Then:
 5. ###  **To explore the dashboard without running any analysis:**
 Run the dashboard:
 ```bash
-run-clear-ai-dashboard
+run-clear-eval-dashboard
 ```
 
 Then you can load the pre-generated sample output zip from [here](results/input_for_ui), without running any analysis. 
@@ -102,9 +102,9 @@ CLEAR can be run via the CLI or Python API.
 Each stage has its own entry point:
 
 ```bash
-run-clear-ai-analysis --config_path path/to/config.yaml    # run full pypeline
-run-clear-ai-generation --config_path path/to/config.yaml  # run generation only
-run-clear-ai-evaluation --config_path path/to/config.yaml  # Assume generation responses are given, run evaluation
+run-clear-eval-analysis --config_path path/to/config.yaml    # run full pypeline
+run-clear-eval-generation --config_path path/to/config.yaml  # run generation only
+run-clear-eval-evaluation --config_path path/to/config.yaml  # Assume generation responses are given, run evaluation
 ```
 
 - If `--config_path` is specified, **all parameters are taken from the config** unless explicitly overridden
@@ -113,7 +113,7 @@ run-clear-ai-evaluation --config_path path/to/config.yaml  # Assume generation r
 #### Option 2: Python API
 
 ```python
-from clear_ai.analysis_runner import run_analysis, run_generation, run_evaluation
+from clear_eval.analysis_runner import run_analysis, run_generation, run_evaluation
 run_analysis(
     config_path="configs/sample_run_config.yaml"
 )
@@ -122,7 +122,7 @@ run_analysis(
 You may also pass overrides instead of using a config file:
 
 ```python
-from clear_ai.analysis_runner import run_analysis
+from clear_eval.analysis_runner import run_analysis
 run_analysis(
     run_name = "my_data",
     provider="openai",
@@ -137,7 +137,7 @@ run_analysis(
 ### 📊 Launching the Dashboard
 
 ```bash
-run-clear-ai-dashboard
+run-clear-eval-dashboard
 ```
 
 Upload the ZIP file generated in your `--output-dir` when prompted.

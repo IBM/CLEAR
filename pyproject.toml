@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "clear_ai"
+name = "clear_eval"
 version = "1.0.0"
 description = "A python API sdk facilitating Error Analysis via LLM-as-a-Judge"
 readme = "README.md"
@@ -37,16 +37,16 @@ requires-python = ">=3.10"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["clear_ai"]
+packages = ["clear_eval"]
 
 [tool.setuptools.package-data]
-clear_ai = ["*.yaml"]
+clear_eval = ["*.yaml"]
 where = ["src"]
 
 [project.scripts]
-run-analysis = "clear_ai.cli:main"
-run-clear-ai-analysis = "clear_ai.cli:main"
-run-clear-ai-generation = "clear_ai.cli:run_generation_cli"
-run-clear-ai-evaluation = "clear_ai.cli:run_evaluation_cli"
-run-clear-ai-aggregation = "clear_ai.cli:run_aggregation_cli"
-run-clear-ai-dashboard = "clear_ai.cli:run_dashboard_cli"
+run-analysis = "clear_eval.cli:main"
+run-clear-eval-analysis = "clear_eval.cli:main"
+run-clear-eval-generation = "clear_eval.cli:run_generation_cli"
+run-clear-eval-evaluation = "clear_eval.cli:run_evaluation_cli"
+run-clear-eval-aggregation = "clear_eval.cli:run_aggregation_cli"
+run-clear-eval-dashboard = "clear_eval.cli:run_dashboard_cli"

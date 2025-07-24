@@ -7,18 +7,18 @@ logger = logging.getLogger(__name__)
 
 import pandas as pd
 
-from clear_ai.pipeline.EvalUseCase import task_to_use_case_class
-from clear_ai.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
-                       EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
-    MAPPING_FILE_PREFIX)
+from clear_eval.pipeline.EvalUseCase import task_to_use_case_class
+from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
+                                           EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
+                                           MAPPING_FILE_PREFIX)
 
-from clear_ai.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
+from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
     ensure_dir, \
     load_json_from_cache, resolve_data_path
-from clear_ai.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, get_llm, \
+from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, get_llm, \
     load_inputs, generate_model_predictions, evaluate_single_records, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
-from clear_ai.pipeline.config_loader import load_yaml
+from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 

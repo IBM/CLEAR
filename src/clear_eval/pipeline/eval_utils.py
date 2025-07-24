@@ -1,17 +1,17 @@
 import logging
 import os
-from clear_ai.pipeline.caching_utils import save_dataframe_to_cache
-from clear_ai.pipeline.llm_chat_utils import get_chat_llm
+from clear_eval.pipeline.caching_utils import save_dataframe_to_cache
+from clear_eval.pipeline.llm_chat_utils import get_chat_llm
 import random
 from langchain_core.messages import HumanMessage, SystemMessage
 import pandas as pd
-from clear_ai.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
+from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
     SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED
-from clear_ai.pipeline.propmts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
+from clear_eval.pipeline.propmts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
      get_shortcomings_clustering_prompt, get_shortcomings_mapping_system_prompt, \
     get_shortcomings_mapping_human_prompt
 import re
-from clear_ai.pipeline.threading_utils import run_func_in_threads
+from clear_eval.pipeline.threading_utils import run_func_in_threads
 logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
