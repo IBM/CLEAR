@@ -69,7 +69,7 @@ Run the dashboard:
 run-clear-eval-dashboard
 ```
 
-Then you can load the pre-generated sample output zip from [here](results/input_for_ui), without running any analysis. 
+Then you can load the pre-generated sample output zip from [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip), without running any analysis. 
 
 
 ---
@@ -162,20 +162,20 @@ Arguments can be provided via:
 > - Python: `perform_generation=True`  
 > - CLI: `--perform-generation True`
 
-| Argument             | Description                                                                                                                                | Default                    |
-|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------|----------------------------|
-| `--config_path`      | Path to a YAML config file (all values loaded unless overridden by CLI args)                                                               |           |
-| `--run_name`         | Unique run name (used in result file names)                                                                                                |        |
-| `--data_path`        | Path to input CSV file                                                                                                                     |           |
-| `--output_dir`       | Output directory to write results                                                                                                          |           |
-| `--provider`         | Model provider: `openai`, `watsonx`, `rits`                                                                                                |           |
-| `--eval_model_name`  | Name of judge model (e.g. `gpt-4o`)                                                                                                        |                            |
-| `--gen_model_name`   | Name of the generator model to evaluate. If not running generations - the generator name to display.                                       |                            |
-| `--perform_generation` | Whether to generate responses or use existing `response` column                                                                            | True                       |  
-| `--is_reference_based` | Use reference-based evaluation (requires `ground_truth` column in input)                                                                   | False                      |
-| `--resume_enabled`   | Whether to reuse intermediate outputs from previous runs stored in output_dir                                                              | True                       |
-| `--evaluation_criteria` | Custom criteria dictionary for scoring individual records: `{"criteria_name1":"criteria_desc1", ...}`supported for yaml config and python. | None                       |
-| `--input_columns`    | Comma-separated list of additional input fields (other than `model_input`) to appear in the results and dashboard (e.g. `question`)        | None                       | 
+| Argument                | Description                                                                                                                                | Default |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `--config_path`         | Path to a YAML config file (all values loaded unless overridden by CLI args)                                                               |         |
+| `--run_name`            | Unique run name (used in result file names)                                                                                                |         |
+| `--data_path`           | Path to input CSV file                                                                                                                     |         |
+| `--output_dir`          | Output directory to write results                                                                                                          |         |
+| `--provider`            | Model provider: `openai`, `watsonx`, `rits`                                                                                                |         |
+| `--eval_model_name`     | Name of judge model (e.g. `gpt-4o`)                                                                                                        |         |
+| `--gen_model_name`      | Name of the generator model to evaluate. If not running generations - the generator name to display.                                       |         |
+| `--perform_generation`  | Whether to generate responses or use existing `response` column                                                                            | True    |  
+| `--is_reference_based`  | Use reference-based evaluation (requires `ground_truth` column in input)                                                                   | False   |
+| `--resume_enabled`      | Whether to reuse intermediate outputs from previous runs stored in output_dir                                                              | True    |
+| `--evaluation_criteria` | Custom criteria dictionary for scoring individual records: `{"criteria_name1":"criteria_desc1", ...}`supported for yaml config and python. | None    |
+| `--input_columns`       | Comma-separated list of additional input fields (other than `model_input`) to appear in the results and dashboard (e.g. `question`)        | None    | 
 
 ---
 
