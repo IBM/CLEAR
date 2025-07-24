@@ -69,7 +69,13 @@ Run the dashboard:
 run-clear-eval-dashboard
 ```
 
-Then you can load the pre-generated sample output zip from [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip), without running any analysis. 
+Then you can load the pre-generated sample output zip.
+you can manually upload a sample `.zip` file located at:
+```
+<your-env>/site-packages/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip
+```
+
+📁 Or just download it directly from the [GitHub repo](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip).
 
 
 ---
