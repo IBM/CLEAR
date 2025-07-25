@@ -513,9 +513,11 @@ def convert_results_to_ui_input(df, config, required_input_fields):
         custom_output_df["recurring_issues_str"] = df["recurring_issues_str"]
 
         required_cols =[config[r] for r in required_input_fields] + config.get("input_columns", []) + \
-                         ["question_id", 'model_input', 'response',
+                         ['model_input', 'response',
                          'score', 'evaluation_text', 'evaluation_summary',
                          'recurring_issues', 'recurring_issues_str', 'ground_truth']
+        required_cols = list(dict.fromkeys(required_cols))
+
         for col in required_cols:
             if col not in custom_output_df.columns:
                 custom_output_df[col] = pd.Series(dtype='object')  # Add empty series if any is missing
