@@ -102,10 +102,12 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
             return str(x)
         return x
 
-    output_df = output_df.applymap(convert_nested_to_str)
+    for col in output_df.select_dtypes(include="object"):
+        if output_df[col].map(lambda x: isinstance(x, (list, dict, set, tuple, np.ndarray))).any():
+            output_df[col] = output_df[col].map(convert_nested_to_str)
 
     parquet_buffer = io.BytesIO()
-    output_df.to_parquet(parquet_buffer, index=False, compression="snappy")
+    output_df.to_parquet(parquet_buffer, compression="brotli", engine="pyarrow", use_dictionary=True, index=False)
     parquet_bytes = parquet_buffer.getvalue()
     #csv_bytes = output_df.to_csv(index=False).encode()
     json_bytes = json.dumps(config, indent=2).encode()

@@ -64,7 +64,7 @@ def load_data(uploaded_file):
                 with zf.open(parquet_file_name) as parquet_file:
                     actual_cols = pq.ParquetFile(parquet_file).schema.names
                     selected_cols = [c for c in expected_cols if c in actual_cols]
-                    df = pd.read_parquet(parquet_file, columns=selected_cols)
+                    df = pd.read_parquet(parquet_file, engine="pyarrow", columns=selected_cols)
             # for col in expected_cols:
             #     if col not in df.columns:
             #         df[col] = np.nan
