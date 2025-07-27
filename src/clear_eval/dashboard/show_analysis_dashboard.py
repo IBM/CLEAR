@@ -21,7 +21,7 @@ EXPECTED_COLS =  [
             "ground_truth"
          ]
 DISPLAY_COLS = [
-            "question_id", "model_input","response", "score",
+            "question_id", "model_input_preview","response", "score",
             "evaluation_summary", "recurring_issues_str", "ground_truth"
          ]
 MAX_NUM_ISSUES = 30
@@ -76,6 +76,7 @@ def load_data(uploaded_file):
                 df['score'] = pd.to_numeric(df['score'], errors='coerce')
                 df.dropna(subset=['score'], inplace=True)
             df.loc[:,"discovered_issues"] = df.apply(lambda r: ",\n".join(extract_issues(r["recurring_issues_str"])), axis=1)
+            df["model_input_preview"] = df["model_input"].apply(lambda x: x[:300])
             if "question_id" in df.columns:
                 df.set_index("question_id", inplace=True)
         except FileNotFoundError:
@@ -455,7 +456,7 @@ def show_data_explorer_select_index(issues_filtered_df, total_examples, format_r
     default_columns = get_input_columns(st.session_state.metadata) + DISPLAY_COLS
 
     df_to_present = issues_filtered_df[[c for c in default_columns if c in issues_filtered_df.columns]]
-    df_to_present["model_input"] = df_to_present["model_input"].apply(lambda x: x[:300])
+
     st.write(f"Found {len(df_to_present)}/{total_examples} matching input examples.")
     if len(df_to_present) > max_presented_examples:
         st.write(f"Displaying first {max_presented_examples} input examples.")
