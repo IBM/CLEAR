@@ -3,6 +3,8 @@ import logging
 import sys
 import os
 import zipfile
+import io
+import numpy as np
 logger = logging.getLogger(__name__)
 
 import pandas as pd
@@ -95,13 +97,24 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     logger.info(f"Custom formatted analysis results saved to {output_path}")
 
     # save outputs to zip
-    csv_bytes = output_df.to_csv(index=False).encode()
+    def convert_nested_to_str(x):
+        if isinstance(x, (list, dict, tuple, set, np.ndarray)):
+            return str(x)
+        return x
+
+    output_df = output_df.applymap(convert_nested_to_str)
+
+    parquet_buffer = io.BytesIO()
+    output_df.to_parquet(parquet_buffer, index=False, compression="snappy")
+    parquet_bytes = parquet_buffer.getvalue()
+    #csv_bytes = output_df.to_csv(index=False).encode()
     json_bytes = json.dumps(config, indent=2).encode()
 
     # 3. Write to .zip
     zip_output_path = output_path.replace(".csv", ".zip")
     with zipfile.ZipFile(zip_output_path, mode="w") as zf:
-        zf.writestr("results.csv", csv_bytes)
+        zf.writestr("results.parquet", parquet_bytes)
+        #zf.writestr("results.csv", csv_bytes)
         zf.writestr("metadata.json", json_bytes)
     logger.info(f"Results for uploading to ui are saved to {zip_output_path}")
 

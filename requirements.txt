@@ -13,3 +13,4 @@ openai
 ibm_watsonx_ai>=1.2.8
 tqdm
 numpy
+pyarrow>=15.0.0
