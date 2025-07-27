@@ -107,7 +107,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     # step5 : convert to ui format and save
     output_df = convert_results_to_ui_input(mapped_data_df, config, required_input_fields)
     output_path = f"{output_dir}/analysis_results_{file_name_info}.csv"
-    logger.error(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
+    logger.info(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
     save_dataframe_to_cache(output_df, output_path)
     logger.info(f"Custom formatted analysis results saved to {output_path}")
 
