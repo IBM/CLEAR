@@ -20,6 +20,10 @@ EXPECTED_COLS =  [
              "evaluation_text", "evaluation_summary", "recurring_issues", "recurring_issues_str",
             "ground_truth"
          ]
+DISPLAY_COLS = [
+            "question_id", "model_input","response", "score",
+            "evaluation_summary", "recurring_issues_str", "ground_truth"
+         ]
 MAX_NUM_ISSUES = 30
 OTHER = "Other Issues"
 NO_ISSUE = "No Issues"
@@ -448,9 +452,10 @@ def write_qa_header():
 def show_data_explorer_select_index(issues_filtered_df, total_examples, format_row_func,
                                     usecase="GENERAL_USECASE"):
     st.header("📊 Data Explorer")
-    default_columns = get_input_columns(st.session_state.metadata) + EXPECTED_COLS
+    default_columns = get_input_columns(st.session_state.metadata) + DISPLAY_COLS
 
     df_to_present = issues_filtered_df[[c for c in default_columns if c in issues_filtered_df.columns]]
+    df_to_present["model_input"] = df_to_present["model_input"].apply(lambda x: x[:300])
     st.write(f"Found {len(df_to_present)}/{total_examples} matching input examples.")
     if len(df_to_present) > max_presented_examples:
         st.write(f"Displaying first {max_presented_examples} input examples.")
