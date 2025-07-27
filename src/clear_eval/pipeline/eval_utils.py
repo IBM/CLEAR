@@ -170,17 +170,17 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
         return "Error during summary generation."
 
 
-def get_evaluation_texts_for_synthesis(df, use_full_text, score_col):
+def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_threshold=1):
     # Get valid evaluation texts from evaluation texts with score < 1
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
-    valid_eval_texts = df[df[score_col] < 1][evaluation_text_col].dropna().tolist()
+    valid_eval_texts = df[df[score_col] < score_threshold][evaluation_text_col].dropna().tolist()
     valid_eval_texts = [t for t in valid_eval_texts if not is_missing_or_error(t)]
     logger.info(f"returning {len(valid_eval_texts)}/{len(df)} valid evaluation texts")
     return valid_eval_texts
 
 def synthesize_shortcomings_from_df(df, llm, config):
     use_full_text = config['use_full_text_for_analysis']
-    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL)
+    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL, score_threshold=config.get("high_score_threshold", 1))
     return synthesize_shortcomings(eval_texts, llm, max_shortcomings=config['max_shortcomings'],
                                    min_shortcomings=config['min_shortcomings'],
                                    max_eval_text_for_synthesis=config['max_eval_text_for_synthesis'])
@@ -354,7 +354,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
     for idx, row in df.iterrows():
         if pd.isna(row[SCORE_COL]):
             inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}")))
-        elif row[SCORE_COL] == 1:
+        elif row[SCORE_COL] >= config.get("high_score_threshold", 1):
             inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}")))
         else:
             n_records_to_map += 1
