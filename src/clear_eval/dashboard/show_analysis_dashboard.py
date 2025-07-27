@@ -16,7 +16,7 @@ import pyarrow.parquet as pq
 
 max_presented_examples = 2000
 EXPECTED_COLS =  [
-            "response", "model_input", "score",
+            "question_id", "model_input","response", "score",
              "evaluation_text", "evaluation_summary", "recurring_issues", "recurring_issues_str",
             "ground_truth"
          ]
@@ -72,9 +72,8 @@ def load_data(uploaded_file):
                 df['score'] = pd.to_numeric(df['score'], errors='coerce')
                 df.dropna(subset=['score'], inplace=True)
             df.loc[:,"discovered_issues"] = df.apply(lambda r: ",\n".join(extract_issues(r["recurring_issues_str"])), axis=1)
-            qid_col =  metadata.get("qid_column")
-            if qid_col is not None and qid_col in df.columns:
-                df.set_index(qid_col, inplace=True)
+            if "question_id" in df.columns:
+                df.set_index("question_id", inplace=True)
         except FileNotFoundError:
             st.error(f"Error: {file_path} not found. Please ensure the file is in the correct directory.")
             return pd.DataFrame(columns=expected_cols), {}
@@ -549,9 +548,10 @@ def show_data_explorer_select_index(issues_filtered_df, total_examples, format_r
 def qa_instance_row_format(x):
     issues_filtered_df = st.session_state.get("issues_filtered_df", pd.DataFrame())
     question_col = st.session_state.metadata.get("question_column", "question")
+    if not question_col in issues_filtered_df.columns:
+        question_col = "model_input"
     return f"Entry Index: {x} - Q: " \
-           f"{str(issues_filtered_df.loc[x, question_col])[:50]}..." \
-        if question_col in issues_filtered_df.columns else f"Entry Index: {x}"
+           f"{str(issues_filtered_df.loc[x, question_col])[:50]}..."
 
 
 def print_experiment_metadata():

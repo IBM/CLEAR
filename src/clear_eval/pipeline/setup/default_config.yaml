@@ -26,7 +26,7 @@ run_name: null
 perform_generation: true
 
 # full path to cinput sv
-data_path:  "gsm8k/gsm8k_granite_3_1_8b_instruct_predictions.csv"
+data_path:  "gsm8k/gsm8k_default_predictions.csv"
 #full path to output dr
 output_dir: "results/gsm8k/sample_output/"
 

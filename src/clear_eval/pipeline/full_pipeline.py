@@ -55,6 +55,21 @@ def get_gen_file_name(run_name, gen_model):
     return f"{GENERATION_FILE_PREFIX}_{run_name}_gen_{gen_model_str}.csv"
 
 
+def get_parquet_bytes(output_df):
+    def convert_nested_to_str(x):
+        if isinstance(x, (list, dict, tuple, set, np.ndarray)):
+            return str(x)
+        return x
+
+    for col in output_df.select_dtypes(include="object"):
+        if output_df[col].map(lambda x: isinstance(x, (list, dict, set, tuple, np.ndarray))).any():
+            output_df[col] = output_df[col].map(convert_nested_to_str)
+
+    parquet_buffer = io.BytesIO()
+    output_df.to_parquet(parquet_buffer, compression="brotli", engine="pyarrow", use_dictionary=True, index=False)
+    return parquet_buffer.getvalue()
+
+
 def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info, required_input_fields ):
     # step3: generate shortcomings
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
@@ -97,18 +112,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     logger.info(f"Custom formatted analysis results saved to {output_path}")
 
     # save outputs to zip
-    def convert_nested_to_str(x):
-        if isinstance(x, (list, dict, tuple, set, np.ndarray)):
-            return str(x)
-        return x
-
-    for col in output_df.select_dtypes(include="object"):
-        if output_df[col].map(lambda x: isinstance(x, (list, dict, set, tuple, np.ndarray))).any():
-            output_df[col] = output_df[col].map(convert_nested_to_str)
-
-    parquet_buffer = io.BytesIO()
-    output_df.to_parquet(parquet_buffer, compression="brotli", engine="pyarrow", use_dictionary=True, index=False)
-    parquet_bytes = parquet_buffer.getvalue()
+    parquet_bytes = get_parquet_bytes(output_df)
     #csv_bytes = output_df.to_csv(index=False).encode()
     json_bytes = json.dumps(config, indent=2).encode()
 
