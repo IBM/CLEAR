@@ -67,10 +67,10 @@ def load_data(uploaded_file):
                 df.set_index(qid_col, inplace=True)
         except FileNotFoundError:
             st.error(f"Error: {file_path} not found. Please ensure the file is in the correct directory.")
-            return pd.DataFrame(columns=expected_cols)
+            return pd.DataFrame(columns=expected_cols), {}
         except ValueError as e:
             st.error(f"Error loading data from {file_path}. Please check column names and data format. Details: {e}")
-            return pd.DataFrame(columns=expected_cols)
+            return pd.DataFrame(columns=expected_cols), {}
         return df, metadata
 
 def extract_issues(text, delimiter=';'):
