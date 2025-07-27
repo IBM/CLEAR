@@ -12,6 +12,7 @@ import json
 import ast  # For safely evaluating string representations of lists if needed
 import os
 from streamlit.runtime.uploaded_file_manager import UploadedFile
+import pyarrow.parquet as pq
 
 max_presented_examples = 2000
 EXPECTED_COLS =  [
@@ -41,20 +42,29 @@ def load_data(uploaded_file):
             names = set(zf.namelist())
             metadata = None
             csv_file_name = None
+            parquet_file_name = None
             for name in names:
                 if name.endswith(".csv") and name.startswith('results'):
                     csv_file_name = name
+                if name.endswith(".parquet") and name.startswith('results'):
+                    parquet_file_name = name
                 if name.endswith(".json") and name.startswith('metadata'):
                     metadata = json.load(zf.open(name))
 
-            if csv_file_name is None:
-                raise Exception("No valid csv file found in input")
+            if csv_file_name is None and parquet_file_name is None:
+                raise Exception("No valid csv or parquet file found in input")
             if metadata is None:
                 raise Exception("No valid metadata json found in input")
             input_columns = get_input_columns(metadata)
             expected_cols = EXPECTED_COLS + input_columns
-            with zf.open(csv_file_name) as csv_file:
-                df = pd.read_csv(csv_file, usecols=lambda c: c in expected_cols)
+            if csv_file_name is not None:
+                with zf.open(csv_file_name) as csv_file:
+                    df = pd.read_csv(csv_file, usecols=lambda c: c in expected_cols)
+            elif parquet_file_name is not None:
+                with zf.open(parquet_file_name) as parquet_file:
+                    actual_cols = pq.ParquetFile(parquet_file).schema.names
+                    selected_cols = [c for c in expected_cols if c in actual_cols]
+                    df = pd.read_parquet(parquet_file, columns=selected_cols)
             # for col in expected_cols:
             #     if col not in df.columns:
             #         df[col] = np.nan
@@ -74,6 +84,8 @@ def load_data(uploaded_file):
         return df, metadata
 
 def extract_issues(text, delimiter=';'):
+    if isinstance(text, np.ndarray):
+        text = text.tolist()
     if isinstance(text, list):
         text = json.dumps(text)
     issues_list = extract_issues_from_str(text, delimiter)
