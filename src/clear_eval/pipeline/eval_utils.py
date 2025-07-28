@@ -1,5 +1,6 @@
 import logging
 import os
+import numpy as np
 from clear_eval.pipeline.caching_utils import save_dataframe_to_cache
 from clear_eval.pipeline.llm_chat_utils import get_chat_llm
 import random
@@ -170,22 +171,42 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
         return "Error during summary generation."
 
 
-def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_threshold=1):
+def sample_summaries_by_score(df, N):
+    scores = df[SCORE_COL]
+    score_indices = df.index
+    alpha = 4.0
+    weights = (1 - scores) ** alpha
+    probabilities = weights / weights.sum()
+    sampled_indices = list(np.random.choice(score_indices, size=N, replace=False, p=probabilities))
+    sampled_df_p = df.loc[sampled_indices]
+    return sampled_df_p
+
+
+def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_threshold=1, max_eval_text_for_synthesis=None):
     # Get valid evaluation texts from evaluation texts with score < 1
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
-    valid_eval_texts = df[df[score_col] < score_threshold][evaluation_text_col].dropna().tolist()
-    valid_eval_texts = [t for t in valid_eval_texts if not is_missing_or_error(t)]
-    logger.info(f"returning {len(valid_eval_texts)}/{len(df)} valid evaluation texts")
+    valid_df = df[df[score_col] < score_threshold]
+    valid_df = valid_df[~valid_df[evaluation_text_col].apply(is_missing_or_error)]
+
+    if max_eval_text_for_synthesis and max_eval_text_for_synthesis < len(valid_df):
+        final_df = sample_summaries_by_score(valid_df, max_eval_text_for_synthesis)
+    else:
+        final_df = valid_df
+
+    valid_eval_texts = final_df[evaluation_text_col].dropna().tolist()
+    logger.info(f"returning {len(valid_eval_texts)}/{len(final_df)} valid evaluation texts ({len(df)}) total")
     return valid_eval_texts
 
 def synthesize_shortcomings_from_df(df, llm, config):
     use_full_text = config['use_full_text_for_analysis']
-    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL, score_threshold=config.get("high_score_threshold", 1))
+    max_eval_text_for_synthesis = config['max_eval_text_for_synthesis']
+    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL,
+                                                    score_threshold=config.get("high_score_threshold", 1),
+                                                    max_eval_text_for_synthesis=max_eval_text_for_synthesis)
     return synthesize_shortcomings(eval_texts, llm, max_shortcomings=config['max_shortcomings'],
-                                   min_shortcomings=config['min_shortcomings'],
-                                   max_eval_text_for_synthesis=config['max_eval_text_for_synthesis'])
+                                   min_shortcomings=config['min_shortcomings'])
 
-def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, min_shortcomings=None, max_eval_text_for_synthesis=None):
+def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, min_shortcomings=None):
     """Analyzes evaluation texts to identify common shortcomings."""
     logger.info(f"\nSynthesizing Shortcomings List")
 
@@ -196,20 +217,13 @@ def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, mi
         logger.info("No valid evaluation texts found to analyze for shortcomings.")
         return []
 
-    # Sample texts if there are too many
-    if max_eval_text_for_synthesis and len(evaluation_text_list) > max_eval_text_for_synthesis:
-        logger.info(f"Sampling {max_eval_text_for_synthesis} evaluation texts out of {len(evaluation_text_list)} for synthesis.")
-        texts_to_analyze = random.sample(evaluation_text_list, max_eval_text_for_synthesis)
-    else:
-        texts_to_analyze = evaluation_text_list
-
     # Concatenate texts with separators
-    concatenated_texts = "\n---\n".join(texts_to_analyze)
+    concatenated_texts = "\n---\n".join(evaluation_text_list)
 
     # Create the prompt for synthesis
     synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts)
 
-    logger.info(f"Sending {len(texts_to_analyze)} evaluation texts to LLM for shortcoming synthesis...")
+    logger.info(f"Sending {len(evaluation_text_list)} evaluation texts to LLM for shortcoming synthesis...")
 
     try:
         messages = [

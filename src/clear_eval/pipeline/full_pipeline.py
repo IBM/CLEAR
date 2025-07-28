@@ -126,7 +126,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
 
 def run_aggregation_pipeline(config):
     logger.info(f"run_aggregation_pipeline received run config: {config}")
-    input_file = config["input_path"] # todo - force conventions?
+    input_file = config["data_path"] # todo - force conventions?
     eval_df = pd.read_csv(input_file)
     file_name_info = input_file.split("/")[-1].replace(f"EVALUATION_FILE_PREFIX_WITH_SUMMARIES_", "")
     run_aggregation_from_df(config, eval_df, file_name_info)
