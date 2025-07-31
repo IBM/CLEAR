@@ -126,10 +126,11 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
 
 def run_aggregation_pipeline(config):
     logger.info(f"run_aggregation_pipeline received run config: {config}")
-    input_file = config["data_path"] # todo - force conventions?
-    eval_df = pd.read_csv(input_file)
-    file_name_info = input_file.split("/")[-1].replace(f"EVALUATION_FILE_PREFIX_WITH_SUMMARIES_", "")
-    run_aggregation_from_df(config, eval_df, file_name_info)
+    run_info = get_run_info(config)
+    eval_dir = config["output_dir"]
+    eval_file = os.path.join(eval_dir, f"{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv")
+    eval_df = pd.read_csv(eval_file)
+    run_aggregation_from_df(config, eval_df, run_info)
 
 
 def run_aggregation_from_df(config, eval_df, file_name_info):
@@ -150,6 +151,16 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info, required_input_fields)
 
 
+def get_run_info(config):
+    reference_str = "based" if config['is_reference_based'] else 'free'
+    eval_model_str = get_model_name_for_file(config["eval_model_name"])
+    gen_model = config.get('gen_model_name')
+    gen_model_str = get_model_name_for_file(gen_model)
+    run_info = f"reference_{reference_str}_gen_{gen_model_str}_eval_{eval_model_str}"
+    run_name = get_run_name(config)
+    return f"{run_name}_{run_info}"
+
+
 def run_eval_pipeline(config):
     # initialize
     logger.info(f"run_eval_pipeline received run config: {config}")
@@ -166,14 +177,8 @@ def run_eval_pipeline(config):
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
     perform_generation = config['perform_generation']
-    reference_str = "based" if config['is_reference_based'] else 'free'
-    eval_model_str = get_model_name_for_file(config["eval_model_name"])
-    gen_model = config.get('gen_model_name')
-    gen_model_str = get_model_name_for_file(gen_model)
-    run_info = f"reference_{reference_str}_gen_{gen_model_str}_eval_{eval_model_str}"
-    run_name = get_run_name(config)
-    run_info = f"{run_name}_{run_info}"
 
+    run_info = get_run_info(config)
     with open(os.path.join(output_dir, f"config_{run_info}.json"), 'w') as f:
         json.dump(config, f)
 
@@ -185,6 +190,8 @@ def run_eval_pipeline(config):
     if perform_generation:
         logger.info(f"Performing generation analysis on {len(data_df)} examples")
         gen_df = None
+        gen_model = config.get('gen_model_name')
+        run_name = get_run_name(config)
         gen_file_name = get_gen_file_name(run_name, gen_model)
         gen_output_path = f"{output_dir}/{gen_file_name}"
         if resume_enabled:
