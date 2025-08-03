@@ -14,7 +14,7 @@ import os
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pyarrow.parquet as pq
 
-max_presented_examples = 2000
+max_presented_examples = 1000
 EXPECTED_COLS =  [
             "question_id", "model_input","response", "score",
              "evaluation_text", "evaluation_summary", "recurring_issues", "recurring_issues_str",
@@ -76,7 +76,7 @@ def load_data(uploaded_file):
                 df['score'] = pd.to_numeric(df['score'], errors='coerce')
                 df.dropna(subset=['score'], inplace=True)
             df.loc[:,"discovered_issues"] = df.apply(lambda r: ",\n".join(extract_issues(r["recurring_issues_str"])), axis=1)
-            df["model_input_preview"] = df["model_input"].apply(lambda x: x[:300])
+            df["model_input_preview"] = df["model_input"].apply(lambda x: x[:300] if isinstance(x, str) else x)
             if "question_id" in df.columns:
                 df.set_index("question_id", inplace=True)
         except FileNotFoundError:
