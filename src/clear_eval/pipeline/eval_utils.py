@@ -544,6 +544,7 @@ def convert_results_to_ui_input(df, config, required_input_fields):
 
 def get_llm(provider, model_name, eval_mode=True):
     try:
+        logger.info(f"Getting llm for model: {model_name}, provider {provider}, eval_mode {eval_mode}")
         llm = get_chat_llm(provider, model_name, eval_mode=eval_mode)
     except Exception as e:
         raise Exception(f"Error initializing LLM {provider}, {model_name}). Details: {e}")

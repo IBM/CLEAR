@@ -8,7 +8,6 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
     if provider == "watsonx":
         from langchain_ibm import ChatWatsonx
         parameters = parameters or {
-            "max_new_tokens": 512,
             "min_new_tokens": 1,
             "stop_sequences": [".", "<|eom_id|>"],
             "enable-auto-tool-choice": False,
@@ -48,7 +47,6 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             default_headers={'RITS_API_KEY': os.getenv("RITS_API_KEY")},
             max_retries=2,
             **parameters
-
         )
     if provider == "azure":
         azure_openapi_host = os.getenv("AZURE_OPENAI_HOST")
