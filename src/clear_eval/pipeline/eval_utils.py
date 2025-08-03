@@ -442,7 +442,7 @@ def load_inputs(config, data_path, load_predictions, task_data):
 
 def run_predictions_generation_save_results(data_df, config, output_path):
     provider = config["provider"]
-    gen_llm = get_llm(provider=provider, model_name=config["gen_model_name"])
+    gen_llm = get_llm(provider=provider, model_name=config["gen_model_name"], eval_mode=False)
     gen_df = generate_model_predictions(data_df, gen_llm, config)
     save_dataframe_to_cache(gen_df, output_path)
     return gen_df
@@ -542,9 +542,9 @@ def convert_results_to_ui_input(df, config, required_input_fields):
         logger.error(f"Warning: Error converting custom analysis results to CSV: {e}")
         return None
 
-def get_llm(provider, model_name):
+def get_llm(provider, model_name, eval_mode=True):
     try:
-        llm = get_chat_llm(provider, model_name)
+        llm = get_chat_llm(provider, model_name, eval_mode=eval_mode)
     except Exception as e:
         raise Exception(f"Error initializing LLM {provider}, {model_name}). Details: {e}")
     if llm is None:
