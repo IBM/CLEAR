@@ -3,6 +3,7 @@ import math
 import re
 import textwrap
 import zipfile
+from io import BytesIO
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,9 +12,12 @@ import seaborn as sns
 import json
 import ast  # For safely evaluating string representations of lists if needed
 import os
+from dotenv import load_dotenv
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pyarrow.parquet as pq
+from args import str2bool
 
+load_dotenv()
 max_presented_examples = 1000
 EXPECTED_COLS =  [
             "question_id", "model_input","response", "score",
@@ -38,9 +42,8 @@ def get_display_filename(file_ref):
 
 
 @st.cache_data
-def load_data(uploaded_file):
-    file_path = uploaded_file.name
-    with zipfile.ZipFile(uploaded_file) as zf:
+def load_data(file_bytes, file_name):
+    with zipfile.ZipFile(BytesIO(file_bytes)) as zf:
         # Validate
         try:
             names = set(zf.namelist())
@@ -80,10 +83,10 @@ def load_data(uploaded_file):
             if "question_id" in df.columns:
                 df.set_index("question_id", inplace=True)
         except FileNotFoundError:
-            st.error(f"Error: {file_path} not found. Please ensure the file is in the correct directory.")
+            st.error(f"Error: {file_name} not found. Please ensure the file is in the correct directory.")
             return pd.DataFrame(columns=expected_cols), {}
         except ValueError as e:
-            st.error(f"Error loading data from {file_path}. Please check column names and data format. Details: {e}")
+            st.error(f"Error loading data from {file_name}. Please check column names and data format. Details: {e}")
             return pd.DataFrame(columns=expected_cols), {}
         return df, metadata
 
@@ -574,7 +577,9 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
 
         # test if first run or data selection changed : reload data
     if 'current_file_id' not in st.session_state or file_id != st.session_state.current_file_id:
-        df_full, metadata = load_data(file_to_load)
+        file_bytes = file_to_load.read()
+        file_name = file_to_load.name
+        df_full, metadata = load_data(file_bytes, file_name)
         st.session_state.current_file_id = file_id
         st.session_state.issues_filtered_df = df_full.copy()
         st.session_state.full_df = df_full.copy()
@@ -639,6 +644,13 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
         st.info(f"Attempted to load `{file_name_to_display}`. Please ensure it exists and is correctly formatted.")
 
 
+def file_from_path(path):
+    with open(path, "rb") as f:
+        content = f.read()
+    bio = BytesIO(content)
+    bio.name = os.path.basename(path)  # Optional: match file_uploader
+    return bio
+
 def file_hash(file_obj):
     return hashlib.md5(file_obj.getbuffer()).hexdigest()
 
@@ -648,10 +660,40 @@ def get_uploaded_file(uploader_key="zip_uploader"):
     uploaded_file = st.sidebar.file_uploader(msg, type="zip", key=uploader_key)
 
     if uploaded_file is not None:
+        st.sidebar.info("❌ Press the X next to the uploaded file to go back to built-in configuration selection")
+
+    results_dir = os.getenv("CLEAR_EVAL_RESULTS_DIR")
+    if results_dir and not uploaded_file:
+        # If no file uploaded, show select boxes (internal file options)
+        st.sidebar.markdown("Or select a built-in configuration:")
+        options = [d for d in os.listdir(results_dir) if \
+                   os.path.isdir(os.path.join(results_dir, d)) and d !="final_results"]
+        selected_dataset_name = st.sidebar.radio(
+            "Choose a usecase to Analyze:",
+            options=options,
+            key=f"use_case_selection"
+        )
+        if selected_dataset_name:
+            use_case_results_dir = os.path.join(results_dir, selected_dataset_name)
+            data_options = os.listdir(use_case_results_dir)
+            data_options = ["None"] + [d for d in data_options if
+                            os.path.isdir(os.path.join(use_case_results_dir, d))]
+            selected_dataset = st.sidebar.selectbox(
+                "Choose dataset:",
+                options=data_options,
+                key=f"dataset_selection_{use_case_results_dir}"
+            )
+            if selected_dataset != "None":
+                data_results_dir = os.path.join(use_case_results_dir, selected_dataset)
+                for f in os.listdir(data_results_dir):
+                    if f.endswith(".zip") or f.endswith(".parquet"):
+                        file_path = os.path.join(data_results_dir, f)
+                        st.write(file_path)
+                        uploaded_file = file_from_path(file_path)
+    if uploaded_file is not None:
         # Show file info
         file_id = file_hash(uploaded_file)
         st.sidebar.success(f"Loaded file: {uploaded_file.name}")
-        st.sidebar.info("❌ Press the X next to the uploaded file to go back to built-in configuration selection")
         return uploaded_file, file_id
 
     for key in ("current_file_id", "full_df", "metadata"):
