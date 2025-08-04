@@ -88,7 +88,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         if resume_enabled:
             deduplicated_shortcomings_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
         if deduplicated_shortcomings_list is None:
-            deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm)
+            deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, config["max_shortcomings"])
             save_json_to_cache(deduplicated_shortcomings_list, deduplicated_shortcomings_list_output_path)
             resume_enabled = False
     else:

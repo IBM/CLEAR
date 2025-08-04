@@ -10,14 +10,14 @@ from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION
     SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED
 from clear_eval.pipeline.propmts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
      get_shortcomings_clustering_prompt, get_shortcomings_mapping_system_prompt, \
-    get_shortcomings_mapping_human_prompt
+    get_shortcomings_mapping_human_prompt, get_shortcomings_synthesis_prompt_cont
 import re
 from clear_eval.pipeline.threading_utils import run_func_in_threads
 logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
-    if not eval_text.strip() or eval_text.startswith(ANALYSIS_SKIPPED) or \
-            eval_text.startswith("Error:") or pd.isna(eval_text):
+    if pd.isna(eval_text) or not eval_text or not eval_text.strip() or \
+        eval_text.startswith(ANALYSIS_SKIPPED) or eval_text.startswith("Error:"):
         return True
     return False
 
@@ -194,7 +194,7 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_thres
         final_df = valid_df
 
     valid_eval_texts = final_df[evaluation_text_col].dropna().tolist()
-    logger.info(f"returning {len(valid_eval_texts)}/{len(final_df)} valid evaluation texts ({len(df)}) total")
+    logger.info(f"returning {len(valid_eval_texts)}/{len(final_df)} valid evaluation texts ({len(df)} total)")
     return valid_eval_texts
 
 def synthesize_shortcomings_from_df(df, llm, config):
@@ -203,10 +203,11 @@ def synthesize_shortcomings_from_df(df, llm, config):
     eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL,
                                                     score_threshold=config.get("high_score_threshold", 1),
                                                     max_eval_text_for_synthesis=max_eval_text_for_synthesis)
-    return synthesize_shortcomings(eval_texts, llm, max_shortcomings=config['max_shortcomings'],
+    return synthesize_shortcomings(eval_texts, llm,
                                    min_shortcomings=config['min_shortcomings'])
 
-def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, min_shortcomings=None):
+def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
+                            max_shortcomings = None, batch_size=100, ):
     """Analyzes evaluation texts to identify common shortcomings."""
     logger.info(f"\nSynthesizing Shortcomings List")
 
@@ -217,41 +218,47 @@ def synthesize_shortcomings(evaluation_text_list, llm, max_shortcomings=None, mi
         logger.info("No valid evaluation texts found to analyze for shortcomings.")
         return []
 
-    # Concatenate texts with separators
-    concatenated_texts = "\n---\n".join(evaluation_text_list)
+    batches = [evaluation_text_list[x:x+batch_size] for x in range(0, len(evaluation_text_list), batch_size)]
+    logger.info(f"Sending {len(evaluation_text_list)} evaluation texts to LLM for shortcoming synthesis in {len(batches)} batches")
+    overall_shortcoming_list = []
+    for evaluation_text_batch in batches:
+        # Concatenate texts with separators
+        concatenated_texts = "\n---\n".join(evaluation_text_batch)
 
-    # Create the prompt for synthesis
-    synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts)
-
-    logger.info(f"Sending {len(evaluation_text_list)} evaluation texts to LLM for shortcoming synthesis...")
-
-    try:
-        messages = [
-            SystemMessage(
-                content="You are an analyst synthesizing common shortcomings from evaluation texts. Respond ONLY with a Python list of strings."),
-            HumanMessage(content=synthesis_prompt)
-        ]
-        response = llm.invoke(messages).content.strip()
-
-        logger.info("Received synthesis response. Parsing list...")
-        synthesized_list = parse_shortcoming_list_response(response)
-
-        if synthesized_list:
-            if max_shortcomings and len(synthesized_list) > max_shortcomings:
-                logger.warning(f"Limiting to top {max_shortcomings} most significant shortcomings")
-                synthesized_list = synthesized_list[:max_shortcomings]
-            elif min_shortcomings and len(synthesized_list) < min_shortcomings:
-                logger.warning(
-                    f"Warning: Only {len(synthesized_list)} shortcomings identified, below minimum of {min_shortcomings}")
-
-            return synthesized_list
+        # Create the prompt for synthesis
+        if not overall_shortcoming_list:
+            synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
         else:
-            logger.warning("Failed to parse a valid list from the synthesis response.")
-            return None
+            shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
+            synthesis_prompt = get_shortcomings_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings)
 
-    except Exception as e:
-        logger.error(f"LLM synthesis failed: {e}")
-        return None
+        try:
+            messages = [
+                SystemMessage(
+                    content="You are an analyst synthesizing common shortcomings from evaluation texts. Respond ONLY with a Python list of strings."),
+                HumanMessage(content=synthesis_prompt)
+            ]
+            response = llm.invoke(messages).content.strip()
+
+
+            synthesized_list = parse_shortcoming_list_response(response)
+            logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
+            if synthesized_list:
+                overall_shortcoming_list.extend(synthesized_list)
+        except Exception as e:
+            logger.error(f"key points synthesis failed: {e}")
+            continue
+
+    if overall_shortcoming_list:
+        if min_shortcomings and len(overall_shortcoming_list) < min_shortcomings:
+            logger.warning(
+                f"Warning: Only {len(overall_shortcoming_list)} shortcomings identified, below minimum of {min_shortcomings}")
+
+        return overall_shortcoming_list
+    else:
+        logger.warning("Failed to parse a valid list from the synthesis response.")
+        return []
+
 
 def parse_shortcoming_list_response(response_content):
     """Parses LLM response expected to be a Python list of strings."""
@@ -275,6 +282,71 @@ def parse_shortcoming_list_response(response_content):
     except Exception as e:
         logger.error(f"Error parsing shortcoming list response: {e}\nResponse: {response_content}")
         return None
+
+
+def parse_mapping_response(response, question_id, num_shortcomings, ):
+    # Attempt to parse the list
+    parsed_list = None
+    # Regex to find list like [0, 1, 0] with optional spaces
+    list_match = re.search(r'\[\s*([01](?:\s*,\s*[01])*)?\s*\]', response)
+    if list_match:
+        list_str = list_match.group(1)  # Content within brackets
+        if list_str:  # Check if list is not empty like '[]'
+            binary_values = [val.strip() for val in list_str.split(',')]
+            if len(binary_values) == num_shortcomings:
+                try:
+                    parsed_list = [int(value) for value in binary_values]
+                except ValueError:
+                    logger.warning(
+                        f"Warning: Could not convert parsed list values to int for {question_id}: {binary_values}")
+            else:
+                logger.warning(
+                    f"Warning: Parsed list length mismatch for {question_id}. Expected {num_shortcomings}, got {len(binary_values)}. Response: {response}")
+        else:  # Handle empty list '[]'
+            if num_shortcomings == 0:  # If expecting 0 shortcomings, empty list is correct
+                parsed_list = []
+            else:  # If expecting > 0 shortcomings, empty list is wrong
+                logger.warning(
+                    f"Warning: Parsed empty list '[]' but expected {num_shortcomings} shortcomings for {question_id}. Response: {response}")
+
+    if parsed_list is not None:
+        shortcomings_result = parsed_list
+    else:
+        # Fallback if parsing fails
+        logger.warning(
+            f"Could not parse LLM response list format for {question_id}: {response}. Defaulting to zeros.")
+        shortcomings_result = [0] * num_shortcomings
+
+    return shortcomings_result
+
+
+def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, system_prompt ):
+        # Skip analysis if eval text is invalid or indicates prior errors
+        num_shortcomings = len(shortcomings_list)
+        if is_missing_or_error(eval_text):
+            shortcomings_result = [0] * num_shortcomings
+            identified_shortcomings_names = []
+            return shortcomings_result, identified_shortcomings_names
+        elif eval_text.startswith(MAPPING_NO_ISSUES):
+            shortcomings_result = [0] * num_shortcomings
+            identified_shortcomings_names = []
+            return shortcomings_result, identified_shortcomings_names
+        else:
+            human_prompt = get_shortcomings_mapping_human_prompt(eval_text, num_shortcomings)
+            try:
+                messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
+                response = llm.invoke(messages).content.strip()
+
+                shortcomings_result =  parse_mapping_response(response, question_id, num_shortcomings)
+                identified_shortcomings_names = [shortcomings_list[i] for i, present in enumerate(shortcomings_result)
+                                                 if present == 1]
+                return shortcomings_result, identified_shortcomings_names
+
+            except Exception as e:
+                logger.error(f"LLM analysis failed for {question_id}: {e}")
+                shortcomings_result = [0] * num_shortcomings
+                identified_shortcomings_names = ["Analysis Error"]
+                return shortcomings_result, identified_shortcomings_names
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list, config):
@@ -304,75 +376,16 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
         df[f'{SHORTCOMING_PREFIX}{i + 1}'] = 0  # Initialize with 0
     df[IDENTIFIED_SHORTCOMING_COL] = ""  # Initialize as empty string
 
-    def analyze_shortcoming_row(eval_text, question_id):
-        # Skip analysis if eval text is invalid or indicates prior errors
-        if is_missing_or_error(eval_text):
-            shortcomings_result = [0] * num_shortcomings
-            identified_shortcomings_names = []
-            return shortcomings_result, identified_shortcomings_names
-        elif eval_text.startswith(MAPPING_NO_ISSUES):
-            shortcomings_result = [0] * num_shortcomings
-            identified_shortcomings_names = []
-            return shortcomings_result, identified_shortcomings_names
-        else:
-            human_prompt = get_shortcomings_mapping_human_prompt(eval_text, num_shortcomings)
-            try:
-                messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
-                response = llm.invoke(messages).content.strip()
-
-                # Attempt to parse the list
-                parsed_list = None
-                # Regex to find list like [0, 1, 0] with optional spaces
-                list_match = re.search(r'\[\s*([01](?:\s*,\s*[01])*)?\s*\]', response)
-                if list_match:
-                    list_str = list_match.group(1)  # Content within brackets
-                    if list_str:  # Check if list is not empty like '[]'
-                        binary_values = [val.strip() for val in list_str.split(',')]
-                        if len(binary_values) == num_shortcomings:
-                            try:
-                                parsed_list = [int(value) for value in binary_values]
-                            except ValueError:
-                                logger.warning(
-                                    f"Warning: Could not convert parsed list values to int for {question_id}: {binary_values}")
-                        else:
-                            logger.warning(
-                                f"Warning: Parsed list length mismatch for {question_id}. Expected {num_shortcomings}, got {len(binary_values)}. Response: {response}")
-                    else:  # Handle empty list '[]'
-                        if num_shortcomings == 0:  # If expecting 0 shortcomings, empty list is correct
-                            parsed_list = []
-                        else:  # If expecting > 0 shortcomings, empty list is wrong
-                            logger.warning(
-                                f"Warning: Parsed empty list '[]' but expected {num_shortcomings} shortcomings for {question_id}. Response: {response}")
-
-                if parsed_list is not None:
-                    shortcomings_result = parsed_list
-                else:
-                    # Fallback if parsing fails
-                    logger.warning(
-                        f"Could not parse LLM response list format for {question_id}: {response}. Defaulting to zeros.")
-                    shortcomings_result = [0] * num_shortcomings
-
-                # Get names of identified shortcomings
-                identified_shortcomings_names = [shortcomings_list[i] for i, present in enumerate(shortcomings_result)
-                                                 if present == 1]
-                return shortcomings_result, identified_shortcomings_names
-
-            except Exception as e:
-                logger.error(f"LLM analysis failed for {question_id}: {e}")
-                shortcomings_result = [0] * num_shortcomings
-                identified_shortcomings_names = ["Analysis Error"]
-                return shortcomings_result, identified_shortcomings_names
-
     inputs_for_threading = []
     n_records_to_map = 0
     for idx, row in df.iterrows():
         if pd.isna(row[SCORE_COL]):
-            inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}")))
+            inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
         elif row[SCORE_COL] >= config.get("high_score_threshold", 1):
-            inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}")))
+            inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
         else:
             n_records_to_map += 1
-            inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}")))
+            inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
     thread_results = run_func_in_threads(
         analyze_shortcoming_row,
@@ -475,22 +488,42 @@ def generate_model_predictions(df, llm, config):
 
     return df
 
-def remove_duplicates_shortcomings(shortcoming_list, llm):
-    logger.info("Removing duplications from list of shortcomings")
+def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_retries=3):
+    logger.info(f"Removing duplications from list of {len(shortcoming_list)} shortcomings")
     try:
-        clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list)
-        analysis_result = llm.invoke(clustering_prompt).content
-        new_shortcoming_list = parse_shortcoming_list_response(analysis_result)
+        clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list, max_shortcomings)
+        new_shortcoming_list = []
+        retries = 0
+        while retries < num_retries:
+            try:
+                analysis_result = llm.invoke(clustering_prompt)
+                analysis_result = analysis_result.content
+                if is_missing_or_error(analysis_result):
+                    raise RuntimeError(f"Failed to get shortcomings without duplications response")
 
-        if is_missing_or_error(analysis_result):
-            logger.error("Failed to get shortcomings without duplications, returning original shortcomings list")
-            return shortcoming_list
+                new_shortcoming_list = parse_shortcoming_list_response(analysis_result)
+                if new_shortcoming_list is None:
+                    logger.error(f"Failed attempt {retries}/{num_retries} to parse shortcomings without duplications from response {analysis_result}")
+                    raise RuntimeError(f"Failed to parse new shortcomings without duplications from response")
+                break
+            except Exception as e:
+                retries += 1
+                logger.warning(f"Failed to parse new shortcomings without duplications from response")
+                if retries < num_retries:
+                    continue
+                else:
+                    raise e
+
+
+        if new_shortcoming_list and max_shortcomings and len(new_shortcoming_list) > max_shortcomings:
+            logger.warning(f"Limiting to top {max_shortcomings}/{len(new_shortcoming_list)} most significant shortcomings")
+            return new_shortcoming_list[:max_shortcomings]
         else:
+            logger.info(f"Returning list of {len(new_shortcoming_list)} shortcomings")
             return new_shortcoming_list
 
     except Exception as e:
-       logger.warning("Failed to get shortcomings without duplications, returning original shortcomings list")
-       return shortcoming_list
+       raise Exception(f"Failed to get shortcomings without duplications: {e}")
 
 def convert_results_to_ui_input(df, config, required_input_fields):
     try:
