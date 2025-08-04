@@ -597,15 +597,13 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
     
     # print metadata
     print_experiment_metadata()
-    
-    file_name_to_display = get_display_filename(file_to_load)
     if df_full.empty:
         st.warning("No data loaded for analysis. Please check the CSV file and its path.")
         return
 
     issue_counts, unique_issue_names, issue_freq, _ = get_issue_analysis(df_full, MAX_NUM_ISSUES)
 
-    st.success(f"Successfully loaded {len(df_full)} records from {file_name_to_display}.")
+    st.success(f"Successfully loaded {len(df_full)} records")
     # if not issue_freq.empty:
     #     plot_issue_freq(dict(issue_freq))
 
@@ -667,7 +665,7 @@ def get_uploaded_file(uploader_key="zip_uploader"):
         # If no file uploaded, show select boxes (internal file options)
         st.sidebar.markdown("Or select a built-in configuration:")
         options = [d for d in os.listdir(results_dir) if \
-                   os.path.isdir(os.path.join(results_dir, d)) and d !="final_results"]
+                   os.path.isdir(os.path.join(results_dir, d))]
         selected_dataset_name = st.sidebar.radio(
             "Choose a usecase to Analyze:",
             options=options,
@@ -677,7 +675,8 @@ def get_uploaded_file(uploader_key="zip_uploader"):
             use_case_results_dir = os.path.join(results_dir, selected_dataset_name)
             data_options = os.listdir(use_case_results_dir)
             data_options = ["None"] + [d for d in data_options if
-                            os.path.isdir(os.path.join(use_case_results_dir, d))]
+                            os.path.isdir(os.path.join(use_case_results_dir, d))
+                                       and d !="final_results"]
             selected_dataset = st.sidebar.selectbox(
                 "Choose dataset:",
                 options=data_options,
@@ -688,7 +687,6 @@ def get_uploaded_file(uploader_key="zip_uploader"):
                 for f in os.listdir(data_results_dir):
                     if f.endswith(".zip") or f.endswith(".parquet"):
                         file_path = os.path.join(data_results_dir, f)
-                        st.write(file_path)
                         uploaded_file = file_from_path(file_path)
     if uploaded_file is not None:
         # Show file info
