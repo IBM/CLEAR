@@ -13,9 +13,12 @@ import json
 import ast  # For safely evaluating string representations of lists if needed
 import os
 from dotenv import load_dotenv
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import streamlit.components.v1 as components
+
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 import pyarrow.parquet as pq
-from args import str2bool
 
 load_dotenv()
 max_presented_examples = 1000
@@ -117,8 +120,14 @@ def get_issue_analysis(df, max_num_issues = None):
     if 'recurring_issues_str' not in df.columns or df['recurring_issues_str'].isnull().all():
         return pd.Series(dtype='int'), [], pd.Series(dtype='float')
     issues_per_row = df['recurring_issues_str'].apply(extract_issues)
-    all_issues_flat = issues_per_row.explode()
-    issue_counts = all_issues_flat.value_counts()
+    issues_score_df = pd.DataFrame({"issue": issues_per_row, "score": df['score']})
+    issues_score_df_flat = issues_score_df.explode('issue')
+    total_stats = len(df)
+    issues_stats = issues_score_df_flat.groupby('issue')['score'].agg(['mean', 'std']).round(2)
+    issues_stats.index.name = 'issue'
+    issues_stats["issue_count"] = issues_score_df_flat['issue'].value_counts()
+    issues_stats.loc[:,"issue_freq"] = issues_stats.apply(lambda r: (100*r["issue_count"]/total_stats).round(1), axis=1)
+    return issues_stats
 
     # if max_num_issues and max_num_issues < len(issue_counts):
     #     # trim list of issues, move the rest to "other"
@@ -141,19 +150,21 @@ def get_issue_analysis(df, max_num_issues = None):
     #     issue_counts[OTHER] = n_others
     #     df["recurring_issues_str"] = filtered_row_to_top_issues
     #     df["recurring_issues_other_str"] = filtered_row_to_other_issues
-
-    unique_issue_names = sorted(issue_counts.index.tolist())
-    total_evals = len(df)
-    if total_evals > 0:
-        issue_freq = (issue_counts / total_evals * 100).round(1)
-    else:
-        issue_freq = pd.Series(dtype='float')
-    return issue_counts, unique_issue_names, issue_freq, df
+    #
+    # unique_issue_names = sorted(issue_counts.index.tolist())
+    # total_evals = len(df)
+    # if total_evals > 0:
+    #     issue_freq = (issue_counts / total_evals * 100).round(1)
+    # else:
+    #     issue_freq = pd.Series(dtype='float')
+    # return issue_counts, unique_issue_names, issue_freq, df
 
 
 def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue_count, issues_filtered_df):
     st.header("Comparison of Issue Frequencies:")
-    filtered_issue_counts, _, filtered_issue_freq, _ = get_issue_analysis(issues_filtered_df)
+    # _, _, filtered_issue_freq, _ = get_issue_analysis(issues_filtered_df)
+    issues_stats = get_issue_analysis(issues_filtered_df)
+    filtered_issue_freq = dict(issues_stats["issue_freq"])
     # Convert to Series
     full_freq = pd.Series(full_issue_freq)
     subset_freq = pd.Series(filtered_issue_freq).reindex(full_freq.index, fill_value=0)
@@ -243,70 +254,236 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
 
     plt.tight_layout()
     st.pyplot(fig)
+#
+# def plot_cmap():
+#     gradient = np.linspace(0, 1, 256).reshape(1, -1)
+#     cmap = cm.get_cmap('RdYlGn')
+#
+#     # # Plot the gradient
+#     # fig, ax = plt.subplots(figsize=(1, 0.2))
+#     # ax.imshow(gradient, aspect='auto', cmap=cmap)
+#     # ax.axis('off')
+#     #
+#     # # Display in Streamlit
+#     # st.markdown("### Severity")
+#     # st.pyplot(fig)
+#
+#     fig, ax = plt.subplots(figsize=(2, 0.2))  # ~200px wide, 20px tall
+#     ax.imshow(gradient, aspect='auto', cmap=cmap)
+#     ax.axis('off')
+#
+#     st.markdown("### Severity")
+#     st.pyplot(fig)
+
+def score_to_hex(score):
+        # Create a red-to-green colormap
+        cmap = cm.get_cmap('RdYlGn')
+
+        # Normalize the score (already between 0 and 1)
+        norm = mcolors.Normalize(vmin=0, vmax=1)
+
+        # Get RGBA color
+        rgba = cmap(norm(score))
+
+        # Convert RGBA to HEX
+        return mcolors.to_hex(rgba)
+
+def get_scaled_fraction(count, sqrt_max):
+        return math.sqrt(count) / sqrt_max if sqrt_max > 0 else 0
 
 
-def list_issues_frequency(issue_counts, issue_freq):
-    st.write("Frequency of each issue (sorted high to low):")
+
+def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        table { 
+            width: 100%;
+            border-collapse: collapse;
+            font-family: sans-serif;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            border-bottom: 2px solid #ccc;
+        }
+        .bar-container {
+            width: 100px;
+            height: 12px;
+            background-color: #eee;
+            border-radius: 6px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .bar-fill {
+            height: 100%;
+            background-color: #1f77b4;
+        }
+    </style>
+    </head>
+    <body>
+    <table>
+        <thead>
+            <tr>
+             <th>
+                <div style="display: inline-block; white-space: normal; word-break: break-word;">
+                    Issue
+                </div>
+            </th>
+
+                <th style="text-align:center;">Count</th>
+                <th style="text-align:center;">Frequency (%)</th>
+                <th style="text-align:center;">Severity</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+
     max_bar_px = 300
+    for issue, freq in sorted_issues_freq:
+        count = issues_stats.loc[issue].get("issue_count", 0)
+        freq = issues_stats.loc[issue].get("issue_freq", 0.0)
+        mean_score = issues_stats.loc[issue].get("mean", 0)
+        severity = (1 - mean_score)
+        scaled_frac = get_scaled_fraction(count, sqrt_max)
+        bar_width = int(scaled_frac * max_bar_px)
+        hex_color = score_to_hex(mean_score)
+
+        # col1, col2 = st.columns([3, 3])
+        #
+        # with col1:
+        #     st.markdown(f"**{issue}**: {count} ({freq}%)")
+        if issue != NO_ISSUE:
+            severity_html = f"""<td style="text-align:center;">{severity:.2f}</td>
+                            <td>
+                               <div style="height: 12px; background: {hex_color};
+                                    width: {bar_width}px; border-radius: 5px;
+                                    margin-top: 4px;">
+                             </td>"""
+        else:
+            severity_html =          progress_cell = """
+            <td style="text-align:center;">-</td>
+            <td><div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 11px; white-space: nowrap;">Severity</span>
+                <div style="position: relative; height: 12px; width: 200px;
+                            background: linear-gradient(to right, green, yellow, red);
+                            border-radius: 5px;">
+                    <div style="position: absolute; top: 14px; left: 0; font-size: 10px;">0</div>
+                    <div style="position: absolute; top: 14px; right: 0; font-size: 10px;">1</div>
+                </div>
+            </div>
+            </td>
+        """
+
+        html += f"""
+                    <tr>
+                  <td class="wrap">{issue}</td>
+                        
+                        <td style="text-align:center;">{count:.0f}</td>
+                        <td style="text-align:center;">{freq:.1f}</td>
+                        {severity_html}         
+                        </tr>
+                    """
+        # else: # <td style="max-width: 10%; white-space: normal; word-break: break-word;">{issue}</td>
+        #     html += f"""
+        #                            <tr>
+        #                                <td>{issue}</td>
+        #                                <td style="text-align:right;">{count}</td>
+        #                                <td style="text-align:right;">{freq}</td>
+        #                            </tr>
+        #                        """
+
+        # if issue != NO_ISSUE:
+        #     with col2:
+        #         st.markdown(
+        #             f"""
+        #                 <div style="height: 12px; background: {hex_color};
+        #                             width: {bar_width}px; border-radius: 5px;
+        #                             margin-top: 4px;">
+        #                 </div>
+        #                 """,
+        #             unsafe_allow_html=True
+        #         )
+        #
+        # else:
+        #     with col2:
+        #
+        #         st.markdown(
+        #             """
+        #             <div style="display: flex; align-items: center; gap: 8px;">
+        #                 <div style="font-size: 11px; white-space: nowrap;">Severity</div>
+        #                 <div>
+        #                     <div style="
+        #                         height: 12px;
+        #                         width: 200px;
+        #                         background: linear-gradient(to right, red, yellow, green);
+        #                         border-radius: 5px;
+        #                         position: relative;
+        #                     ">
+        #                         <div style="position: absolute; top: 14px; left: 0; font-size: 10px;">0</div>
+        #                         <div style="position: absolute; top: 14px; right: 0; font-size: 10px;">1</div>
+        #                     </div>
+        #                 </div>
+        #             </div>
+        #             """,
+        #             unsafe_allow_html=True
+        #         )
+
+    # # Append each row
+    # for _, row in df.iterrows():
+    #     percent = int(row["Progress"] * 100)
+    #     html += f"""
+    #         <tr>
+    #             <td>{row['Name']}</td>
+    #             <td style="text-align:right;">{row['Score']}</td>
+    #             <td>
+    #                 <div class="bar-container">
+    #                     <div class="bar-fill" style="width: {percent}%;"></div>
+    #                 </div>
+    #                 {percent}%
+    #             </td>
+    #         </tr>
+    #     """
+    #
+    html += """
+        </tbody>
+    </table>
+    </body>
+    </html>
+    """
+    row_height = 50
+    header_height = 60
+    table_height = header_height + len(issues_stats) * row_height
+    # Show full HTML as component
+    components.html(html, height=table_height, scrolling=False)
+
+
+def list_issues_frequency(issues_stats):
+    st.write("Frequency of each issue (sorted high to low):")
+    issue_counts = dict(issues_stats["issue_count"])
+    issue_freq = issues_stats["issue_freq"]
 
     included_counts = [v for k, v in issue_counts.items() if k != NO_ISSUE]
     sqrt_max = math.sqrt(max(included_counts))
-    max_value = max(included_counts)
 
-    # Scale based on sqrt(count)
-    def get_scaled_fraction(count):
-        return math.sqrt(count) / sqrt_max if sqrt_max > 0 else 0
-
-    def interpolate_color(start_rgb, end_rgb, fraction):
-        """Linearly interpolate between two RGB colors."""
-        return tuple(
-            int(start + (end - start) * fraction)
-            for start, end in zip(start_rgb, end_rgb)
-        )
-
-    def get_color(scaled_fraction):
-        """
-        Returns a vivid blue CSS rgb(...) string.
-        scaled_fraction: float between 0 and 1
-        """
-        vivid_start = (0, 234, 255)  # Bright cyan
-        vivid_end = (0, 51, 204)  # Royal blue
-
-        rgb = interpolate_color(vivid_start, vivid_end, scaled_fraction)
-        return f'rgb{rgb}'
-
-    sorted_issues_count = sorted(issue_counts.items(), key=lambda x: issue_freq.get(x[0], 0), reverse=True)
+    sorted_issues_freq = sorted(issue_freq.items(), key=lambda x: issue_freq.get(x[0], 0), reverse=True)
 
     # Split out the target and the rest
-    no_issue_item = [item for item in sorted_issues_count if item[0] == NO_ISSUE]
-    other_items = [item for item in sorted_issues_count if item[0] != NO_ISSUE]
+    no_issue_item = [item for item in sorted_issues_freq if item[0] == NO_ISSUE]
+    other_items = [item for item in sorted_issues_freq if item[0] != NO_ISSUE]
 
     # Combine with 'no_issue' first
-    sorted_issues_count = no_issue_item + other_items
+    sorted_issues_freq = no_issue_item + other_items
 
-    for issue, count in sorted_issues_count:
+    get_table_html(issues_stats, sorted_issues_freq, sqrt_max)
 
-        freq = issue_freq.get(issue, 0.0)
-        scaled_frac = get_scaled_fraction(count)
-        bar_width = int(scaled_frac * max_bar_px)
-        color = get_color(scaled_frac)
-
-        col1, col2 = st.columns([3, 3])  # Adjust width ratio as needed
-
-        with col1:
-            st.markdown(f"**{issue}**: {count} ({freq}%)")
-
-        if issue != NO_ISSUE:
-            with col2:
-                st.markdown(
-                    f"""
-                    <div style="height: 12px; background: {color};
-                                width: {bar_width}px; border-radius: 5px;
-                                margin-top: 4px;">
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
 
 def perform_instance_filtering_by_issue_and_score(df_full, issue_counts, issue_freq):
     defaults = {
@@ -601,7 +778,8 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
         st.warning("No data loaded for analysis. Please check the CSV file and its path.")
         return
 
-    issue_counts, unique_issue_names, issue_freq, _ = get_issue_analysis(df_full, MAX_NUM_ISSUES)
+    # issue_counts, unique_issue_names, issue_freq, _ = get_issue_analysis(df_full, MAX_NUM_ISSUES)
+    issues_stats = get_issue_analysis(df_full, MAX_NUM_ISSUES)
 
     st.success(f"Successfully loaded {len(df_full)} records")
     # if not issue_freq.empty:
@@ -618,8 +796,10 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
     total_evals = len(df_full)
     st.write(f"Total evaluations processed: {total_evals}")
 
-    if not issue_counts.empty:
-        list_issues_frequency(issue_counts, issue_freq)
+    if not issues_stats.empty:
+        issue_freq = dict(issues_stats['issue_freq'])
+        issue_counts =  dict(issues_stats['issue_count'])
+        list_issues_frequency(issues_stats)
         st.session_state.issues_filtered_df = perform_instance_filtering_by_issue_and_score(df_full, issue_counts, issue_freq)
         if len(st.session_state.issues_filtered_df) > 0 and not st.session_state.issues_filtered_df.empty:
             plot_distribution_for_full_and_filtered(df_full, issue_freq, issue_counts, st.session_state.issues_filtered_df)
@@ -639,7 +819,7 @@ def display_qa_style_analysis(instance_format_func=qa_instance_row_format):
         st.write("No recurring issues found or 'recurring_issues_str' column is missing/empty.")
 
     if df_full.empty and 'file_to_load' in locals():
-        st.info(f"Attempted to load `{file_name_to_display}`. Please ensure it exists and is correctly formatted.")
+        st.info(f"Attempted to load file`. Please ensure it exists and is correctly formatted.")
 
 
 def file_from_path(path):
@@ -698,7 +878,6 @@ def get_uploaded_file(uploader_key="zip_uploader"):
         st.session_state.pop(key, None)
     st.warning("⚠️ Please upload a file to proceed.")
     st.stop()
-    return None
 
 def fix_illegal_json(data):
     """
@@ -812,7 +991,7 @@ def write_recurring_issues(selected_row):
     except Exception as e:
         pass
 
-def plot_issue_freq(issue_to_freq, x_col='Issue', y_col='Frequency(%)'):
+def plot_issue_freq(issue_to_freq, x_col='Issue', y_col='Frequency (%)'):
     st.header('Recurring issues discovered in the data and their frequencies')
     issue_freq_df =  pd.DataFrame(list(issue_to_freq.items()), columns=[x_col, y_col])
     issue_freq_df = issue_freq_df[issue_freq_df[x_col] != NO_ISSUE]
