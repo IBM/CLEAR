@@ -254,26 +254,6 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
 
     plt.tight_layout()
     st.pyplot(fig)
-#
-# def plot_cmap():
-#     gradient = np.linspace(0, 1, 256).reshape(1, -1)
-#     cmap = cm.get_cmap('RdYlGn')
-#
-#     # # Plot the gradient
-#     # fig, ax = plt.subplots(figsize=(1, 0.2))
-#     # ax.imshow(gradient, aspect='auto', cmap=cmap)
-#     # ax.axis('off')
-#     #
-#     # # Display in Streamlit
-#     # st.markdown("### Severity")
-#     # st.pyplot(fig)
-#
-#     fig, ax = plt.subplots(figsize=(2, 0.2))  # ~200px wide, 20px tall
-#     ax.imshow(gradient, aspect='auto', cmap=cmap)
-#     ax.axis('off')
-#
-#     st.markdown("### Severity")
-#     st.pyplot(fig)
 
 def score_to_hex(score):
         # Create a red-to-green colormap
@@ -307,6 +287,8 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
         th, td {
             padding: 8px;
             text-align: left;
+            vertical-align: top;
+            border-bottom: 1px dashed #ccc;  
         }
         th {
             border-bottom: 2px solid #ccc;
@@ -331,12 +313,7 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
     <table>
         <thead>
             <tr>
-             <th>
-                <div style="display: inline-block; white-space: normal; word-break: break-word;">
-                    Issue
-                </div>
-            </th>
-
+                <th style="text-align:left;">Issue</th>
                 <th style="text-align:center;">Count</th>
                 <th style="text-align:center;">Frequency (%)</th>
                 <th style="text-align:center;">Severity</th>
@@ -356,10 +333,6 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
         bar_width = int(scaled_frac * max_bar_px)
         hex_color = score_to_hex(mean_score)
 
-        # col1, col2 = st.columns([3, 3])
-        #
-        # with col1:
-        #     st.markdown(f"**{issue}**: {count} ({freq}%)")
         if issue != NO_ISSUE:
             severity_html = f"""<td style="text-align:center;">{severity:.2f}</td>
                             <td>
@@ -370,7 +343,7 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
         else:
             severity_html =          progress_cell = """
             <td style="text-align:center;">-</td>
-            <td><div style="display: flex; flex-direction: column; gap: 4px;">
+            <td><div style="display: flex; flex-direction: row; gap: 4px;">
                 <span style="font-size: 11px; white-space: nowrap;">Severity</span>
                 <div style="position: relative; height: 12px; width: 200px;
                             background: linear-gradient(to right, green, yellow, red);
@@ -385,73 +358,12 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
         html += f"""
                     <tr>
                   <td class="wrap">{issue}</td>
-                        
                         <td style="text-align:center;">{count:.0f}</td>
                         <td style="text-align:center;">{freq:.1f}</td>
                         {severity_html}         
                         </tr>
                     """
-        # else: # <td style="max-width: 10%; white-space: normal; word-break: break-word;">{issue}</td>
-        #     html += f"""
-        #                            <tr>
-        #                                <td>{issue}</td>
-        #                                <td style="text-align:right;">{count}</td>
-        #                                <td style="text-align:right;">{freq}</td>
-        #                            </tr>
-        #                        """
 
-        # if issue != NO_ISSUE:
-        #     with col2:
-        #         st.markdown(
-        #             f"""
-        #                 <div style="height: 12px; background: {hex_color};
-        #                             width: {bar_width}px; border-radius: 5px;
-        #                             margin-top: 4px;">
-        #                 </div>
-        #                 """,
-        #             unsafe_allow_html=True
-        #         )
-        #
-        # else:
-        #     with col2:
-        #
-        #         st.markdown(
-        #             """
-        #             <div style="display: flex; align-items: center; gap: 8px;">
-        #                 <div style="font-size: 11px; white-space: nowrap;">Severity</div>
-        #                 <div>
-        #                     <div style="
-        #                         height: 12px;
-        #                         width: 200px;
-        #                         background: linear-gradient(to right, red, yellow, green);
-        #                         border-radius: 5px;
-        #                         position: relative;
-        #                     ">
-        #                         <div style="position: absolute; top: 14px; left: 0; font-size: 10px;">0</div>
-        #                         <div style="position: absolute; top: 14px; right: 0; font-size: 10px;">1</div>
-        #                     </div>
-        #                 </div>
-        #             </div>
-        #             """,
-        #             unsafe_allow_html=True
-        #         )
-
-    # # Append each row
-    # for _, row in df.iterrows():
-    #     percent = int(row["Progress"] * 100)
-    #     html += f"""
-    #         <tr>
-    #             <td>{row['Name']}</td>
-    #             <td style="text-align:right;">{row['Score']}</td>
-    #             <td>
-    #                 <div class="bar-container">
-    #                     <div class="bar-fill" style="width: {percent}%;"></div>
-    #                 </div>
-    #                 {percent}%
-    #             </td>
-    #         </tr>
-    #     """
-    #
     html += """
         </tbody>
     </table>
@@ -461,8 +373,8 @@ def get_table_html(issues_stats, sorted_issues_freq, sqrt_max):
     row_height = 50
     header_height = 60
     table_height = header_height + len(issues_stats) * row_height
-    # Show full HTML as component
-    components.html(html, height=table_height, scrolling=False)
+
+    components.html(html, height=table_height, scrolling=True)
 
 
 def list_issues_frequency(issues_stats):
