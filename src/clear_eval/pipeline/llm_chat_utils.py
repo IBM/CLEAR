@@ -48,6 +48,20 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             max_retries=2,
             **parameters
         )
+    elif provider == "rits-rest":
+        model_base = model_name_to_rits_base.get(model_id)
+        if eval_mode:
+            parameters["temperature"] = 0
+        if not model_base:
+            model_base = model_id.split("/")[-1].replace(".", "-").lower().replace("-vision", "").replace("-Instruct", "")
+        return ChatOpenAI(
+            model=model_id,
+            api_key='/',
+            base_url=f'https://restricted-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/{model_base}/v1',
+            default_headers={'RITS_API_KEY': os.getenv("RITS_API_KEY_RESTRICTED")},
+            max_retries=2,
+            **parameters
+        )
     if provider == "azure":
         azure_openapi_host = os.getenv("AZURE_OPENAI_HOST")
         api_version = os.getenv("OPENAI_API_VERSION")

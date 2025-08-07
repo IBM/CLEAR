@@ -17,6 +17,10 @@ provider_defaults:
     gen_model_name: ibm-granite/granite-3.3-8b-instruct
     eval_model_name: meta-llama/llama-3-3-70b-instruct
     max_workers: 20
+  rits-rest:
+    gen_model_name: none
+    eval_model_name: deepseek-ai/deepseek-r1
+    max_workers: 20
 
 
 # unique run_ identifier (to appear in file name)
