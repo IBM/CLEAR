@@ -232,7 +232,7 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
 
     # Axis and label formatting
     ax.set_yticks(y_positions)
-    ax.set_yticklabels(wrapped_labels, fontsize=8)
+    ax.set_yticklabels(wrapped_labels, fontsize=5)
     ax.set_xlim(0, max(df_sorted.max()) * 1.2)
     ax.set_xlabel("Frequency (%)", fontsize=9)
     ax.invert_yaxis()
@@ -777,7 +777,7 @@ def get_uploaded_file(uploader_key="zip_uploader"):
             if selected_dataset != "None":
                 data_results_dir = os.path.join(use_case_results_dir, selected_dataset)
                 for f in os.listdir(data_results_dir):
-                    if f.endswith(".zip") or f.endswith(".parquet"):
+                    if f.endswith(".zip"):
                         file_path = os.path.join(data_results_dir, f)
                         uploaded_file = file_from_path(file_path)
     if uploaded_file is not None:
