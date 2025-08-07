@@ -242,9 +242,11 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
 
 
             synthesized_list = parse_shortcoming_list_response(response)
-            logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
             if synthesized_list:
+                logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
                 overall_shortcoming_list.extend(synthesized_list)
+            else:
+                logger.info(f"Could not identify new shortcomings")
         except Exception as e:
             logger.error(f"key points synthesis failed: {e}")
             continue
@@ -276,8 +278,11 @@ def parse_shortcoming_list_response(response_content):
             else:
                 logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
                 return None
+        elif re.search(r'\[[\s]*\]', response_content, re.DOTALL):
+            logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
+            return []
         else:
-            logger.warning(f"Warning: Could not find a valid Python list format in response: {response_content}")
+            logger.warning(f"Warning: Could not parsed list of shortcomings from: {response_content}")
             return None
     except Exception as e:
         logger.error(f"Error parsing shortcoming list response: {e}\nResponse: {response_content}")
