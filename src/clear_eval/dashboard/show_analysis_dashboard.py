@@ -232,7 +232,7 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
 
     # Axis and label formatting
     ax.set_yticks(y_positions)
-    ax.set_yticklabels(wrapped_labels, fontsize=8)
+    ax.set_yticklabels(wrapped_labels, fontsize=5)
     ax.set_xlim(0, max(df_sorted.max()) * 1.2)
     ax.set_xlabel("Frequency (%)", fontsize=9)
     ax.invert_yaxis()
