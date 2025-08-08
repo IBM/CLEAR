@@ -264,6 +264,7 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
 
 def parse_shortcoming_list_response(response_content):
     """Parses LLM response expected to be a Python list of strings."""
+    shortcomings = None
     try:
         # Find the list within the response
         list_match = re.search(r'\[\s*(".*?"(?:\s*,\s*".*?")*)\s*\]', response_content, re.DOTALL)
@@ -271,18 +272,22 @@ def parse_shortcoming_list_response(response_content):
             list_content = list_match.group(1)
             # Split by comma, handling potential commas inside quotes carefully
             shortcomings = re.findall(r'"(.*?)"', list_content)
-            # Basic cleaning
-            shortcomings = [s.strip() for s in shortcomings if s.strip()]
-            if shortcomings:
-                return shortcomings
-            else:
-                logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
-                return None
-        elif re.search(r'\[[\s]*\]', response_content, re.DOTALL):
-            logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
-            return []
         else:
-            logger.warning(f"Warning: Could not parsed list of shortcomings from: {response_content}")
+            #extract list with single quotes:
+            list_match = re.search(r"\[\s*('.*?'(?:\s*,\s*'.*?')*)\s*\]", response_content, re.DOTALL)
+            if list_match:
+                list_content = list_match.group(1)
+                # Match quotes, but allow apostrophes inside unless right before , or end of str
+                shortcomings = re.findall(r"'(.*?)'(?=\s*(?:,|$))", list_content, re.DOTALL)
+            # extract empty list
+            elif re.search(r'\[[\s]*\]', response_content, re.DOTALL):
+                logger.warning(f"Warning: Parsed an empty list of shortcomings from: {response_content}")
+                shortcomings = []
+        if shortcomings is not None:
+            shortcomings = [s.strip() for s in shortcomings if s.strip()]
+            return shortcomings
+        else:
+            logger.warning(f"Warning: Could not parse list of shortcomings from: {response_content}")
             return None
     except Exception as e:
         logger.error(f"Error parsing shortcoming list response: {e}\nResponse: {response_content}")
