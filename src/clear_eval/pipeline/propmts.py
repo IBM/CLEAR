@@ -79,14 +79,14 @@ You may also consider other relevant factors that contribute to the overall qual
 Evaluation Criteria:
 {evaluation_criteria_str}
 
-Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Final Score: <score>' (e.g., 'Final Score: 0.7').
+Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
 
 Input: '{model_input}'
 Output: '{model_output}'
 
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
-Final score: [Your score here]
+Evaluation score: [Your score here]
 """
 
 def get_general_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str):
@@ -103,7 +103,7 @@ You may also consider other relevant factors that contribute to the overall qual
 Evaluation Criteria:
 {evaluation_criteria_str}
 
-Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Final Score: <score>' (e.g., 'Final Score: 0.7').
+Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
 
 Input: '{model_input}'
 Reference: '{reference}'
@@ -111,13 +111,13 @@ Output: '{model_output}'
 
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
-Final score: [Your score here]
+Evaluation score: [Your score here]
 """
 
 def get_summarization_prompt(evaluation_text: str):
     return \
 f"""You are given an evaluation text produced by a judge model. Summarize the text in a few sentences.
-Focus on the core reasoning for the score and the final score itself.
+Focus on the core reasoning for the score.
 Remove redundancies and make it concise while keeping the essential information.
 Disregard the score given by the model and focus on the textual feedback.
 Use short and simple sentences.
