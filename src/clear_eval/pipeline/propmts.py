@@ -86,7 +86,7 @@ Output: '{model_output}'
 
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
-Evaluation score: [Your score here]
+Final score: [Your score here]
 """
 
 def get_general_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str):
@@ -111,7 +111,7 @@ Output: '{model_output}'
 
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
-Evaluation score: [Your score here]
+Final score: [Your score here]
 """
 
 def get_summarization_prompt(evaluation_text: str):
