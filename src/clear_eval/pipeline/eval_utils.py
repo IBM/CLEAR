@@ -194,7 +194,7 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_thres
         final_df = valid_df
 
     valid_eval_texts = final_df[evaluation_text_col].dropna().tolist()
-    logger.info(f"returning {len(valid_eval_texts)}/{len(final_df)} valid evaluation texts ({len(df)} total)")
+    logger.info(f"returning {len(valid_eval_texts)}/{len(valid_df)} valid evaluation texts ({len(df)} total)")
     return valid_eval_texts
 
 def synthesize_shortcomings_from_df(df, llm, config):
