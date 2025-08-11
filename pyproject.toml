@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "clear_eval"
-version = "1.0.5"
+version = "1.0.6"
 description = "A python API sdk facilitating Error Analysis via LLM-as-a-Judge"
 readme = "README.md"
 authors = [{ name = "Lilach Eden", email = "lilache@il.ibm.com"},
