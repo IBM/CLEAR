@@ -814,19 +814,19 @@ def fix_illegal_json(data):
     except:
         pass
 
-    # Step 2: Replace True/False/None with JSON equivalents
+    # Step 2: Try to parse Python-like dict using ast.literal_eval
+    try:
+        py_obj = ast.literal_eval(data)
+        return json.loads(json.dumps(py_obj))  # Ensure JSON-safe
+    except:
+        pass
+
+    # Step 3: Replace True/False/None with JSON equivalents
     fixed = (
         data.replace("None", "null")
             .replace("True", "true")
             .replace("False", "false")
     )
-
-    # Step 3: Try to parse Python-like dict using ast.literal_eval
-    try:
-        py_obj = ast.literal_eval(fixed)
-        return json.loads(json.dumps(py_obj))  # Ensure JSON-safe
-    except:
-        pass
 
     # Step 4: Last-ditch fix — use regex to fix inner quotes in values
     def escape_quotes_in_values(match):
@@ -854,11 +854,10 @@ def print_json_fallback_string(val):
         if parsed:
             st.json(parsed)
         else:
-            st.write(val)
+            st.markdown(val)
 
     except Exception:
-        st.write(val)
-
+        st.markdown(val)
 
 def show_issues_selection_buttons(all_issues, suffix, explanation):
     st.header("🔍 Select Filters")
@@ -935,8 +934,8 @@ def show_instance_results(elected_row, selected_index):
                 with st.expander(f"**{column}:**"):
                     st.markdown(elected_row[column])
 
-        st.markdown("**Response:**")
-        st.markdown(elected_row.get('response', 'N/A'))
+        with st.expander("**Response:**"):
+            print_json_fallback_string(elected_row.get('response', 'N/A'))
 
         with st.expander("**Model Input (Prompt):**"):
             st.text(elected_row.get('model_input', 'N/A'))
