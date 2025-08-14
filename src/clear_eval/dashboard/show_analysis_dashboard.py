@@ -177,9 +177,15 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
 
     df_sorted = df_comp.sort_values("Full Dataset", ascending=False)
 
+    def wrap_label(label, width=40):
+        trimmed_label = ' '.join(label.split(' ')[:14])
+        if len(trimmed_label) < len(label):
+            trimmed_label += "..."
+        return '\n'.join(textwrap.wrap(trimmed_label, width))
+
     # Wrap long labels
     def wrap_labels(labels, width=40):
-        return ['\n'.join(textwrap.wrap(label, width)) for label in labels]
+        return [wrap_label(label, width) for label in labels]
 
     wrapped_labels = wrap_labels(df_sorted.index.tolist(), width=40)
 
