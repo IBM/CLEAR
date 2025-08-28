@@ -100,7 +100,12 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     if resume_enabled:
         mapped_data_df = load_dataframe_from_cache(mapping_data_output_path, expected_rows=len(eval_df))
     if mapped_data_df is None:
-        mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, deduplicated_shortcomings_list, config)
+        use_full_text = config['use_full_text_for_analysis']
+        qid_col = config['qid_column']
+        max_workers = config['max_workers']
+        high_score_threshold = config.get("high_score_threshold", 1)
+        mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, deduplicated_shortcomings_list, use_full_text,
+                                                     qid_col, max_workers, high_score_threshold)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
 
