@@ -359,12 +359,10 @@ def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, syst
                 return shortcomings_result, identified_shortcomings_names
 
 
-def map_shortcomings_to_records(df, llm, shortcomings_list, config):
+def map_shortcomings_to_records(df, llm, shortcomings_list,
+                                use_full_text, qid_col, max_workers, high_score_threshold):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
     logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
-    use_full_text = config['use_full_text_for_analysis']
-    qid_col = config['qid_column']
-    max_workers = config['max_workers']
     df[IDENTIFIED_SHORTCOMING_COL] = ""
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     if shortcomings_list is None:
@@ -391,7 +389,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list, config):
     for idx, row in df.iterrows():
         if pd.isna(row[SCORE_COL]):
             inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
-        elif row[SCORE_COL] >= config.get("high_score_threshold", 1):
+        elif row[SCORE_COL] >= high_score_threshold:
             inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
         else:
             n_records_to_map += 1
@@ -452,7 +450,6 @@ def load_inputs(config, data_path, load_predictions, task_data):
         data_df.loc[:, model_input_column] = data_df.apply(lambda row: task_data.get_default_generation_model_inputs(row, config), axis=1)
 
     for c in task_data.required_input_fields:
-        #print(c, config.get(c))
         if config[c] not in list(data_df.columns):
               raise ValueError(f"Required column {config[c]} not found in data")
 
