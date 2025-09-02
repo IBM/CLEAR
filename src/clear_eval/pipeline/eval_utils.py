@@ -591,3 +591,16 @@ def get_llm(provider, model_name, eval_mode=True):
     if llm is None:
         raise ValueError(f"Error initializing LLM ({provider}, {model_name}).")
     return llm
+
+def create_aggregations_from_df(df, eval_llm, use_full_text, max_shortcomings, high_score_threshold, max_workers,
+                                score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None):
+    evaluation_text_list = get_evaluation_texts_for_synthesis(df, use_full_text, score_col, high_score_threshold, max_eval_text_for_synthesis)
+    shortcoming_list = synthesize_shortcomings(evaluation_text_list, eval_llm, min_shortcomings=None,
+                            max_shortcomings = None, batch_size=100, )
+    deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, max_shortcomings)
+    mapped_data_df = map_shortcomings_to_records(df, eval_llm, deduplicated_shortcomings_list, use_full_text,
+                                                 qid_col, max_workers, high_score_threshold)
+    qid_to_issues = zip(mapped_data_df[qid_col], mapped_data_df[IDENTIFIED_SHORTCOMING_COL])
+    return qid_to_issues
+
+
