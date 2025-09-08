@@ -932,7 +932,7 @@ def show_instance_results(elected_row, selected_index):
         for column in input_columns:
             if column in elected_row:
                 with st.expander(f"**{column}:**"):
-                    st.markdown(elected_row[column])
+                    print_json_fallback_string(elected_row[column])
 
         with st.expander("**Response:**"):
             print_json_fallback_string(elected_row.get('response', 'N/A'))
