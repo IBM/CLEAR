@@ -37,18 +37,18 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
             return f"Error during evaluation: {str(e)}", pd.NA
 
 
-def evaluate_single_records(df, llm, config, get_evaluation_prompt_func):
+def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
     """Evaluates predictions and adds scores."""
     logger.info(f"\n--- Evaluating Predictions ---")
 
     if llm is None:
         logger.error("Error: Evaluation LLM not initialized. Skipping evaluation.")
         df[EVALUATION_TEXT_COL] = "Error: LLM not available"
-        df[SCORE_COL] = pd.NA
+        df[score_col] = pd.NA
         return df
 
     df[EVALUATION_TEXT_COL] = ""
-    df[SCORE_COL] = pd.NA  # Use Pandas NA for missing scores
+    df[score_col] = pd.NA  # Use Pandas NA for missing scores
 
     inputs_for_threading = []
     for idx, row in df.iterrows():
@@ -73,11 +73,11 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func):
             score = None
 
         df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
-        df.at[df.index[i], SCORE_COL] = score if pd.isna(score) else float(score)
+        df.at[df.index[i], score_col] = score if pd.isna(score) else float(score)
 
     logger.info("Finished evaluating predictions.")
     # Convert score column to nullable float type
-    df[SCORE_COL] = df[SCORE_COL].astype('Float64')
+    df[score_col] = df[score_col].astype('Float64')
     return df
 
 def produce_summaries_per_record(df, llm, config):
@@ -171,8 +171,8 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
         return "Error during summary generation."
 
 
-def sample_summaries_by_score(df, N):
-    scores = df[SCORE_COL]
+def sample_summaries_by_score(df, N, score_col = SCORE_COL):
+    scores = df[score_col]
     score_indices = df.index
     alpha = 4.0
     weights = (1 - scores) ** alpha
@@ -182,14 +182,14 @@ def sample_summaries_by_score(df, N):
     return sampled_df_p
 
 
-def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_threshold=1, max_eval_text_for_synthesis=None):
+def get_evaluation_texts_for_synthesis(df, use_full_text, score_col = SCORE_COL, score_threshold=1, max_eval_text_for_synthesis=None):
     # Get valid evaluation texts from evaluation texts with score < 1
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     valid_df = df[df[score_col] < score_threshold]
     valid_df = valid_df[~valid_df[evaluation_text_col].apply(is_missing_or_error)]
 
     if max_eval_text_for_synthesis and max_eval_text_for_synthesis < len(valid_df):
-        final_df = sample_summaries_by_score(valid_df, max_eval_text_for_synthesis)
+        final_df = sample_summaries_by_score(valid_df, max_eval_text_for_synthesis, score_col)
     else:
         final_df = valid_df
 
@@ -197,10 +197,10 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col, score_thres
     logger.info(f"returning {len(valid_eval_texts)}/{len(valid_df)} valid evaluation texts ({len(df)} total)")
     return valid_eval_texts
 
-def synthesize_shortcomings_from_df(df, llm, config):
+def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL):
     use_full_text = config['use_full_text_for_analysis']
     max_eval_text_for_synthesis = config['max_eval_text_for_synthesis']
-    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=SCORE_COL,
+    eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=score_col,
                                                     score_threshold=config.get("high_score_threshold", 1),
                                                     max_eval_text_for_synthesis=max_eval_text_for_synthesis)
     return synthesize_shortcomings(eval_texts, llm,
@@ -360,7 +360,7 @@ def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, syst
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list,
-                                use_full_text, qid_col, max_workers, high_score_threshold):
+                                use_full_text, qid_col, max_workers, high_score_threshold, score_col = SCORE_COL):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
     logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
     df[IDENTIFIED_SHORTCOMING_COL] = ""
@@ -387,9 +387,9 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
     inputs_for_threading = []
     n_records_to_map = 0
     for idx, row in df.iterrows():
-        if pd.isna(row[SCORE_COL]):
+        if pd.isna(row[score_col]):
             inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
-        elif row[SCORE_COL] >= high_score_threshold:
+        elif row[score_col] >= high_score_threshold:
             inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
         else:
             n_records_to_map += 1
