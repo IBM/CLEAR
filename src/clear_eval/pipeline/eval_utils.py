@@ -598,7 +598,12 @@ def create_aggregations_from_df(df, eval_llm, use_full_text, max_shortcomings, h
     shortcoming_list = synthesize_shortcomings(evaluation_text_list, eval_llm, min_shortcomings=None,
                             max_shortcomings = None, batch_size=100, )
     deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, max_shortcomings)
-    mapped_data_df = map_shortcomings_to_records(df, eval_llm, deduplicated_shortcomings_list, use_full_text,
+    return map_shortcomings_from_df(df, deduplicated_shortcomings_list,  eval_llm, use_full_text, high_score_threshold, max_workers,
+                                score_col = score_col, qid_col=qid_col)
+
+def map_shortcomings_from_df(df, shortcomings_list,  eval_llm, use_full_text, high_score_threshold, max_workers,
+                                score_col = SCORE_COL, qid_col="id"):
+    mapped_data_df = map_shortcomings_to_records(df, eval_llm, shortcomings_list, use_full_text,
                                                  qid_col, max_workers, high_score_threshold, score_col)
     qid_to_issues = dict(zip(mapped_data_df[qid_col], mapped_data_df[IDENTIFIED_SHORTCOMING_COL]))
     return qid_to_issues
