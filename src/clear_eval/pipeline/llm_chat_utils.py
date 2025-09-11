@@ -39,7 +39,7 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
         if eval_mode:
             parameters["temperature"] = 0
         if not model_base:
-            model_base = model_id.split("/")[-1].replace(".", "-").lower().replace("-vision", "").replace("-Instruct", "")
+            model_base = model_id.split("/")[-1].replace(".", "-").lower().replace("-vision", "")
         return ChatOpenAI(
             model=model_id,
             api_key='/',
@@ -79,4 +79,10 @@ model_name_to_rits_base = {
     "microsoft/Phi-4-reasoning": "phi-4-reasoning",
     "mistralai/mixtral-8x7B-instruct-v0.1": "mixtral-8x7b-instruct-v01",
     "mistralai/mixtral-8x22B-instruct-v0.1": "mixtral-8x22b-instruct-v01",
+    "meta-llama/llama-4-maverick-17b-128e-instruct-fp8": "llama-4-mvk-17b-128e-fp8",
+    "deepseek-ai/DeepSeek-V3": "deepseek-v3-h200",
+    "meta-llama/Llama-3.1-8B-Instruct": "llama-3-1-8b-instruct",
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct": "llama-4-scout-17b-16e-instruct",
+    "mistralai/Mistral-Small-3.1-24B-Instruct-2503": "mistral-small-3-1-24b-2503",
+    "ibm-granite/granite-guardian-3.2-5b": "granite-guardian-3-2-5b-ris",
 }
