@@ -196,11 +196,11 @@ Arguments can be provided via:
 
 Depending on your selected `--provider`:
 
-| Provider   | Required Environment Variables                                      |
-|------------|---------------------------------------------------------------------|
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]              |                                   |
-| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `PROJECT_ID` |
-| `rits`     | `RITS_API_KEY`                                                      |
+| Provider   | Required Environment Variables                                              |
+|------------|-----------------------------------------------------------------------------|
+| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
+| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
+| `rits`     | `RITS_API_KEY`                                                              |
 
 ---
 
