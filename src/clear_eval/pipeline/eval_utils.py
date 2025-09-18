@@ -197,17 +197,17 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col = SCORE_COL,
     logger.info(f"returning {len(valid_eval_texts)}/{len(valid_df)} valid evaluation texts ({len(df)} total)")
     return valid_eval_texts
 
-def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL):
+def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL, synthesis_template=None):
     use_full_text = config['use_full_text_for_analysis']
     max_eval_text_for_synthesis = config['max_eval_text_for_synthesis']
     eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=score_col,
                                                     score_threshold=config.get("high_score_threshold", 1),
                                                     max_eval_text_for_synthesis=max_eval_text_for_synthesis)
     return synthesize_shortcomings(eval_texts, llm,
-                                   min_shortcomings=config['min_shortcomings'])
+                                   min_shortcomings=config['min_shortcomings'], synthesis_template=synthesis_template)
 
 def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
-                            max_shortcomings = None, batch_size=100, ):
+                            max_shortcomings = None, batch_size=100, synthesis_template=None):
     """Analyzes evaluation texts to identify common shortcomings."""
     logger.info(f"\nSynthesizing Shortcomings List")
 
@@ -227,7 +227,10 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
 
         # Create the prompt for synthesis
         if not overall_shortcoming_list:
-            synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
+            if synthesis_template is not None:
+                synthesis_prompt = synthesis_template.format(concatenated_texts, max_shortcomings)
+            else:
+                synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
         else:
             shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
             synthesis_prompt = get_shortcomings_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings)
@@ -593,10 +596,10 @@ def get_llm(provider, model_name, eval_mode=True):
     return llm
 
 def create_aggregations_from_df(df, eval_llm, use_full_text, max_shortcomings, high_score_threshold, max_workers,
-                                score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None):
+                                score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None, synthesis_template=None):
     evaluation_text_list = get_evaluation_texts_for_synthesis(df, use_full_text, score_col, high_score_threshold, max_eval_text_for_synthesis)
     shortcoming_list = synthesize_shortcomings(evaluation_text_list, eval_llm, min_shortcomings=None,
-                            max_shortcomings = None, batch_size=100, )
+                            max_shortcomings = None, batch_size=100, synthesis_template=synthesis_template)
     deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, max_shortcomings)
     return map_shortcomings_from_df(df, deduplicated_shortcomings_list,  eval_llm, use_full_text, high_score_threshold, max_workers,
                                 score_col = score_col, qid_col=qid_col)
