@@ -109,14 +109,18 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
                                                      qid_col, max_workers, high_score_threshold)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
+    convert_to_ui_format(mapped_data_df, output_dir, required_input_fields, config, file_name_info)
 
+def convert_to_ui_format(mapped_data_df, output_dir, required_input_fields, config, file_name_info):
     # step5 : convert to ui format and save
     output_df = convert_results_to_ui_input(mapped_data_df, config, required_input_fields)
     output_path = f"{output_dir}/analysis_results_{file_name_info}.csv"
     logger.info(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
     save_dataframe_to_cache(output_df, output_path)
     logger.info(f"Custom formatted analysis results saved to {output_path}")
+    save_ui_input_results(output_df, output_path, config)
 
+def save_ui_input_results(output_df, output_path, config):
     # save outputs to zip
     parquet_bytes = get_parquet_bytes(output_df)
     #csv_bytes = output_df.to_csv(index=False).encode()
@@ -243,5 +247,5 @@ def run_eval_pipeline(config):
 
 
 if __name__ == "__main__":
-    config = load_yaml(os.path.join(SCRIPT_DIR, 'setup', 'default_config.yaml'))
-    run_eval_pipeline(config)
+    main_config = load_yaml(os.path.join(SCRIPT_DIR, 'setup', 'default_config.yaml'))
+    run_eval_pipeline(main_config)
