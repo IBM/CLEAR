@@ -116,7 +116,9 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     logger.info(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
     save_dataframe_to_cache(output_df, output_path)
     logger.info(f"Custom formatted analysis results saved to {output_path}")
+    save_ui_input_results(output_df, output_path, config)
 
+def save_ui_input_results(output_df, output_path, config):
     # save outputs to zip
     parquet_bytes = get_parquet_bytes(output_df)
     #csv_bytes = output_df.to_csv(index=False).encode()
@@ -243,5 +245,5 @@ def run_eval_pipeline(config):
 
 
 if __name__ == "__main__":
-    config = load_yaml(os.path.join(SCRIPT_DIR, 'setup', 'default_config.yaml'))
-    run_eval_pipeline(config)
+    main_config = load_yaml(os.path.join(SCRIPT_DIR, 'setup', 'default_config.yaml'))
+    run_eval_pipeline(main_config)
