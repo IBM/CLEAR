@@ -77,7 +77,8 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
     if resume_enabled:
         shortcoming_list = load_json_from_cache(shortcoming_list_output_path)
     if shortcoming_list is None:
-        shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config)
+        synthesis_template = config.get("synthesis_template")
+        shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config, synthesis_template=synthesis_template)
         save_json_to_cache(shortcoming_list, shortcoming_list_output_path)
         resume_enabled = False
 
