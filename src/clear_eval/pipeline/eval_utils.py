@@ -226,14 +226,15 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
         concatenated_texts = "\n---\n".join(evaluation_text_batch)
 
         # Create the prompt for synthesis
-        if not overall_shortcoming_list:
-            if synthesis_template is not None:
-                synthesis_prompt = synthesis_template.format(concatenated_texts, max_shortcomings)
-            else:
-                synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
+        # If synthesis template is given, use it for each batch and only merge duplicates later.
+        if synthesis_template is not None:
+            synthesis_prompt = synthesis_template.format(max_shortcomings, concatenated_texts)
         else:
-            shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
-            synthesis_prompt = get_shortcomings_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings)
+            if not overall_shortcoming_list:
+                synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
+            else:
+                shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
+                synthesis_prompt = get_shortcomings_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings)
 
         try:
             messages = [
