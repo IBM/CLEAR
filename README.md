@@ -56,6 +56,10 @@ This will:
 - Run the full CLEAR pipeline
 - Save results under: `results/gsm8k/sample_output/`
 
+The sample dataset which is used as default by the analysis can be found [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/gsm8k_default_predictions.csv).
+
+The default configuration file which uses this can be found [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/pipeline/setup/default_config.yaml).
+
 4. ###  **View results in the interactive dashboard:**
 
 ```bash
@@ -132,6 +136,8 @@ run_clear_eval_analysis(
     config_path="configs/sample_run_config.yaml"
 )
 ```
+
+For an example data and configuration files, please see [Run on sample data](#run-on-sample-data).
 
 You may also pass overrides instead of using a config file:
 
