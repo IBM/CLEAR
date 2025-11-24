@@ -186,7 +186,12 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col = SCORE_COL,
     # Get valid evaluation texts from evaluation texts with score < 1
     evaluation_text_col = EVALUATION_TEXT_COL if use_full_text else EVALUATION_SUMMARY_COL
     valid_df = df[df[score_col] < score_threshold]
+    if len(valid_df) == 0:
+        return []
+
     valid_df = valid_df[~valid_df[evaluation_text_col].apply(is_missing_or_error)]
+    if len(valid_df) == 0:
+        return []
 
     if max_eval_text_for_synthesis and max_eval_text_for_synthesis < len(valid_df):
         final_df = sample_summaries_by_score(valid_df, max_eval_text_for_synthesis, score_col)
@@ -501,6 +506,9 @@ def generate_model_predictions(df, llm, config):
 
 def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_retries=3):
     logger.info(f"Removing duplications from list of {len(shortcoming_list)} shortcomings")
+    if not shortcoming_list:
+        logger.info(f"No shortcomings found")
+        return []
     try:
         clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list, max_shortcomings)
         new_shortcoming_list = []
