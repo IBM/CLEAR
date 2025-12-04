@@ -44,6 +44,8 @@ def parse_args():
     parser.add_argument("--agent-mode", type=str2bool, default=False,
                         help="Whether to use a default evaluation criteria suited for an agentic step and not a single llm response")
 
+    parser.add_argument("--max-workers", type=int, default=None,
+                        help="number of parallel inferences")
 
     args = parser.parse_args()
 
