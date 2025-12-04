@@ -27,3 +27,12 @@ def run_clear_eval_generation(config_path=None, **kwargs):
 def run_clear_eval_aggregation(config_path=None, **kwargs):
     config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
     run_aggregation_pipeline(config_dict)
+
+def run_clear_eval_single_record_evaluation(config_path=None, **kwargs):
+    config_dict = load_config(DEFAULT_CONFIG_PATH, config_path, **kwargs)
+    config_dict["perform_generation"] = False
+    config_dict["generate_issues"] = False
+    run_eval_pipeline(config_dict)
+
+if __name__ == "__main__":
+    run_clear_eval_evaluation()
