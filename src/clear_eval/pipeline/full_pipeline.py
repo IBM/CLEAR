@@ -142,6 +142,15 @@ def run_aggregation_pipeline(config):
     eval_df = pd.read_csv(eval_file)
     run_aggregation_from_df(config, eval_df, run_info)
 
+def run_evaluation_from_df(config, response_df, ):
+    task = config.get("task")
+    task_data = task_to_use_case_class.get(task)
+    provider = config["provider"]
+    eval_llm = get_llm(provider, config["eval_model_name"])
+    eval_df = evaluate_single_records(response_df, eval_llm, config, task_data.generate_evaluation_model_prompt)
+    if not config.get("use_full_text_for_analysis"):
+        eval_df = produce_summaries_per_record(eval_df, eval_llm, config)
+    return eval_df
 
 def run_aggregation_from_df(config, eval_df, file_name_info):
 
