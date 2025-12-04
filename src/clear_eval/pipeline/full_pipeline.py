@@ -104,7 +104,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         use_full_text = config['use_full_text_for_analysis']
         qid_col = config['qid_column']
         max_workers = config['max_workers']
-        high_score_threshold = config.get("high_score_threshold", 1)
+        high_score_threshold = config.get("success_threshold", 1)
         mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, deduplicated_shortcomings_list, use_full_text,
                                                      qid_col, max_workers, high_score_threshold)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)

@@ -206,7 +206,7 @@ def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL, synthe
     use_full_text = config['use_full_text_for_analysis']
     max_eval_text_for_synthesis = config['max_eval_text_for_synthesis']
     eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=score_col,
-                                                    score_threshold=config.get("high_score_threshold", 1),
+                                                    score_threshold=config.get("success_threshold", 1),
                                                     max_eval_text_for_synthesis=max_eval_text_for_synthesis)
     return synthesize_shortcomings(eval_texts, llm,
                                    min_shortcomings=config['min_shortcomings'], synthesis_template=synthesis_template)

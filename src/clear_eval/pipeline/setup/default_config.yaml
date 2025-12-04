@@ -2,12 +2,12 @@
 provider: watsonx
 provider_defaults:
   openai:
-    eval_model_name: gpt-4o
-    gen_model_name: gpt-3.5-turbo
+    gen_model_name: gpt-4o
+    eval_model_name: gpt-3.5-turbo
     max_workers: 10
   azure:
-    eval_model_name: gpt-4o-2024-08-06
     gen_model_name: gpt-4o-mini-2024-07-18
+    eval_model_name: gpt-4o-2024-08-06
     max_workers: 20
   watsonx:
     gen_model_name: ibm/granite-3-3-8b-instruct
@@ -32,7 +32,7 @@ output_dir: "results/gsm8k/sample_output/"
 
 max_examples_to_analyze: null # for debugging
 
-high_score_threshold: 0.91
+success_threshold: 0.91
 # whether to use reference in the evaluations.
 is_reference_based: false
 
