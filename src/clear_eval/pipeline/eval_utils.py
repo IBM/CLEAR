@@ -60,7 +60,7 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
     results = run_func_in_threads(
         evaluate_row,
         inputs_for_threading,
-        max_workers=config['max_workers'],  # Or make this configurable
+        max_workers=config['max_workers'],
         error_prefix="Error: Evaluation Error for ",
         progress_desc=f"Evaluating predictions "
     )
@@ -91,7 +91,7 @@ def produce_summaries_per_record(df, llm, config):
     thread_results = run_func_in_threads(
         generate_evaluation_summary,
         inputs_for_summary,
-        max_workers=config['max_workers'],  # Or make this configurable
+        max_workers=config['max_workers'],
         error_prefix="Error: Summary Generation Error for ",
         progress_desc=f"Generating evaluation summaries"
     )
@@ -493,7 +493,7 @@ def generate_model_predictions(df, llm, config):
     thread_results = run_func_in_threads(
         predict_row,
         inputs_for_threading,
-        max_workers=config["max_workers"],  # Or make this configurable
+        max_workers=config["max_workers"],
         error_prefix="Error: Prediction Error for ",
         progress_desc=f"Generating predictions"
     )
