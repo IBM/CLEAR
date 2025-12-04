@@ -34,7 +34,7 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
             response = llm.invoke(prompt)
             return parse_evaluation_response(response.content)
         except Exception as e:
-            return f"Error during evaluation: {str(e)}", pd.NA
+            return f"Error: during evaluation: {str(e)}", pd.NA
 
 
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
@@ -168,7 +168,7 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
         return summary
     except Exception as e:
         logger.error(f"Error generating evaluation summary for QID {question_id}: {e}")
-        return "Error during summary generation."
+        return "Error: during summary generation."
 
 
 def sample_summaries_by_score(df, N, score_col = SCORE_COL):
