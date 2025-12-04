@@ -69,8 +69,9 @@ class EvaluationCriteria:
         return {c.name: c.description for c in self.criteria_list}
 
 
-def get_default_evaluation_criteria():
-    return EvaluationCriteria.from_dict(default_eval_criteria_dict)
+def get_default_evaluation_criteria(agent_mode: bool) -> EvaluationCriteria:
+    eval_dict = default_agentic_eval_criteria_dict if agent_mode else default_eval_criteria_dict
+    return EvaluationCriteria.from_dict(eval_dict)
 
 
 default_eval_criteria_dict = {
@@ -81,4 +82,16 @@ default_eval_criteria_dict = {
         "omitting critical details?",
     "Coherence & Clarity":
         "Does the response make sense, follow a logical flow, and is it easy to understand?",
+}
+
+default_agentic_eval_criteria_dict = {
+    "Correctness": "The response produces accurate and logically sound results. For a final answer, this meets the user's stated requirements. For a partial response, such as a tool call, this means selecting the appropriate tool and providing accurate and logical parameters that correctly advance the task.",
+    "Completeness": "For a final answer, all parts of the user's request are addressed. For a partial response, the step taken is a logical and self-contained action that moves towards fulfilling the user's request, without missing essential elements for that specific step.",
+    "Clarity": "The explanation and code are easy to read, well-structured, and unambiguous.",
+    "Relevance": "The response stays focused on the question without unnecessary or off-topic content.",
+    "Efficiency": "The proposed solution is optimized for performance, avoiding unnecessary complexity.",
+    "Robustness": "The solution handles edge cases and potential errors gracefully.",
+    "Best_Practices": "The solution follows accepted conventions, style guidelines, and maintainable coding standards.",
+    "Actionability": "The response provides directly usable steps without requiring significant rework.",
+    "Transparency": "Reasoning, assumptions, and decisions are clearly explained.",
 }

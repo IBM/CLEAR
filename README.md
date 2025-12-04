@@ -194,8 +194,9 @@ Arguments can be provided via:
 | `--is_reference_based`  | Use reference-based evaluation (requires `ground_truth` column in input)                                                                   | False   |
 | `--resume_enabled`      | Whether to reuse intermediate outputs from previous runs stored in output_dir                                                              | True    |
 | `--evaluation_criteria` | Custom criteria dictionary for scoring individual records: `{"criteria_name1":"criteria_desc1", ...}`supported for yaml config and python. | None    |
-| `--input_columns`       | Comma-separated list of additional input fields (other than `model_input`) to appear in the results and dashboard (e.g. `question`)        | None    | 
-
+| `--input_columns`       | Comma-separated list of additional input fields (other than `model_input`) to appear in the results and dashboard (e.g. `question`)        | None    |
+| `--agent_mode`          | boolean, if True - use a default evaluation criteria suited for an agentic step and not a single llm response                              | False   |
+| `--success_threshold`   | float, the minimum judge score required for a single record to be considered successful                                                    | 0.91    |
 ---
 
 ## 🔑Supported providers and credentials

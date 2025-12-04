@@ -40,6 +40,10 @@ def parse_args():
                                                 "the judge. Example: --evaluation-criteria '{\"correction\": \"Response is factually correct\"}'")
     parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
     parser.add_argument("--input-columns", nargs='+', help="List of column names to present in the ui")
+    parser.add_argument("--success-threshold", type=float, help="the minimum judge score required for a single record to be considered successful ")
+    parser.add_argument("--agent-mode", type=str2bool, default=False,
+                        help="Whether to use a default evaluation criteria suited for an agentic step and not a single llm response")
+
 
     args = parser.parse_args()
 

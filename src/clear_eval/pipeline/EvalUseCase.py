@@ -36,7 +36,8 @@ class EvalUseCase:
 
         evaluation_criteria = config.get('evaluation_criteria')
         if not evaluation_criteria:
-            evaluation_criteria = get_default_evaluation_criteria()
+            agent_mode = config.get('agent_mode', False)
+            evaluation_criteria = get_default_evaluation_criteria(agent_mode)
         if isinstance(evaluation_criteria, dict):
             evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
         evaluation_criteria_str = evaluation_criteria.to_str()
