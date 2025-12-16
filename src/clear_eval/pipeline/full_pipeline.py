@@ -18,7 +18,7 @@ from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_da
     ensure_dir, \
     load_json_from_cache, resolve_data_path
 from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, get_llm, \
-    load_inputs, generate_model_predictions, evaluate_single_records, synthesize_shortcomings_from_df, \
+    load_inputs, generate_model_predictions, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
 from clear_eval.pipeline.config_loader import load_yaml
 
@@ -147,7 +147,7 @@ def run_evaluation_from_df(config, response_df, ):
     task_data = task_to_use_case_class.get(task)
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
-    eval_df = evaluate_single_records(response_df, eval_llm, config, task_data.generate_evaluation_model_prompt)
+    eval_df = task_data.eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
         eval_df = produce_summaries_per_record(eval_df, eval_llm, config)
     return eval_df
@@ -232,7 +232,7 @@ def run_eval_pipeline(config):
             evaluation_output_path_1 = f"{output_dir}/{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv"
             eval_df_0 = load_dataframe_from_cache(evaluation_output_path_1, expected_rows=len(gen_df))
     if eval_df_0 is None:
-        eval_df_0 = evaluate_single_records(gen_df, eval_llm, config, task_data.generate_evaluation_model_prompt)
+        eval_df_0 = task_data.eval_records(gen_df, eval_llm, config)
         save_dataframe_to_cache(eval_df_0, evaluation_output_path_0)
         resume_enabled = False
 
