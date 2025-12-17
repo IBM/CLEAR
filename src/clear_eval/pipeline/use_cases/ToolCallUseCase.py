@@ -63,9 +63,9 @@ class ToolCallEvalUseCase(EvalUseCase):
         # TODO: IMPLEMENT
         return "Correct tool call", 1
 
-    def generate_spark_evaluation_results(self, examples, provider, model_name):
+    def generate_spark_evaluation_results(self, examples: List[Dict[str, Any]], provider: str, model_name: str):
         """Generates spark evaluation results."""
-        # examples - List[Dict[str, Any]], keys: context, api_spec, call, values: json objects
+        # examples - List[Dict[str, Any]], keys: context, api_spec, call, values: the json objects
         # provider - rits/watsonx/openai
         # model_name: str
 
