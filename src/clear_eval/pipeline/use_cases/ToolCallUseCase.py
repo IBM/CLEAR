@@ -334,7 +334,7 @@ if __name__ == "__main__":
     df[ToolCallEvalUseCase.SPECS_COL] = json.dumps(apis_specs)
     df[ToolCallEvalUseCase.RESPONSE_COL] = df[ToolCallEvalUseCase.RESPONSE_COL].apply(json.dumps)
     df[ToolCallEvalUseCase.CONTEXT_COL] = df[ToolCallEvalUseCase.CONTEXT_COL].apply(json.dumps)
-    df[ToolCallEvalUseCase.ID_COL] = list(range(len(df)))
+    df[ToolCallEvalUseCase.ID_COL] = df.index.astype(str)
     llm = get_chat_llm(config["provider"], config["eval_model_name"], eval_mode=True)
 
     tool_call_use_case = ToolCallEvalUseCase()
