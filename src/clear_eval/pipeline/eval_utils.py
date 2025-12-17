@@ -37,35 +37,6 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
             return f"Error: during evaluation: {str(e)}", pd.NA
 
 
-def evaluate_single_records_tool_call(df, llm, config, score_col=SCORE_COL):
-
-    # """Evaluates predictions and adds scores."""
-    logger.info(f"\n--- Evaluating Tool calls predictionsPredictions ---")
-    df[EVALUATION_TEXT_COL] = ""
-    df[score_col] = pd.NA  # Use Pandas NA for missing scores
-
-    # TODO
-    # spark_llm = get_spark_llm(llm)
-    # construct input examples from df (input fields tool_spec and conversation_history given)
-    # construct spark pipeline
-
-    # call spark with pipeline over examples, results store sorted results over the examples
-    results = []
-
-    # extract output score and evaluation text from each results (concatenate failing explanations? minimum/average score over metrics?)
-    for i, result in enumerate(results):
-        (eval_text, score) = None # TODO extract eval text and score from results
-        score = score if pd.isna(score) else float(score)
-
-        df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
-        df.at[df.index[i], score_col] = score if pd.isna(score) else float(score)
-
-    logger.info("Finished evaluating predictions.")
-    # Convert score column to nullable float type
-    df[score_col] = df[score_col].astype('Float64')
-    return df
-
-
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
     """Evaluates predictions and adds scores."""
     logger.info(f"\n--- Evaluating Predictions ---")
