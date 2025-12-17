@@ -6,8 +6,8 @@ from clear_eval.pipeline.evaluation_criteria import EvaluationCriteria, get_defa
 from clear_eval.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
     get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
-from clear_eval.pipeline.constants import ANALYSIS_SKIPPED, SCORE_COL
-from clear_eval.pipeline.eval_utils import evaluate_single_records, evaluate_single_records_tool_call
+from clear_eval.pipeline.constants import ANALYSIS_SKIPPED, SCORE_COL, EVALUATION_TEXT_COL
+from clear_eval.pipeline.eval_utils import evaluate_single_records
 
 
 class EvalUseCase:
@@ -51,9 +51,8 @@ class EvalUseCase:
         else:
             return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
 
-    @classmethod
-    def eval_records(cls, df, llm, config, score_col=SCORE_COL):
-        get_evaluation_prompt_func = cls.generate_evaluation_model_prompt
+    def eval_records(self, df, llm, config, score_col=SCORE_COL):
+        get_evaluation_prompt_func = self.generate_evaluation_model_prompt
         return evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col)
 
 
@@ -142,25 +141,3 @@ class RAGUseCase(EvalUseCase):
             return get_rag_evaluation_prompt_reference_based(question, model_answer, reference)
         else:
             return get_rag_evaluation_prompt_reference_free(question, documents, model_answer)
-
-
-class ToolCallEvalUseCase(EvalUseCase):
-
-    @classmethod
-    def eval_records(cls, df, llm, config, score_col = SCORE_COL):
-        return evaluate_single_records_tool_call(df, llm, config, score_col)
-
-    @staticmethod
-    def generate_evaluation_model_prompt(row, config):
-        return None
-
-    @staticmethod
-    def get_default_generation_model_inputs(row, config):
-        raise NotImplementedError("Tool Call generations must be provided")
-
-task_to_use_case_class = {
-    "math": MathUseCase,
-    "rag": RAGUseCase,
-    "general": GeneralEvalUseCase,
-    "tool_call": ToolCallEvalUseCase
-}

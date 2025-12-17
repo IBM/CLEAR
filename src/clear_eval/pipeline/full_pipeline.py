@@ -1,6 +1,5 @@
 import json
 import logging
-import sys
 import os
 import zipfile
 import io
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 import pandas as pd
 
-from clear_eval.pipeline.EvalUseCase import task_to_use_case_class
+from clear_eval.pipeline.use_cases.use_case_utils import get_use_case_class, get_supported_use_case_classes
 from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
                                            EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
                                            MAPPING_FILE_PREFIX)
@@ -18,7 +17,7 @@ from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_da
     ensure_dir, \
     load_json_from_cache, resolve_data_path
 from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, get_llm, \
-    load_inputs, generate_model_predictions, synthesize_shortcomings_from_df, \
+    load_inputs, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
 from clear_eval.pipeline.config_loader import load_yaml
 
@@ -37,7 +36,7 @@ def run_generation_pipeline(config):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = task_to_use_case_class.get(task)
+    task_data = get_use_case_class(task)
 
     data_path = resolve_data_path(config["data_path"])
     data_df = load_inputs(config, data_path, load_predictions = False, task_data = task_data)
@@ -144,10 +143,10 @@ def run_aggregation_pipeline(config):
 
 def run_evaluation_from_df(config, response_df, ):
     task = config.get("task")
-    task_data = task_to_use_case_class.get(task)
+    task_data = get_use_case_class(task)
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
-    eval_df = task_data.eval_records(response_df, eval_llm, config)
+    eval_df = task_data().eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
         eval_df = produce_summaries_per_record(eval_df, eval_llm, config)
     return eval_df
@@ -157,10 +156,10 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = task_to_use_case_class.get(task)
+    task_data = get_use_case_class(task)
     required_input_fields = task_data.required_input_fields
     if not task_data:
-        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(task_to_use_case_class.keys())}")
+        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(get_supported_use_case_classes())}")
 
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
@@ -186,9 +185,9 @@ def run_eval_pipeline(config):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = task_to_use_case_class.get(task)
+    task_data = get_use_case_class(task)
     if not task_data:
-        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(task_to_use_case_class.keys())}")
+        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(get_supported_use_case_classes())}")
 
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
@@ -232,7 +231,7 @@ def run_eval_pipeline(config):
             evaluation_output_path_1 = f"{output_dir}/{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv"
             eval_df_0 = load_dataframe_from_cache(evaluation_output_path_1, expected_rows=len(gen_df))
     if eval_df_0 is None:
-        eval_df_0 = task_data.eval_records(gen_df, eval_llm, config)
+        eval_df_0 = task_data().eval_records(gen_df, eval_llm, config)
         save_dataframe_to_cache(eval_df_0, evaluation_output_path_0)
         resume_enabled = False
 
