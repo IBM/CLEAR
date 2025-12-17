@@ -30,7 +30,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             examples.append({self.ID_COL:row[self.ID_COL],
                              self.CONTEXT_COL: json.loads(row[self.CONTEXT_COL]),
                              self.SPECS_COL: json.loads(row[self.SPECS_COL]),
-                             self.RESPONSE_COL: json.loads(row["response"])}) # responses are kept under "response"
+                             self.RESPONSE_COL: json.loads(row[self.RESPONSE_COL])})
 
         # call spark with pipeline over examples, results store sorted results over the examples
         results = self.generate_spark_evaluation_results(examples,
@@ -65,9 +65,8 @@ class ToolCallEvalUseCase(EvalUseCase):
 
     def generate_spark_evaluation_results(self, examples: List[Dict[str, Any]], provider: str, model_name: str):
         """Generates spark evaluation results."""
-        # examples - List[Dict[str, Any]], keys: context, api_spec, call, values: the json objects
+        # examples - List[Dict[str, Any]], keys: context, api_spec, response (the tool call), values: the json objects
         # provider - rits/watsonx/openai
-        # model_name: str
 
         # TODO
         # spark_llm = get_spark_llm(provider, model_name)
@@ -82,7 +81,7 @@ if __name__ == "__main__":
     model_name = "meta-llama/llama-3-3-70b-instruct"
     config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider, eval_model_name=model_name)
 
-    examples = [
+    test_examples = [
         # Example 1: valid get_weather
         {
             "call": {
@@ -330,7 +329,7 @@ if __name__ == "__main__":
         },
     ]
 
-    df = pd.DataFrame.from_records(examples).rename(columns={"call": ToolCallEvalUseCase.RESPONSE_COL,
+    df = pd.DataFrame.from_records(test_examples).rename(columns={"call": ToolCallEvalUseCase.RESPONSE_COL,
                                                              "context": ToolCallEvalUseCase.CONTEXT_COL})
     df[ToolCallEvalUseCase.SPECS_COL] = json.dumps(apis_specs)
     df[ToolCallEvalUseCase.RESPONSE_COL] = df[ToolCallEvalUseCase.RESPONSE_COL].apply(json.dumps)
