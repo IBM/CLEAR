@@ -31,7 +31,8 @@ dependencies = [
     "seaborn",
     "langchain_community",
     "numpy",
-    "pyarrow>=15.0.0"
+    "pyarrow>=15.0.0",
+    "agent-lifecycle-toolkit[refraction]",
 ]
 requires-python = ">=3.10"
 
