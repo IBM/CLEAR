@@ -14,6 +14,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+requires-python = ">=3.10"
+
 dependencies = [
     "python-dotenv",
     "langchain",
@@ -32,9 +34,13 @@ dependencies = [
     "langchain_community",
     "numpy",
     "pyarrow>=15.0.0",
+    "agent-lifecycle-toolkit[refraction]"
+]
+
+[project.optional-dependencies]
+tool_use = [
     "agent-lifecycle-toolkit[refraction]",
 ]
-requires-python = ">=3.10"
 
 [tool.setuptools]
 include-package-data = true
