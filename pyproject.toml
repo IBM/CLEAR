@@ -34,12 +34,11 @@ dependencies = [
     "langchain_community",
     "numpy",
     "pyarrow>=15.0.0",
-    "agent-lifecycle-toolkit[refraction]"
 ]
 
 [project.optional-dependencies]
-tool_use = [
-    "agent-lifecycle-toolkit[refraction]",
+tool-calls = [
+  "agent-lifecycle-toolkit[refraction] @ git+ssh://git@github.com/AgentToolkit/agent-lifecycle-toolkit.git"
 ]
 
 [tool.setuptools]
