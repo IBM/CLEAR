@@ -97,7 +97,7 @@ class ToolCallEvalUseCase(EvalUseCase):
 
     @staticmethod
     def get_default_generation_model_inputs(row, config):
-        raise NotImplementedError("Tool Call generations must be provided")
+        return ""
 
     def get_eval_from_results(self, result: SPARCReflectionResult) -> Tuple[str, float]:
         """
