@@ -1,3 +1,4 @@
+import asyncio
 import json
 from importlib.resources import files
 from typing import Tuple, Any, List, Dict
@@ -24,7 +25,7 @@ class ToolCallEvalUseCase(EvalUseCase):
     RESPONSE_COL = "response"
     ID_COL = "id"
 
-    def eval_records(self, df, llm, config, score_col = SCORE_COL):
+    async def eval_records(self, df, llm, config, score_col = SCORE_COL):
         """Evaluates predictions and adds scores."""
         logger.info(f"\n--- Evaluating Tool calls predictionsPredictions ---")
         df[EVALUATION_TEXT_COL] = ""
@@ -34,7 +35,7 @@ class ToolCallEvalUseCase(EvalUseCase):
         altk_llm_client = self.clear_llm_client_to_altk_llm_client(llm, config.get("provider"), config.get("eval_model_name"))
 
         # call sparc with pipeline over examples, results store sorted results over the examples
-        results = self.generate_sparc_evaluation_results(df=df, llm_client=altk_llm_client)
+        results = await self.generate_sparc_evaluation_results(df=df, llm_client=altk_llm_client)
 
         # extract output score and evaluation text from each results (concatenate failing explanations? minimum/average score over metrics?)
         for i, result in enumerate(results):
@@ -80,7 +81,9 @@ class ToolCallEvalUseCase(EvalUseCase):
             )
         elif provider == "openai":
             MetricsClientCls = get_llm("openai.async.output_val")
-            llm_client = MetricsClientCls(model_name=model_name, api_key="")
+            llm_client = MetricsClientCls(
+                model=llm.model_name,
+            )
         else:
             raise ValueError(f"Unsupported provider: {provider}")
         
@@ -116,12 +119,11 @@ class ToolCallEvalUseCase(EvalUseCase):
             return f"Tool call is invalid. Reasons:\n{explanation_text}", 0.0
     
 
-    def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[SPARCReflectionResult]:
+    async def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[SPARCReflectionResult]:
         """Generates sparc evaluation results."""
         sparc_component = SPARCReflectionComponent(
             config=ComponentConfig(llm_client=llm_client),
             track=Track.SLOW_TRACK,  # Use slow track for performance
-            execution_mode=SPARCExecutionMode.ASYNC,
         )
         reflection_results = []
         for _, example in df.iterrows():
@@ -130,7 +132,8 @@ class ToolCallEvalUseCase(EvalUseCase):
                     tool_specs=json.loads(example[self.SPECS_COL]),
                     tool_calls=[json.loads(example[self.RESPONSE_COL])],
                 )
-            reflection_result = sparc_component.process(run_input, phase=AgentPhase.RUNTIME).output.reflection_result
+            reflection_result = await sparc_component.aprocess(run_input, phase=AgentPhase.RUNTIME)
+            reflection_result = reflection_result.output.reflection_result
             reflection_results.append(reflection_result)
         
         return reflection_results
@@ -138,8 +141,10 @@ class ToolCallEvalUseCase(EvalUseCase):
 
 if __name__ == "__main__":
     DEFAULT_CONFIG_PATH = str(files("clear_eval.pipeline.setup").joinpath("default_config.yaml"))
+    # provider = "openai"
+    # model_name = "gpt-4o-mini"
     provider = "watsonx"
-    model_name = "meta-llama/llama-3-3-70b-instruct"
+    model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
     config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider, eval_model_name=model_name)
 
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
@@ -147,6 +152,5 @@ if __name__ == "__main__":
     llm = get_chat_llm(config["provider"], config["eval_model_name"], eval_mode=True)
 
     tool_call_use_case = ToolCallEvalUseCase()
-    evaluated_df = tool_call_use_case.eval_records(df, llm, config)
+    evaluated_df = asyncio.run(tool_call_use_case.eval_records(df, llm, config))
     evaluated_df.to_csv(sample_data_file.replace(".csv", "_eval.csv"), index=False)
-
