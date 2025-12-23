@@ -152,3 +152,5 @@ if __name__ == "__main__":
 
     tool_call_use_case = ToolCallEvalUseCase()
     evaluated_df = tool_call_use_case.eval_records(df, llm, config)
+    evaluated_df.to_csv(sample_data_file.replace(".csv", "_eval.csv"), index=False)
+
