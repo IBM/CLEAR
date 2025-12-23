@@ -459,7 +459,7 @@ def load_inputs(config, data_path, load_predictions, task_data):
         data_df.loc[:, model_input_column] = data_df.apply(lambda row: task_data.get_default_generation_model_inputs(row, config), axis=1)
 
     for c in task_data.required_input_fields:
-        if config[c] not in list(data_df.columns):
+        if config.get(c, c.replace("_column", "")) not in list(data_df.columns):
               raise ValueError(f"Required column {config[c]} not found in data")
 
     max_samples = config["max_examples_to_analyze"]
@@ -544,12 +544,13 @@ def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_
     except Exception as e:
        raise Exception(f"Failed to get shortcomings without duplications: {e}")
 
-def convert_results_to_ui_input(df, config, required_input_fields):
+def convert_results_to_ui_input(df, config, task_data):
     try:
+        required_input_fields = task_data.required_input_fields
         custom_output_df = pd.DataFrame()
 
-        for c in required_input_fields:
-            custom_output_df[c.replace("_column", "")] = df.get(config[c], pd.Series(dtype='str'))
+        for c in task_data.required_input_fields:
+            custom_output_df[c.replace("_column", "")] = df.get(config.get(c, c.replace("_column", "")), pd.Series(dtype='str'))
         for c in config.get("input_columns", []):
             custom_output_df[c] = df.get(c, pd.Series(dtype='str'))
 
