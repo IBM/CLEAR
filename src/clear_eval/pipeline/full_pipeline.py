@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 import pandas as pd
 
-from clear_eval.pipeline.use_cases.use_case_utils import get_use_case_class, get_supported_use_case_classes
+from clear_eval.pipeline.use_cases.use_case_utils import get_task_data_obj
 from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
                                            EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
                                            MAPPING_FILE_PREFIX)
@@ -36,10 +36,10 @@ def run_generation_pipeline(config):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = get_use_case_class(task)
+    task_data = get_task_data_obj(task)
 
     data_path = resolve_data_path(config["data_path"])
-    data_df = load_inputs(config, data_path, load_predictions = False, task_data = task_data)
+    data_df = load_inputs(config, data_path, load_predictions = False, task_data=task_data)
 
     gen_model = config.get('gen_model_name')
     output_dir = config['output_dir']
@@ -69,7 +69,7 @@ def get_parquet_bytes(output_df):
     return parquet_buffer.getvalue()
 
 
-def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info, required_input_fields ):
+def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
     # step3: generate shortcomings
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     shortcoming_list = None
@@ -108,11 +108,12 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
                                                      qid_col, max_workers, high_score_threshold)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
-    convert_to_ui_format(mapped_data_df, output_dir, required_input_fields, config, file_name_info)
+    convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info)
 
-def convert_to_ui_format(mapped_data_df, output_dir, required_input_fields, config, file_name_info):
+def convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info):
     # step5 : convert to ui format and save
-    output_df = convert_results_to_ui_input(mapped_data_df, config, required_input_fields)
+    task_data = get_task_data_obj(config.get("task"))
+    output_df = convert_results_to_ui_input(mapped_data_df, config, task_data)
     output_path = f"{output_dir}/analysis_results_{file_name_info}.csv"
     logger.info(f"\n--- Saving Custom Formatted Analysis to {output_dir} ---")
     save_dataframe_to_cache(output_df, output_path)
@@ -142,11 +143,10 @@ def run_aggregation_pipeline(config):
     run_aggregation_from_df(config, eval_df, run_info)
 
 def run_evaluation_from_df(config, response_df, ):
-    task = config.get("task")
-    task_data = get_use_case_class(task)
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
-    eval_df = task_data().eval_records(response_df, eval_llm, config)
+    task_data = get_task_data_obj(config["task"])
+    eval_df = task_data.eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
         eval_df = produce_summaries_per_record(eval_df, eval_llm, config)
     return eval_df
@@ -156,17 +156,12 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = get_use_case_class(task)
-    required_input_fields = task_data.required_input_fields
-    if not task_data:
-        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(get_supported_use_case_classes())}")
-
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
-    aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info, required_input_fields)
+    aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info)
 
 
 def get_run_info(config):
@@ -185,9 +180,6 @@ def run_eval_pipeline(config):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    task_data = get_use_case_class(task)
-    if not task_data:
-        raise ValueError(f"Invalid task specified: {task}, supported tasks are {list(get_supported_use_case_classes())}")
 
     provider = config["provider"]
     eval_llm = get_llm(provider, config["eval_model_name"])
@@ -195,14 +187,14 @@ def run_eval_pipeline(config):
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
     perform_generation = config['perform_generation']
-
+    task_data = get_task_data_obj(config["task"])
     run_info = get_run_info(config)
     with open(os.path.join(output_dir, f"config_{run_info}.json"), 'w') as f:
         json.dump(config, f)
 
     # step0: load input data
     data_path = resolve_data_path(config["data_path"])
-    data_df = load_inputs(config, data_path, load_predictions = not perform_generation, task_data = task_data)
+    data_df = load_inputs(config, data_path, load_predictions = not perform_generation, task_data=task_data)
 
     # step 1: perform generation (if needed)
     if perform_generation:
@@ -231,7 +223,7 @@ def run_eval_pipeline(config):
             evaluation_output_path_1 = f"{output_dir}/{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv"
             eval_df_0 = load_dataframe_from_cache(evaluation_output_path_1, expected_rows=len(gen_df))
     if eval_df_0 is None:
-        eval_df_0 = task_data().eval_records(gen_df, eval_llm, config)
+        eval_df_0 = task_data.eval_records(gen_df, eval_llm, config)
         save_dataframe_to_cache(eval_df_0, evaluation_output_path_0)
         resume_enabled = False
 
@@ -250,8 +242,7 @@ def run_eval_pipeline(config):
         return
 
     aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm ,
-                    file_name_info = run_info,
-                    required_input_fields = task_data.required_input_fields)
+                    file_name_info = run_info)
 
 
 if __name__ == "__main__":
