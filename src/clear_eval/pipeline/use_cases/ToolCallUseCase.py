@@ -25,7 +25,10 @@ class ToolCallEvalUseCase(EvalUseCase):
     RESPONSE_COL = "response"
     ID_COL = "id"
 
-    async def eval_records(self, df, llm, config, score_col = SCORE_COL):
+    def eval_records(self, df, llm, config, score_col = SCORE_COL):
+        return asyncio.run(self.eval_records_async(df, llm, config, score_col))
+
+    async def eval_records_async(self, df, llm, config, score_col=SCORE_COL):
         """Evaluates predictions and adds scores."""
         logger.info(f"\n--- Evaluating Tool calls predictionsPredictions ---")
         df[EVALUATION_TEXT_COL] = ""
@@ -152,5 +155,5 @@ if __name__ == "__main__":
     llm = get_chat_llm(config["provider"], config["eval_model_name"], eval_mode=True)
 
     tool_call_use_case = ToolCallEvalUseCase()
-    evaluated_df = asyncio.run(tool_call_use_case.eval_records(df, llm, config))
+    evaluated_df = tool_call_use_case.eval_records(df, llm, config)
     evaluated_df.to_csv(sample_data_file.replace(".csv", "_eval.csv"), index=False)
