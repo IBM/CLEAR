@@ -23,7 +23,7 @@ class ToolCallEvalUseCase(EvalUseCase):
     SPECS_COL = "api_spec"
     CONTEXT_COL = "context"
     RESPONSE_COL = "response"
-    ID_COL = "id"
+    required_input_fields = [CONTEXT_COL, SPECS_COL]
 
     def eval_records(self, df, llm, config, score_col = SCORE_COL):
         return asyncio.run(self.eval_records_async(df, llm, config, score_col))
