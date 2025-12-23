@@ -80,10 +80,6 @@ class ToolCallEvalUseCase(EvalUseCase):
             )
         elif provider == "openai":
             MetricsClientCls = get_llm("openai.async.output_val")
-            llm_client = MetricsClientCls(
-                model=llm.model,
-            )
-        
             llm_client = MetricsClientCls(model_name=model_name, api_key="")
         else:
             raise ValueError(f"Unsupported provider: {provider}")
