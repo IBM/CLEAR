@@ -162,7 +162,6 @@ def get_issue_analysis(df, max_num_issues = None):
 
 def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue_count, issues_filtered_df):
     st.header("Comparison of Issue Frequencies:")
-    # _, _, filtered_issue_freq, _ = get_issue_analysis(issues_filtered_df)
     issues_stats = get_issue_analysis(issues_filtered_df)
     filtered_issue_freq = dict(issues_stats["issue_freq"])
     # Convert to Series
@@ -174,8 +173,8 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
         "Full Dataset": full_freq,
         "Filtered Subset": subset_freq
     }).drop(index=NO_ISSUE, errors="ignore")
-
-    df_sorted = df_comp.sort_values("Full Dataset", ascending=False)
+    if len(df_comp) == 0:
+         return
 
     def wrap_label(label, width=40):
         trimmed_label = ' '.join(label.split(' ')[:14])
@@ -389,7 +388,10 @@ def list_issues_frequency(issues_stats):
     issue_freq = issues_stats["issue_freq"]
 
     included_counts = [v for k, v in issue_counts.items() if k != NO_ISSUE]
-    sqrt_max = math.sqrt(max(included_counts))
+    if len(included_counts) == 0:
+        sqrt_max = 10
+    else:
+        sqrt_max = math.sqrt(max(included_counts))
 
     sorted_issues_freq = sorted(issue_freq.items(), key=lambda x: issue_freq.get(x[0], 0), reverse=True)
 
