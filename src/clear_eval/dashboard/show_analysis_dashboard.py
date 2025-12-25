@@ -175,6 +175,7 @@ def plot_distribution_for_full_and_filtered(df_full, full_issue_freq, full_issue
     }).drop(index=NO_ISSUE, errors="ignore")
     if len(df_comp) == 0:
          return
+    df_sorted = df_comp.sort_values("Full Dataset", ascending=False)
 
     def wrap_label(label, width=40):
         trimmed_label = ' '.join(label.split(' ')[:14])
