@@ -67,6 +67,8 @@ def load_data(file_bytes, file_name):
                 raise Exception("No valid metadata json found in input")
             input_columns = get_input_columns(metadata)
             expected_cols = EXPECTED_COLS + input_columns
+            expected_cols = list(dict.fromkeys(expected_cols))
+
             if csv_file_name is not None:
                 with zf.open(csv_file_name) as csv_file:
                     df = pd.read_csv(csv_file, usecols=lambda c: c in expected_cols)
