@@ -15,12 +15,18 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
         }
         if eval_mode:
             parameters["decoding_method"]= "greedy"
+        url = os.getenv("WATSONX_URL")
+        if not url:
+            raise KeyError("WATSONX_URL env var must be specified for watsonx inference.")
+        apikey = os.getenv("WATSONX_APIKEY")
+        if not apikey:
+            raise KeyError("WATSONX_APIKEY env var must be specified for watsonx inference.")
         space_id = os.getenv("WATSONX_SPACE_ID")
         if space_id:
             return ChatWatsonx(
                 model_id=model_id,
-                url=os.getenv("WATSONX_URL"),
-                apikey=os.getenv("WATSONX_APIKEY"),
+                url=url,
+                apikey=apikey,
                 space_id=space_id,
                 params=parameters,
             )
@@ -28,8 +34,8 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
         if project_id:
             return ChatWatsonx(
                 model_id=model_id,
-                url=os.getenv("WATSONX_URL"),
-                apikey=os.getenv("WATSONX_APIKEY"),
+                url=url,
+                apikey=apikey,
                 project_id=project_id,
                 params=parameters,
             )
