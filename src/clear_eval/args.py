@@ -9,6 +9,8 @@ def parse_dict(arg: str) -> dict:
         raise argparse.ArgumentTypeError(f"Invalid JSON format: {e}")
 
 def str2bool(v):
+    if v is None:
+        return None
     if isinstance(v, bool):
         return v
     if v.lower() in ("yes", "true", "t", "1"):
@@ -28,11 +30,11 @@ def parse_args():
                         default=None)
 
     parser.add_argument("--config-path", default=None, help="Optional: path to the config file")
-    parser.add_argument("--perform-generation", type=str2bool, default=True, help="Whether to perform generations or"
+    parser.add_argument("--perform-generation", type=str2bool, default=None, help="Whether to perform generations or"
                                                                     "use existing generations")
-    parser.add_argument("--is-reference-based", type=str2bool, default=False,
+    parser.add_argument("--is-reference-based", type=str2bool, default=None,
                         help="Whether to use use references for the evaluations (if true, references must be stored in the 'reference' column of the input.")
-    parser.add_argument("--resume-enabled", type=str2bool, default=True,
+    parser.add_argument("--resume-enabled", type=str2bool, default=None,
                         help="Whether to use use intermediate results found in the output dir")
     parser.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
@@ -41,7 +43,7 @@ def parse_args():
     parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
     parser.add_argument("--input-columns", nargs='+', help="List of column names to present in the ui")
     parser.add_argument("--success-threshold", type=float, help="the minimum judge score required for a single record to be considered successful ")
-    parser.add_argument("--agent-mode", type=str2bool, default=False,
+    parser.add_argument("--agent-mode", type=str2bool, default=None,
                         help="Whether to use a default evaluation criteria suited for an agentic step and not a single llm response")
 
     parser.add_argument("--max-workers", type=int, default=None,
