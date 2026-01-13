@@ -3,9 +3,13 @@ import json
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 import streamlit.web.cli as stcli
 from clear_eval.analysis_runner import run_clear_eval_analysis, run_clear_eval_generation, run_clear_eval_aggregation
 from clear_eval.args import parse_args
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def main():
