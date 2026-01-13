@@ -5,6 +5,28 @@ from langchain_openai import AzureChatOpenAI, ChatOpenAI
 def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
     if parameters is None:
         parameters = {}
+    
+    # Google provider (supports Gemini model family)
+    if provider == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise KeyError("GOOGLE_API_KEY env var must be specified for Google provider.")
+        
+        # Set evaluation mode parameters
+        if eval_mode:
+            parameters["temperature"] = 0
+        
+        # Default to Gemini 2.0 Flash if no model specified
+        model_id = model_id or "gemini-2.0-flash"
+        
+        return ChatGoogleGenerativeAI(
+            model=model_id,
+            google_api_key=api_key,
+            max_retries=2,
+            **parameters
+        )
+    
     if provider == "watsonx":
         from langchain_ibm import ChatWatsonx
         parameters = parameters or {
@@ -78,7 +100,7 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             **parameters
 
         )
-    raise ValueError(f"Unknown provider {provider}, supported providers: watsonx, rits, azure or openai")
+    raise ValueError(f"Unknown provider {provider}, supported providers: google, watsonx, rits, azure or openai")
 
 model_name_to_rits_base = {
     "microsoft/phi-4": "microsoft-phi-4",

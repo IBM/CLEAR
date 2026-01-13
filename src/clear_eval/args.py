@@ -24,7 +24,7 @@ def parse_args():
 
     parser.add_argument("--data-path", help="Path to the data csv file")
     parser.add_argument("--output-dir", default=None, help="Output directory")
-    parser.add_argument("--provider", choices=["azure", "openai", "watsonx", "rits"])
+    parser.add_argument("--provider", choices=["google", "azure", "openai", "watsonx", "rits"])
     parser.add_argument("--eval-model-name", help="Name of the model used by CLEAR for evaluating and analyzing outputs")
     parser.add_argument("--gen-model-name", help="Name of the generator model whose responses are evaluated (e.g. gpt-3.5-turbo)",
                         default=None)

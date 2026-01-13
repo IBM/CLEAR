@@ -20,6 +20,8 @@ dependencies = [
     "langgraph",
     "langchain_openai",
     "langchain_ibm",
+    "langchain-google-genai",
+    "google-generativeai",
     "ibm_watsonx_ai>=1.2.8",
     "openai",
     "pyyaml",
