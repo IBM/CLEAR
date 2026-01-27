@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 import pandas as pd
 from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
     SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED
-from clear_eval.pipeline.propmts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
+from clear_eval.pipeline.prompts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
      get_shortcomings_clustering_prompt, get_shortcomings_mapping_system_prompt, \
     get_shortcomings_mapping_human_prompt, get_shortcomings_synthesis_prompt_cont
 import re

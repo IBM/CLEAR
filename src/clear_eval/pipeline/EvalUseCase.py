@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 
 from clear_eval.pipeline.evaluation_criteria import EvaluationCriteria, get_default_evaluation_criteria
-from clear_eval.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
+from clear_eval.pipeline.prompts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
     get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
 from clear_eval.pipeline.constants import ANALYSIS_SKIPPED
