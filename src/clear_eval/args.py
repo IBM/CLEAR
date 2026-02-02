@@ -50,6 +50,7 @@ def parse_args():
 
     parser.add_argument("--max-workers", type=int, default=None,
                         help="number of parallel inferences")
+    parser.add_argument("--predefined-issues",nargs='+', help="Predefined issues to use")
 
     args = parser.parse_args()
 

@@ -68,8 +68,7 @@ def get_parquet_bytes(output_df):
     output_df.to_parquet(parquet_buffer, compression="brotli", engine="pyarrow", use_dictionary=True, index=False)
     return parquet_buffer.getvalue()
 
-
-def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
+def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled):
     # step3: generate shortcomings
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     shortcoming_list = None
@@ -77,7 +76,8 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         shortcoming_list = load_json_from_cache(shortcoming_list_output_path)
     if shortcoming_list is None:
         synthesis_template = config.get("synthesis_template")
-        shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config, synthesis_template=synthesis_template)
+        shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config,
+                                                           synthesis_template=synthesis_template)
         save_json_to_cache(shortcoming_list, shortcoming_list_output_path)
         resume_enabled = False
 
@@ -88,11 +88,31 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         if resume_enabled:
             deduplicated_shortcomings_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
         if deduplicated_shortcomings_list is None:
-            deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, config["max_shortcomings"])
+            deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm,
+                                                                            config["max_shortcomings"])
             save_json_to_cache(deduplicated_shortcomings_list, deduplicated_shortcomings_list_output_path)
             resume_enabled = False
     else:
         deduplicated_shortcomings_list = shortcoming_list
+    return deduplicated_shortcomings_list, resume_enabled
+
+def get_predefined_issues_list(config):
+    issues = config.get("predefined_issues")
+    if not issues:
+        return None
+    if isinstance(issues, list):
+        return issues
+    elif isinstance(issues, str):
+        return json.loads(issues)
+    return None
+
+def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
+    shortcoming_list = get_predefined_issues_list(config)
+    if shortcoming_list:
+        logger.info("Using predefined issues")
+        resume_enabled = False
+    else:
+        shortcoming_list, resume_enabled = get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled)
 
     # step4: map to records
     mapped_data_df = None
@@ -104,7 +124,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         qid_col = config['qid_column']
         max_workers = config['max_workers']
         high_score_threshold = config.get("success_threshold", 1)
-        mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, deduplicated_shortcomings_list, use_full_text,
+        mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, shortcoming_list, use_full_text,
                                                      qid_col, max_workers, high_score_threshold)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
