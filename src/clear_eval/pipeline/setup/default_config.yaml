@@ -24,6 +24,7 @@ run_name: null
 
 # whether to perform generation or take existing ones from data
 perform_generation: true
+predefined_issues: null
 
 # full path to cinput sv
 data_path:  "gsm8k/gsm8k_default_predictions.csv"
