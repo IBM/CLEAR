@@ -13,6 +13,9 @@ from clear_eval.pipeline.propmts import get_summarization_prompt, get_shortcomin
     get_shortcomings_mapping_human_prompt, get_shortcomings_synthesis_prompt_cont
 import re
 from clear_eval.pipeline.threading_utils import run_func_in_threads
+from clear_eval.pipeline.external_judge import (
+    load_external_judge, call_external_judge, ExternalJudgeError, get_judge_info
+)
 logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
@@ -37,33 +40,86 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
             return f"Error: during evaluation: {str(e)}", pd.NA
 
 
+def evaluate_row_external(row, config, external_judge_func):
+    """Evaluate a single row using an external judge function."""
+    try:
+        return call_external_judge(external_judge_func, row, config)
+    except ExternalJudgeError as e:
+        return f"Error: External judge error: {str(e)}", pd.NA
+    except Exception as e:
+        return f"Error: during external evaluation: {str(e)}", pd.NA
+
+
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
-    """Evaluates predictions and adds scores."""
+    """Evaluates predictions and adds scores using either LLM or external judge."""
     logger.info(f"\n--- Evaluating Predictions ---")
-
-    if llm is None:
-        logger.error("Error: Evaluation LLM not initialized. Skipping evaluation.")
-        df[EVALUATION_TEXT_COL] = "Error: LLM not available"
+    
+    # Check if using external judge
+    judge_type = config.get('judge_type', 'llm')
+    
+    if judge_type == 'external':
+        # Load external judge
+        external_judge_path = config.get('external_judge_path')
+        external_judge_function = config.get('external_judge_function', 'evaluate')
+        
+        if not external_judge_path:
+            logger.error("Error: judge_type is 'external' but external_judge_path not provided.")
+            df[EVALUATION_TEXT_COL] = "Error: External judge path not configured"
+            df[score_col] = pd.NA
+            return df
+        
+        try:
+            external_judge_func = load_external_judge(external_judge_path, external_judge_function)
+            logger.info(f"Using external judge: {external_judge_path}::{external_judge_function}")
+        except ExternalJudgeError as e:
+            logger.error(f"Error loading external judge: {e}")
+            df[EVALUATION_TEXT_COL] = f"Error: {str(e)}"
+            df[score_col] = pd.NA
+            return df
+        
+        # Prepare inputs for threading with external judge
+        df[EVALUATION_TEXT_COL] = ""
         df[score_col] = pd.NA
-        return df
-
-    df[EVALUATION_TEXT_COL] = ""
-    df[score_col] = pd.NA  # Use Pandas NA for missing scores
-
-    inputs_for_threading = []
-    for idx, row in df.iterrows():
-        inputs_for_threading.append((
-           row, config, llm, get_evaluation_prompt_func
+        
+        inputs_for_threading = []
+        for idx, row in df.iterrows():
+            inputs_for_threading.append((row, config, external_judge_func))
+        
+        results = run_func_in_threads(
+            evaluate_row_external,
+            inputs_for_threading,
+            max_workers=config['max_workers'],
+            error_prefix="Error: External Judge Evaluation Error for ",
+            progress_desc=f"Evaluating predictions with external judge"
         )
-    )
-
-    results = run_func_in_threads(
-        evaluate_row,
-        inputs_for_threading,
-        max_workers=config['max_workers'],
-        error_prefix="Error: Evaluation Error for ",
-        progress_desc=f"Evaluating predictions "
-    )
+        
+    else:
+        # Use LLM evaluation (default behavior)
+        if llm is None:
+            logger.error("Error: Evaluation LLM not initialized. Skipping evaluation.")
+            df[EVALUATION_TEXT_COL] = "Error: LLM not available"
+            df[score_col] = pd.NA
+            return df
+        
+        logger.info(f"Using LLM judge: {llm.model_name if hasattr(llm, 'model_name') else 'unknown'}")
+        
+        df[EVALUATION_TEXT_COL] = ""
+        df[score_col] = pd.NA
+        
+        inputs_for_threading = []
+        for idx, row in df.iterrows():
+            inputs_for_threading.append((
+                row, config, llm, get_evaluation_prompt_func
+                                         )
+                                        )
+        
+        results = run_func_in_threads(
+            evaluate_row,
+            inputs_for_threading,
+            max_workers=config['max_workers'],
+            error_prefix="Error: Evaluation Error for ",
+            progress_desc=f"Evaluating predictions"
+        )
     for i, result in enumerate(results):
         if result.is_success:
             (eval_text, score) = result.result

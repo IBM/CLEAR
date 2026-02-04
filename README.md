@@ -198,6 +198,10 @@ Arguments can be provided via:
 | `--agent_mode`          | boolean, if True - use a default evaluation criteria suited for an agentic step and not a single llm response                              | False             |
 | `--success_threshold`   | float, the minimum judge score required for a single record to be considered successful                                                    | 0.91              |
 | `--max_workers`         | Number of parallel inferences to run                                                                                                       | provider specific |
+| `--judge_type`          | Type of judge: `llm` (default) or `external` for custom evaluation functions                                                              | llm               |
+| `--external_judge_path` | Path to Python file with external judge function (required if `judge_type` is `external`)                                                 | None              |
+| `--external_judge_function` | Name of function in external judge file to call                                                                                        | evaluate          |
+| `--external_judge_config` | JSON dict of additional config for external judge: `{"param": "value"}`                                                                  | {}                |
 
 ---
 
@@ -207,6 +211,91 @@ Depending on your selected `--provider`:
 
 | Provider   | Required Environment Variables                                              |
 |------------|-----------------------------------------------------------------------------|
+## 🔌 Using External Judges
+
+CLEAR supports plugging in custom evaluation functions as an alternative to LLM-based evaluation. This is useful for:
+- **Deterministic metrics** (exact match, numeric tolerance, etc.)
+- **Cost reduction** (avoid LLM API calls)
+- **Faster evaluation** for large datasets
+- **Integration** of existing evaluation metrics
+
+### Quick Start with External Judge
+
+1. **Create a judge function** (or use provided examples):
+
+```python
+# my_judge.py
+import pandas as pd
+
+def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+    """Evaluate a single record."""
+    response = row.get(config['model_output_column'], '')
+    ground_truth = row.get(config['reference_column'], '')
+    
+    # Your evaluation logic
+    match = str(response).strip() == str(ground_truth).strip()
+    score = 1.0 if match else 0.0
+    eval_text = f"Match: {match}"
+    
+    return eval_text, score
+```
+
+2. **Configure CLEAR to use your judge**:
+
+```yaml
+# config.yaml
+judge_type: external
+external_judge_path: my_judge.py
+external_judge_function: evaluate
+data_path: your_data.csv
+output_dir: results/
+```
+
+3. **Run the analysis**:
+
+```bash
+run-clear-eval-analysis --config-path config.yaml
+```
+
+Or via CLI:
+
+```bash
+run-clear-eval-analysis \
+  --judge-type external \
+  --external-judge-path my_judge.py \
+  --data-path your_data.csv \
+  --output-dir results/
+```
+
+### Example Judges
+
+CLEAR includes example judges in `examples/custom_judges/`:
+
+- **`exact_match_judge.py`**: Simple string matching
+- **`numeric_tolerance_judge.py`**: Numeric comparison with tolerance
+
+See [`examples/custom_judges/README.md`](examples/custom_judges/README.md) for detailed documentation and more examples.
+
+### Judge Interface
+
+External judges must implement:
+
+```python
+def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+    """
+    Args:
+        row: Record data (model_input, response, ground_truth, etc.)
+        config: Full configuration dictionary
+    
+    Returns:
+        (evaluation_text: str, score: float)
+        - evaluation_text: Textual feedback
+        - score: 0.0-1.0, or pd.NA for failures
+    """
+```
+
+---
+
 | `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
 | `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
 | `rits`     | `RITS_API_KEY`                                                              |
