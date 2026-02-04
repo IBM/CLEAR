@@ -2,10 +2,20 @@
 
 ## Overview
 
-This document summarizes the implementation of external judge support for the CLEAR evaluation pipeline. External judges allow users to plug in custom Python functions to evaluate model outputs, replacing or supplementing LLM-based evaluation.
+This document summarizes the implementation of external judge support for the CLEAR evaluation pipeline. External judges allow users to plug in custom Python functions to evaluate model outputs, replacing LLM-based evaluation with complete control over the evaluation process.
 
 ## Implementation Date
 February 2026
+
+## Key Design Decision: Batch Interface
+
+**The external judge receives the entire DataFrame at once**, not individual records. This design gives users complete flexibility in how they process the data:
+- Sequential processing (row by row)
+- Vectorized operations (pandas operations on entire columns)
+- Parallel processing (multiprocessing, threading)
+- Batch processing (process in chunks)
+- External API calls (batch requests)
+- GPU acceleration (for ML-based judges)
 
 ## What Was Added
 
@@ -14,7 +24,7 @@ February 2026
 A new module providing:
 - **`load_external_judge()`**: Dynamically loads judge functions from Python files
 - **`validate_judge_function()`**: Validates judge function signatures
-- **`call_external_judge()`**: Safely executes judge functions with error handling
+- **`call_external_judge()`**: Safely executes judge functions with comprehensive validation
 - **`ExternalJudgeError`**: Custom exception for judge-related errors
 - **`get_judge_info()`**: Extracts judge configuration from config dict
 
@@ -23,10 +33,9 @@ A new module providing:
 Updated `evaluate_single_records()` to:
 - Check `judge_type` configuration parameter
 - Load and validate external judge if `judge_type == 'external'`
-- Route evaluation through external judge or LLM based on configuration
-- Maintain parallel execution support for both judge types
-
-Added `evaluate_row_external()` function for external judge evaluation.
+- Call external judge with entire DataFrame (batch interface)
+- Copy results back to original DataFrame
+- Maintain backward compatibility with LLM evaluation
 
 ### 3. Configuration Support
 
@@ -49,24 +58,23 @@ external_judge_config: {}
 **Exact Match Judge** (`exact_match_judge.py`):
 - Simple string comparison
 - Case-insensitive matching
-- Useful for classification tasks
+- Demonstrates basic batch processing
 
 **Numeric Tolerance Judge** (`numeric_tolerance_judge.py`):
 - Numeric comparison with configurable tolerance
 - Extracts numbers from text
-- Useful for math problems
+- Demonstrates configurable judge parameters
 
 **Documentation** (`README.md`):
 - Comprehensive guide for creating custom judges
-- Usage examples
-- Best practices
-- Troubleshooting guide
+- Usage examples with different processing strategies
+- Best practices and troubleshooting
 
 ### 5. Testing & Examples
 
 **Test Script** (`examples/test_external_judge.py`):
 - Validates both example judges
-- Demonstrates judge testing methodology
+- Demonstrates batch interface usage
 - Can be run standalone: `python examples/test_external_judge.py`
 
 **Example Config** (`examples/config_external_judge_example.yaml`):
@@ -79,7 +87,7 @@ external_judge_config: {}
 **Main README.md**:
 - New section: "🔌 Using External Judges"
 - Updated CLI arguments table
-- Quick start guide
+- Quick start guide with batch interface
 - Links to detailed documentation
 
 ## Judge Interface Specification
@@ -87,18 +95,23 @@ external_judge_config: {}
 All external judges must implement:
 
 ```python
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """
-    Evaluate a single record.
+    Evaluate all records in the dataset.
     
     Args:
-        row: pandas Series with record data (model_input, response, ground_truth, etc.)
+        df: pandas DataFrame with all records to evaluate
         config: Full configuration dictionary
         
     Returns:
-        (evaluation_text: str, score: float)
-        - evaluation_text: Textual feedback about the evaluation
-        - score: Numerical score 0.0-1.0, or pd.NA for failures
+        DataFrame with added columns:
+        - 'evaluation_text': Textual feedback for each record
+        - 'score': Numerical score 0.0-1.0, or pd.NA for failures
+    
+    The judge receives the entire dataset and can process it however
+    it wants (sequentially, in parallel, in batches, etc.). It must
+    return a DataFrame with the same number of rows and the required
+    evaluation columns added.
     """
     pass
 ```
@@ -144,20 +157,52 @@ run_clear_eval_analysis(
 
 ## Key Features
 
-1. **Backward Compatible**: Default behavior unchanged (uses LLM)
-2. **Flexible**: Supports any Python callable with correct signature
-3. **Parallel Execution**: External judges run in parallel like LLM evaluation
-4. **Error Handling**: Comprehensive validation and error messages
-5. **Configurable**: Judge-specific config via `external_judge_config`
-6. **Well Documented**: Examples, guides, and inline documentation
+1. **Batch Interface**: Judge receives entire DataFrame, enabling flexible processing strategies
+2. **Backward Compatible**: Default behavior unchanged (uses LLM)
+3. **Flexible Processing**: Users control how data is processed (sequential, parallel, vectorized, etc.)
+4. **Comprehensive Validation**: Validates function signature, return type, and output format
+5. **Error Handling**: Clear error messages and graceful failure handling
+6. **Configurable**: Judge-specific config via `external_judge_config`
+7. **Well Documented**: Examples, guides, and inline documentation
 
 ## Benefits
 
-1. **Cost Reduction**: Avoid LLM API costs for deterministic metrics
-2. **Speed**: Faster evaluation for simple metrics
-3. **Flexibility**: Integrate existing evaluation functions
-4. **Transparency**: Full control over evaluation logic
-5. **Compatibility**: Works with all CLEAR features (aggregation, dashboard, etc.)
+1. **Complete Control**: Users decide how to process data (no assumptions about parallelization)
+2. **Performance**: Can use vectorized operations, GPU acceleration, or external APIs
+3. **Cost Reduction**: Avoid LLM API costs for deterministic metrics
+4. **Flexibility**: Integrate any evaluation logic or existing metrics
+5. **Transparency**: Full visibility into evaluation process
+6. **Compatibility**: Works with all CLEAR features (aggregation, dashboard, etc.)
+
+## Processing Strategies Enabled
+
+The batch interface enables various processing strategies:
+
+**Sequential (Simple)**:
+```python
+for idx, row in df.iterrows():
+    # Process one at a time
+```
+
+**Vectorized (Fastest for simple logic)**:
+```python
+df['score'] = (df['response'] == df['ground_truth']).astype(float)
+```
+
+**Parallel (For complex per-record logic)**:
+```python
+from multiprocessing import Pool
+with Pool() as pool:
+    results = pool.map(process_func, df.iterrows())
+```
+
+**Batch API Calls**:
+```python
+batch_size = 100
+for i in range(0, len(df), batch_size):
+    batch = df.iloc[i:i+batch_size]
+    results = external_api.evaluate_batch(batch)
+```
 
 ## Files Modified
 
@@ -190,30 +235,13 @@ Expected output:
 ✓ All tests passed!
 ```
 
-## Future Enhancements (Optional)
-
-Potential improvements for future versions:
-
-1. **Built-in Judges**: Add common judges (BLEU, ROUGE, etc.) to the package
-2. **Judge Registry**: Allow registering judges by name instead of file path
-3. **Async Support**: Add async judge support for I/O-bound operations
-4. **Judge Composition**: Allow combining multiple judges
-5. **Fallback Mechanism**: Automatic fallback to LLM if external judge fails
-
 ## Notes
 
 - External judges still require an LLM provider for issue synthesis/aggregation
 - The `eval_model_name` config is ignored when using external judges
 - Type hints in example judges may show warnings but are compatible with the system
 - External judges have access to the full config dictionary for maximum flexibility
-
-## Support
-
-For questions or issues:
-1. Check `examples/custom_judges/README.md` for detailed documentation
-2. Review example judges for implementation patterns
-3. Run `examples/test_external_judge.py` to verify setup
-4. Refer to main README.md for general CLEAR usage
+- The batch interface gives users complete control over processing strategy
 
 ---
 
