@@ -76,7 +76,7 @@ def validate_judge_function(judge_func: Callable, function_name: str) -> None:
     """
     Validate that a judge function has the correct signature.
     
-    Expected signature: (row: pd.Series, config: dict) -> Tuple[str, float]
+    Expected signature: (df: pd.DataFrame, config: dict) -> pd.DataFrame
     
     Args:
         judge_func: The function to validate
@@ -93,10 +93,10 @@ def validate_judge_function(judge_func: Callable, function_name: str) -> None:
         sig = inspect.signature(judge_func)
         params = list(sig.parameters.keys())
         
-        # Should have at least 2 parameters (row, config)
+        # Should have at least 2 parameters (df, config)
         if len(params) < 2:
             raise ExternalJudgeError(
-                f"Judge function '{function_name}' must accept at least 2 parameters (row, config). "
+                f"Judge function '{function_name}' must accept at least 2 parameters (df, config). "
                 f"Found: {params}"
             )
         
@@ -108,55 +108,84 @@ def validate_judge_function(judge_func: Callable, function_name: str) -> None:
 
 def call_external_judge(
     judge_func: Callable,
-    row: pd.Series,
+    df: pd.DataFrame,
     config: dict
-) -> Tuple[str, Any]:
+) -> pd.DataFrame:
     """
     Call an external judge function and validate its output.
     
     Args:
         judge_func: The judge function to call
-        row: The data row to evaluate
+        df: The DataFrame with all records to evaluate
         config: Configuration dictionary
         
     Returns:
-        Tuple of (evaluation_text, score)
+        DataFrame with added 'evaluation_text' and 'score' columns
         
     Raises:
         ExternalJudgeError: If the judge execution fails or returns invalid output
     """
     try:
-        result = judge_func(row, config)
+        result_df = judge_func(df, config)
         
         # Validate return type
-        if not isinstance(result, tuple) or len(result) != 2:
+        if not isinstance(result_df, pd.DataFrame):
             raise ExternalJudgeError(
-                f"Judge function must return a tuple of (str, float). Got: {type(result)}"
+                f"Judge function must return a pandas DataFrame. Got: {type(result_df)}"
             )
         
-        eval_text, score = result
+        # Check that required columns exist
+        from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
         
-        # Validate evaluation text
-        if not isinstance(eval_text, str):
+        if EVALUATION_TEXT_COL not in result_df.columns:
             raise ExternalJudgeError(
-                f"Evaluation text must be a string. Got: {type(eval_text)}"
+                f"Judge function must add '{EVALUATION_TEXT_COL}' column to the DataFrame"
             )
         
-        # Validate score (allow pd.NA for missing scores)
-        if not pd.isna(score):
+        if SCORE_COL not in result_df.columns:
+            raise ExternalJudgeError(
+                f"Judge function must add '{SCORE_COL}' column to the DataFrame"
+            )
+        
+        # Validate that DataFrame has same number of rows
+        if len(result_df) != len(df):
+            raise ExternalJudgeError(
+                f"Judge function must return DataFrame with same number of rows. "
+                f"Expected: {len(df)}, Got: {len(result_df)}"
+            )
+        
+        # Validate evaluation text column
+        if not result_df[EVALUATION_TEXT_COL].dtype == 'object':
+            logger.warning(
+                f"'{EVALUATION_TEXT_COL}' column should contain strings. "
+                f"Got dtype: {result_df[EVALUATION_TEXT_COL].dtype}"
+            )
+        
+        # Validate score column (should be numeric or contain pd.NA)
+        score_col = result_df[SCORE_COL]
+        non_na_scores = score_col.dropna()
+        if len(non_na_scores) > 0:
             try:
-                score = float(score)
-                if not (0.0 <= score <= 1.0):
+                # Check if scores are numeric
+                numeric_scores = pd.to_numeric(non_na_scores, errors='coerce')
+                if numeric_scores.isna().any():
+                    raise ExternalJudgeError(
+                        f"'{SCORE_COL}' column must contain numeric values or pd.NA"
+                    )
+                
+                # Warn if scores are outside expected range
+                out_of_range = (numeric_scores < 0.0) | (numeric_scores > 1.0)
+                if out_of_range.any():
                     logger.warning(
-                        f"Score {score} is outside the expected range [0.0, 1.0]. "
+                        f"Some scores in '{SCORE_COL}' are outside the expected range [0.0, 1.0]. "
                         f"This may affect analysis results."
                     )
-            except (TypeError, ValueError):
+            except Exception as e:
                 raise ExternalJudgeError(
-                    f"Score must be a number or pd.NA. Got: {type(score)}"
+                    f"Error validating '{SCORE_COL}' column: {str(e)}"
                 )
         
-        return eval_text, score
+        return result_df
         
     except ExternalJudgeError:
         raise

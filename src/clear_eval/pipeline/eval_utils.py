@@ -40,16 +40,6 @@ def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
             return f"Error: during evaluation: {str(e)}", pd.NA
 
 
-def evaluate_row_external(row, config, external_judge_func):
-    """Evaluate a single row using an external judge function."""
-    try:
-        return call_external_judge(external_judge_func, row, config)
-    except ExternalJudgeError as e:
-        return f"Error: External judge error: {str(e)}", pd.NA
-    except Exception as e:
-        return f"Error: during external evaluation: {str(e)}", pd.NA
-
-
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
     """Evaluates predictions and adds scores using either LLM or external judge."""
     logger.info(f"\n--- Evaluating Predictions ---")
@@ -77,21 +67,22 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
             df[score_col] = pd.NA
             return df
         
-        # Prepare inputs for threading with external judge
-        df[EVALUATION_TEXT_COL] = ""
-        df[score_col] = pd.NA
-        
-        inputs_for_threading = []
-        for idx, row in df.iterrows():
-            inputs_for_threading.append((row, config, external_judge_func))
-        
-        results = run_func_in_threads(
-            evaluate_row_external,
-            inputs_for_threading,
-            max_workers=config['max_workers'],
-            error_prefix="Error: External Judge Evaluation Error for ",
-            progress_desc=f"Evaluating predictions with external judge"
-        )
+        # Call external judge with entire DataFrame
+        try:
+            logger.info(f"Calling external judge with {len(df)} records...")
+            result_df = call_external_judge(external_judge_func, df.copy(), config)
+            
+            # Copy evaluation results back to original DataFrame
+            df[EVALUATION_TEXT_COL] = result_df[EVALUATION_TEXT_COL]
+            df[score_col] = result_df[score_col]
+            
+            logger.info("Finished evaluating predictions with external judge.")
+            
+        except ExternalJudgeError as e:
+            logger.error(f"Error executing external judge: {e}")
+            df[EVALUATION_TEXT_COL] = f"Error: {str(e)}"
+            df[score_col] = pd.NA
+            return df
         
     else:
         # Use LLM evaluation (default behavior)
@@ -120,18 +111,21 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
             error_prefix="Error: Evaluation Error for ",
             progress_desc=f"Evaluating predictions"
         )
-    for i, result in enumerate(results):
-        if result.is_success:
-            (eval_text, score) = result.result
-            score = score if pd.isna(score) else float(score)
-        else:
-            eval_text = result.error
-            score = None
+        
+        # Process results
+        for i, result in enumerate(results):
+            if result.is_success:
+                (eval_text, score) = result.result
+                score = score if pd.isna(score) else float(score)
+            else:
+                eval_text = result.error
+                score = None
 
-        df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
-        df.at[df.index[i], score_col] = score if pd.isna(score) else float(score)
+            df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
+            df.at[df.index[i], score_col] = score if pd.isna(score) else float(score)
 
-    logger.info("Finished evaluating predictions.")
+        logger.info("Finished evaluating predictions.")
+    
     # Convert score column to nullable float type
     df[score_col] = df[score_col].astype('Float64')
     return df

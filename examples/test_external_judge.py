@@ -12,6 +12,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.clear_eval.pipeline.external_judge import load_external_judge, call_external_judge
+from src.clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 
 def test_exact_match_judge():
@@ -26,7 +27,7 @@ def test_exact_match_judge():
     print(f"✓ Successfully loaded judge from: {judge_path}\n")
     
     # Create test data
-    test_cases = [
+    test_df = pd.DataFrame([
         {
             'id': 'test_1',
             'model_input': 'What is 2+2?',
@@ -48,7 +49,7 @@ def test_exact_match_judge():
             'ground_truth': '25',
             'expected_score': 0.0
         }
-    ]
+    ])
     
     config = {
         'model_output_column': 'response',
@@ -56,20 +57,24 @@ def test_exact_match_judge():
         'external_judge_config': {}
     }
     
-    # Test each case
+    # Call judge with entire DataFrame
+    result_df = call_external_judge(judge_func, test_df, config)
+    
+    # Test each result
     all_passed = True
-    for test_case in test_cases:
-        row = pd.Series(test_case)
-        eval_text, score = call_external_judge(judge_func, row, config)
+    for idx, row in result_df.iterrows():
+        expected_score = row['expected_score']
+        actual_score = row[SCORE_COL]
+        eval_text = row[EVALUATION_TEXT_COL]
         
-        passed = score == test_case['expected_score']
+        passed = actual_score == expected_score
         status = "✓ PASS" if passed else "✗ FAIL"
         all_passed = all_passed and passed
         
-        print(f"{status} | Test: {test_case['id']}")
-        print(f"  Response: '{test_case['response']}'")
-        print(f"  Ground Truth: '{test_case['ground_truth']}'")
-        print(f"  Score: {score} (expected: {test_case['expected_score']})")
+        print(f"{status} | Test: {row['id']}")
+        print(f"  Response: '{row['response']}'")
+        print(f"  Ground Truth: '{row['ground_truth']}'")
+        print(f"  Score: {actual_score} (expected: {expected_score})")
         print(f"  Evaluation: {eval_text[:80]}...")
         print()
     
@@ -88,7 +93,7 @@ def test_numeric_tolerance_judge():
     print(f"✓ Successfully loaded judge from: {judge_path}\n")
     
     # Create test data
-    test_cases = [
+    test_df = pd.DataFrame([
         {
             'id': 'test_1',
             'model_input': 'What is 10 * 10?',
@@ -110,7 +115,7 @@ def test_numeric_tolerance_judge():
             'ground_truth': '100',
             'expected_score': 0.0  # 5% error, exceeds 1% tolerance
         }
-    ]
+    ])
     
     config = {
         'model_output_column': 'response',
@@ -121,20 +126,24 @@ def test_numeric_tolerance_judge():
         }
     }
     
-    # Test each case
+    # Call judge with entire DataFrame
+    result_df = call_external_judge(judge_func, test_df, config)
+    
+    # Test each result
     all_passed = True
-    for test_case in test_cases:
-        row = pd.Series(test_case)
-        eval_text, score = call_external_judge(judge_func, row, config)
+    for idx, row in result_df.iterrows():
+        expected_score = row['expected_score']
+        actual_score = row[SCORE_COL]
+        eval_text = row[EVALUATION_TEXT_COL]
         
-        passed = score == test_case['expected_score']
+        passed = actual_score == expected_score
         status = "✓ PASS" if passed else "✗ FAIL"
         all_passed = all_passed and passed
         
-        print(f"{status} | Test: {test_case['id']}")
-        print(f"  Response: '{test_case['response']}'")
-        print(f"  Ground Truth: '{test_case['ground_truth']}'")
-        print(f"  Score: {score} (expected: {test_case['expected_score']})")
+        print(f"{status} | Test: {row['id']}")
+        print(f"  Response: '{row['response']}'")
+        print(f"  Ground Truth: '{row['ground_truth']}'")
+        print(f"  Score: {actual_score} (expected: {expected_score})")
         print(f"  Evaluation: {eval_text[:80]}...")
         print()
     

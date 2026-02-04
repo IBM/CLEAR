@@ -4,6 +4,8 @@ Example External Judge: Numeric Tolerance Evaluator
 This judge evaluates numeric answers with a configurable tolerance level.
 Useful for math problems where slight variations in decimal places are acceptable.
 
+The judge receives the entire DataFrame and returns it with added evaluation columns.
+
 Usage:
     In your config file, set:
     - judge_type: external
@@ -17,6 +19,7 @@ Usage:
 import re
 import pandas as pd
 from typing import Optional
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 
 def extract_number(text: str) -> Optional[float]:
@@ -42,16 +45,16 @@ def extract_number(text: str) -> Optional[float]:
         return None
 
 
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """
-    Evaluate a numeric response with tolerance.
+    Evaluate numeric responses with tolerance.
     
     Args:
-        row: pandas Series containing the record data
+        df: pandas DataFrame containing all records
         config: Configuration dictionary
     
     Returns:
-        Tuple of (evaluation_text: str, score: float)
+        DataFrame with added evaluation_text and score columns
     """
     # Get configuration
     response_col = config.get('model_output_column', 'response')
@@ -61,63 +64,79 @@ def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
     tolerance = judge_config.get('tolerance', 0.01)  # 1% default tolerance
     extract_last = judge_config.get('extract_last_number', False)
     
-    # Get values
-    response = row.get(response_col, '')
-    ground_truth = row.get(reference_col, '')
+    # Initialize result columns
+    evaluation_texts = []
+    scores = []
     
-    # Handle missing data
-    if pd.isna(response) or pd.isna(ground_truth):
-        return "Missing data: response or ground truth is not available", pd.NA
+    # Process each row
+    for idx, row in df.iterrows():
+        response = row.get(response_col, '')
+        ground_truth = row.get(reference_col, '')
+        
+        # Handle missing data
+        if pd.isna(response) or pd.isna(ground_truth):
+            evaluation_texts.append("Missing data: response or ground truth is not available")
+            scores.append(pd.NA)
+            continue
+        
+        # Extract numbers
+        if extract_last:
+            response_num = extract_number(str(response))
+            ground_truth_num = extract_number(str(ground_truth))
+        else:
+            try:
+                response_num = float(str(response).strip())
+                ground_truth_num = float(str(ground_truth).strip())
+            except ValueError:
+                response_num = None
+                ground_truth_num = None
+        
+        # Check if we could extract numbers
+        if response_num is None or ground_truth_num is None:
+            eval_text = (
+                f"Could not extract numeric values.\n"
+                f"Response: '{response}'\n"
+                f"Ground truth: '{ground_truth}'"
+            )
+            evaluation_texts.append(eval_text)
+            scores.append(0.0)
+            continue
+        
+        # Calculate relative error
+        if ground_truth_num == 0:
+            # Handle division by zero - use absolute difference
+            error = abs(response_num - ground_truth_num)
+            is_correct = error <= tolerance
+        else:
+            relative_error = abs(response_num - ground_truth_num) / abs(ground_truth_num)
+            is_correct = relative_error <= tolerance
+            error = relative_error
+        
+        # Determine score and evaluation text
+        if is_correct:
+            score = 1.0
+            eval_text = (
+                f"✓ Correct: Response is within tolerance.\n"
+                f"Expected: {ground_truth_num}\n"
+                f"Got: {response_num}\n"
+                f"Error: {error:.4f} (tolerance: {tolerance})"
+            )
+        else:
+            score = 0.0
+            eval_text = (
+                f"✗ Incorrect: Response exceeds tolerance.\n"
+                f"Expected: {ground_truth_num}\n"
+                f"Got: {response_num}\n"
+                f"Error: {error:.4f} (tolerance: {tolerance})"
+            )
+        
+        evaluation_texts.append(eval_text)
+        scores.append(score)
     
-    # Extract numbers
-    if extract_last:
-        response_num = extract_number(str(response))
-        ground_truth_num = extract_number(str(ground_truth))
-    else:
-        try:
-            response_num = float(str(response).strip())
-            ground_truth_num = float(str(ground_truth).strip())
-        except ValueError:
-            response_num = None
-            ground_truth_num = None
+    # Add results to DataFrame
+    df[EVALUATION_TEXT_COL] = evaluation_texts
+    df[SCORE_COL] = scores
     
-    # Check if we could extract numbers
-    if response_num is None or ground_truth_num is None:
-        return (
-            f"Could not extract numeric values.\n"
-            f"Response: '{response}'\n"
-            f"Ground truth: '{ground_truth}'",
-            0.0
-        )
-    
-    # Calculate relative error
-    if ground_truth_num == 0:
-        # Handle division by zero - use absolute difference
-        error = abs(response_num - ground_truth_num)
-        is_correct = error <= tolerance
-    else:
-        relative_error = abs(response_num - ground_truth_num) / abs(ground_truth_num)
-        is_correct = relative_error <= tolerance
-        error = relative_error
-    
-    # Determine score
-    if is_correct:
-        score = 1.0
-        eval_text = (
-            f"✓ Correct: Response is within tolerance.\n"
-            f"Expected: {ground_truth_num}\n"
-            f"Got: {response_num}\n"
-            f"Error: {error:.4f} (tolerance: {tolerance})"
-        )
-    else:
-        score = 0.0
-        eval_text = (
-            f"✗ Incorrect: Response exceeds tolerance.\n"
-            f"Expected: {ground_truth_num}\n"
-            f"Got: {response_num}\n"
-            f"Error: {error:.4f} (tolerance: {tolerance})"
-        )
-    
-    return eval_text, score
+    return df
 
 # Made with Bob

@@ -226,18 +226,34 @@ CLEAR supports plugging in custom evaluation functions as an alternative to LLM-
 ```python
 # my_judge.py
 import pandas as pd
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
-    """Evaluate a single record."""
-    response = row.get(config['model_output_column'], '')
-    ground_truth = row.get(config['reference_column'], '')
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """Evaluate all records in the dataset."""
+    response_col = config.get('model_output_column', 'response')
+    reference_col = config.get('reference_column', 'ground_truth')
     
-    # Your evaluation logic
-    match = str(response).strip() == str(ground_truth).strip()
-    score = 1.0 if match else 0.0
-    eval_text = f"Match: {match}"
+    # Process all records (can use vectorized ops, parallel processing, etc.)
+    evaluation_texts = []
+    scores = []
     
-    return eval_text, score
+    for idx, row in df.iterrows():
+        response = row.get(response_col, '')
+        ground_truth = row.get(reference_col, '')
+        
+        # Your evaluation logic
+        match = str(response).strip() == str(ground_truth).strip()
+        score = 1.0 if match else 0.0
+        eval_text = f"Match: {match}"
+        
+        evaluation_texts.append(eval_text)
+        scores.append(score)
+    
+    # Add results to DataFrame
+    df[EVALUATION_TEXT_COL] = evaluation_texts
+    df[SCORE_COL] = scores
+    
+    return df
 ```
 
 2. **Configure CLEAR to use your judge**:
@@ -281,16 +297,19 @@ See [`examples/custom_judges/README.md`](examples/custom_judges/README.md) for d
 External judges must implement:
 
 ```python
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """
     Args:
-        row: Record data (model_input, response, ground_truth, etc.)
+        df: DataFrame with all records to evaluate
         config: Full configuration dictionary
     
     Returns:
-        (evaluation_text: str, score: float)
-        - evaluation_text: Textual feedback
+        DataFrame with added 'evaluation_text' and 'score' columns
+        - evaluation_text: Textual feedback for each record
         - score: 0.0-1.0, or pd.NA for failures
+    
+    The judge receives the entire dataset and can process it however
+    it wants (sequentially, in parallel, in batches, etc.).
     """
 ```
 

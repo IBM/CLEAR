@@ -15,18 +15,22 @@ An external judge is a Python function that evaluates model outputs without usin
 All external judges must implement the following function signature:
 
 ```python
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """
-    Evaluate a single record.
+    Evaluate all records in the dataset.
     
     Args:
-        row: pandas Series containing the record data (includes model_input, response, etc.)
+        df: pandas DataFrame containing all records to evaluate
         config: Configuration dictionary with all settings
         
     Returns:
-        Tuple of (evaluation_text: str, score: float)
-        - evaluation_text: Textual feedback/analysis
-        - score: Numerical score between 0.0 and 1.0, or pd.NA if evaluation failed
+        DataFrame with added columns:
+        - 'evaluation_text': Textual feedback for each record
+        - 'score': Numerical score between 0.0 and 1.0, or pd.NA if evaluation failed
+    
+    The judge receives the entire dataset and can process it however it wants
+    (sequentially, in parallel, in batches, etc.). It must return a DataFrame
+    with the same number of rows and the required evaluation columns added.
     """
     pass
 ```
@@ -81,17 +85,35 @@ run-clear-eval-analysis \
 
 ```python
 import pandas as pd
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
-def evaluate(row: pd.Series, config: dict) -> tuple[str, float]:
-    # Get data from row
-    response = row.get(config['model_output_column'], '')
-    ground_truth = row.get(config['reference_column'], '')
+def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+    """Evaluate all records in the dataset."""
+    # Get configuration
+    response_col = config.get('model_output_column', 'response')
+    reference_col = config.get('reference_column', 'ground_truth')
     
-    # Your evaluation logic here
-    score = 1.0 if response == ground_truth else 0.0
-    eval_text = f"Match: {score == 1.0}"
+    # Initialize result lists
+    evaluation_texts = []
+    scores = []
     
-    return eval_text, score
+    # Process each row (or use vectorized operations, parallel processing, etc.)
+    for idx, row in df.iterrows():
+        response = row.get(response_col, '')
+        ground_truth = row.get(reference_col, '')
+        
+        # Your evaluation logic here
+        score = 1.0 if response == ground_truth else 0.0
+        eval_text = f"Match: {score == 1.0}"
+        
+        evaluation_texts.append(eval_text)
+        scores.append(score)
+    
+    # Add results to DataFrame
+    df[EVALUATION_TEXT_COL] = evaluation_texts
+    df[SCORE_COL] = scores
+    
+    return df
 ```
 
 2. **Configure CLEAR to use your judge:**
@@ -119,19 +141,67 @@ run-clear-eval-analysis --config-path your_config.yaml
 4. **Use Configuration**: Access judge-specific settings via `config['external_judge_config']`
 5. **Error Handling**: Wrap risky operations in try-except blocks and return error messages
 
-## Accessing Row Data
+## Accessing DataFrame Data
 
-The `row` parameter contains all columns from your input CSV:
+The `df` parameter is a pandas DataFrame containing all records with all columns from your input CSV:
 
 ```python
-# Standard columns (if present)
-model_input = row.get(config['model_input_column'], '')
-response = row.get(config['model_output_column'], '')
-ground_truth = row.get(config['reference_column'], '')
-question_id = row.get(config['qid_column'], '')
+# Get column names from config
+response_col = config.get('model_output_column', 'response')
+reference_col = config.get('reference_column', 'ground_truth')
+qid_col = config.get('qid_column', 'id')
 
-# Custom columns from your data
-custom_field = row.get('your_column_name', '')
+# Access data for all records
+responses = df[response_col]
+ground_truths = df[reference_col]
+question_ids = df[qid_col]
+
+# Access custom columns
+custom_data = df['your_column_name']
+
+# Process row by row if needed
+for idx, row in df.iterrows():
+    response = row[response_col]
+    ground_truth = row[reference_col]
+    # ... your logic
+```
+
+## Processing Flexibility
+
+Since the judge receives the entire DataFrame, you have complete control over how to process it:
+
+**Sequential Processing:**
+```python
+for idx, row in df.iterrows():
+    # Process one row at a time
+    pass
+```
+
+**Vectorized Operations (fastest for simple logic):**
+```python
+# Use pandas vectorized operations
+df[SCORE_COL] = (df[response_col] == df[reference_col]).astype(float)
+```
+
+**Parallel Processing:**
+```python
+from multiprocessing import Pool
+
+def process_row(row):
+    # Your logic
+    return eval_text, score
+
+with Pool() as pool:
+    results = pool.map(process_row, [row for _, row in df.iterrows()])
+```
+
+**Batch Processing:**
+```python
+batch_size = 100
+for i in range(0, len(df), batch_size):
+    batch = df.iloc[i:i+batch_size]
+    # Process batch
+    pass
 ```
 
 ## Accessing Configuration
@@ -155,14 +225,23 @@ Test your judge function before running the full pipeline:
 ```python
 import pandas as pd
 from your_judge import evaluate
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 # Create test data
-test_row = pd.Series({
-    'model_input': 'What is 2+2?',
-    'response': '4',
-    'ground_truth': '4',
-    'id': 'test_1'
-})
+test_df = pd.DataFrame([
+    {
+        'id': 'test_1',
+        'model_input': 'What is 2+2?',
+        'response': '4',
+        'ground_truth': '4'
+    },
+    {
+        'id': 'test_2',
+        'model_input': 'What is 3+3?',
+        'response': '6',
+        'ground_truth': '6'
+    }
+])
 
 test_config = {
     'model_output_column': 'response',
@@ -171,9 +250,13 @@ test_config = {
 }
 
 # Test evaluation
-eval_text, score = evaluate(test_row, test_config)
-print(f"Score: {score}")
-print(f"Text: {eval_text}")
+result_df = evaluate(test_df, test_config)
+print(result_df[[EVALUATION_TEXT_COL, SCORE_COL]])
+```
+
+Or use the provided test script:
+```bash
+python examples/test_external_judge.py
 ```
 
 ## Troubleshooting
