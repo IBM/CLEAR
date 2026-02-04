@@ -18,6 +18,16 @@ provider_defaults:
     eval_model_name: meta-llama/llama-3-3-70b-instruct
     max_workers: 20
 
+# Judge configuration
+# judge_type: "llm" (default) or "external"
+judge_type: llm
+# Path to Python file containing external judge function (required if judge_type is "external")
+external_judge_path: null
+# Name of the function to call in the external judge file (default: "evaluate")
+external_judge_function: evaluate
+# Additional configuration passed to the external judge
+external_judge_config: {}
+
 
 # unique run_ identifier (to appear in file name)
 run_name: null
