@@ -84,9 +84,18 @@ class ToolCallEvalUseCase(EvalUseCase):
             )
         elif provider == "openai":
             MetricsClientCls = get_llm("openai.async.output_val")
-            llm_client = MetricsClientCls(
-                model=llm.model_name,
-            )
+            # Extract base_url and api_key from LangChain ChatOpenAI client
+            kwargs = {"model": llm.model_name}
+            
+            # Check if custom base_url is set (for OpenAI-compatible endpoints)
+            if hasattr(llm, 'openai_api_base') and llm.openai_api_base:
+                kwargs["base_url"] = llm.openai_api_base
+            
+            # Check if custom api_key is set (LangChain uses SecretStr type)
+            if hasattr(llm, 'openai_api_key') and llm.openai_api_key:
+                kwargs["api_key"] = llm.openai_api_key._secret_value
+            
+            llm_client = MetricsClientCls(**kwargs)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
         
@@ -149,7 +158,6 @@ if __name__ == "__main__":
     provider = "watsonx"
     model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
     config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider, eval_model_name=model_name)
-
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
     llm = get_chat_llm(config["provider"], config["eval_model_name"], eval_mode=True)
