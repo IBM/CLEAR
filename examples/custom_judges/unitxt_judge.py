@@ -1,15 +1,14 @@
 """
-Example External Judge: Exact Match Evaluator
+Example External Judge: Unitxt judge Evaluator
 
-This is a simple example of an external judge that performs exact string matching
-between the model response and ground truth.
+This is a simple example of an external judge that uses a unitxt judge
 
 The judge receives the entire DataFrame and returns it with added evaluation columns.
 
 Usage:
     In your config file or CLI, set:
     - task: external
-    - external_judge_path: examples/custom_judges/exact_match_judge.py
+    - external_judge_path: examples/custom_judges/unitxt_judge.py
     - external_judge_function: evaluate
 """
 
@@ -19,11 +18,9 @@ from unitxt.templates import NullTemplate
 
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 from unitxt.api import create_dataset, evaluate as evaluate_with_unitxt
-from unitxt.inference import CrossProviderInferenceEngine
-from unitxt.llm_as_judge import LLMJudgeDirect
 
 def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    # Get column names from config
+
     response_col = config.get('model_output_column', 'response')
     model_input_col = config.get('model_input_column', 'model_input')
     data = [{model_input_col:d} for d in list(df[model_input_col])]
