@@ -9,6 +9,8 @@ seaborn
 langchain_openai
 langchain_ibm
 langchain_community
+langchain-google-genai
+google-generativeai
 openai
 ibm_watsonx_ai>=1.2.8
 tqdm

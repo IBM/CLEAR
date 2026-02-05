@@ -49,7 +49,7 @@ CLEAR requires a supported LLM provider and credentials to run analysis. [See su
 The sample dataset is a small subset of the **GSM8K math problems**.
 For running on the sample data and default configuration, you simpy have to set your provider and run
 ```bash
-run-clear-eval-analysis --provider=openai # or rits, watsonx
+run-clear-eval-analysis --provider=google # or openai, watsonx, rits, azure
 ```
 
 This will:
@@ -208,11 +208,35 @@ Arguments can be provided via:
 
 Depending on your selected `--provider`:
 
-| Provider   | Required Environment Variables                                              |
-|------------|-----------------------------------------------------------------------------|
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
-| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
-| `rits`     | `RITS_API_KEY`                                                              |
+| Provider   | Required Environment Variables                                              | Default Model        |
+|------------|-----------------------------------------------------------------------------|----------------------|
+| `google`   | `GOOGLE_API_KEY`                                                            | `gemini-2.0-flash`   |
+| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      | `gpt-4o`             |
+| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` | `llama-3-3-70b`      |
+| `rits`     | `RITS_API_KEY`                                                              | `llama-3-3-70b`      |
+| `azure`    | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_HOST`, `OPENAI_API_VERSION`           | `gpt-4o`             |
+
+### Google Provider (Gemini Models)
+
+To use Google's Gemini models:
+
+```bash
+# Set your API key (get from https://aistudio.google.com/app/apikey)
+export GOOGLE_API_KEY=your_api_key
+
+# Run with Google provider
+run-clear-eval-analysis --provider google --data-path your_data.csv
+```
+
+Available Gemini models:
+- `gemini-2.0-flash` (default, fast and efficient)
+- `gemini-1.5-pro` (more capable, good for evaluation/judging)
+- `gemini-1.5-flash` (previous generation)
+
+**Recommended setup**: Use `gemini-2.0-flash` for both generation and evaluation:
+```bash
+run-clear-eval-analysis --provider google --gen-model-name gemini-2.0-flash --eval-model-name gemini-2.0-flash
+```
 
 ## 🔌 Using External Judges
 
