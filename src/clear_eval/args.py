@@ -52,11 +52,9 @@ def parse_args():
                         help="number of parallel inferences")
     parser.add_argument("--predefined-issues",nargs='+', help="Predefined issues to use")
     
-    # External judge arguments
-    parser.add_argument("--judge-type", choices=["llm", "external"], default=None,
-                        help="Type of judge to use: 'llm' (default) or 'external'")
+    # External judge arguments (used when task is 'external')
     parser.add_argument("--external-judge-path", default=None,
-                        help="Path to Python file containing external judge function (required if judge-type is 'external')")
+                        help="Path to Python file containing external judge function (used when task is 'external')")
     parser.add_argument("--external-judge-function", default=None,
                         help="Name of the function to call in the external judge file (default: 'evaluate')")
     parser.add_argument("--external-judge-config", type=parse_dict, default=None,

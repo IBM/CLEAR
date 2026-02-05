@@ -28,27 +28,27 @@ A new module providing:
 - **`ExternalJudgeError`**: Custom exception for judge-related errors
 - **`get_judge_info()`**: Extracts judge configuration from config dict
 
-### 2. Modified Core Evaluation (`src/clear_eval/pipeline/eval_utils.py`)
+### 2. New Use Case (`src/clear_eval/pipeline/use_cases/ExternalJudgeUseCase.py`)
 
-Updated `evaluate_single_records()` to:
-- Check `judge_type` configuration parameter
-- Load and validate external judge if `judge_type == 'external'`
-- Call external judge with entire DataFrame (batch interface)
-- Copy results back to original DataFrame
-- Maintain backward compatibility with LLM evaluation
+Created `ExternalJudgeUseCase` class that:
+- Inherits from `EvalUseCase`
+- Overrides `eval_records()` to load and call external judge
+- Receives entire DataFrame and returns it with evaluation columns
+- No required input fields - judge defines what it needs
+- Handles all external judge logic in one place
 
 ### 3. Configuration Support
 
 **Default Config (`src/clear_eval/pipeline/setup/default_config.yaml`)**:
 ```yaml
-judge_type: llm  # or 'external'
+# External judge configuration (used when task is "external")
 external_judge_path: null
 external_judge_function: evaluate
 external_judge_config: {}
 ```
 
 **CLI Arguments (`src/clear_eval/args.py`)**:
-- `--judge-type`: Choose between 'llm' or 'external'
+- `--task`: Set to 'external' to use external judge
 - `--external-judge-path`: Path to judge Python file
 - `--external-judge-function`: Function name to call
 - `--external-judge-config`: JSON dict of judge-specific config
@@ -121,7 +121,7 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 ### Via Configuration File
 
 ```yaml
-judge_type: external
+task: external
 external_judge_path: path/to/my_judge.py
 external_judge_function: evaluate
 data_path: data.csv
@@ -136,7 +136,7 @@ run-clear-eval-analysis --config-path config.yaml
 
 ```bash
 run-clear-eval-analysis \
-  --judge-type external \
+  --task external \
   --external-judge-path my_judge.py \
   --data-path data.csv \
   --output-dir results/
@@ -148,7 +148,7 @@ run-clear-eval-analysis \
 from clear_eval.analysis_runner import run_clear_eval_analysis
 
 run_clear_eval_analysis(
-    judge_type='external',
+    task='external',
     external_judge_path='my_judge.py',
     data_path='data.csv',
     output_dir='results/'

@@ -43,7 +43,7 @@ Simple string matching evaluator that checks if the model response exactly match
 
 **Usage:**
 ```yaml
-judge_type: external
+task: external
 external_judge_path: examples/custom_judges/exact_match_judge.py
 external_judge_function: evaluate
 ```
@@ -51,7 +51,7 @@ external_judge_function: evaluate
 **CLI:**
 ```bash
 run-clear-eval-analysis \
-  --judge-type external \
+  --task external \
   --external-judge-path examples/custom_judges/exact_match_judge.py \
   --data-path your_data.csv
 ```
@@ -62,7 +62,7 @@ Evaluates numeric answers with configurable tolerance, useful for math problems.
 
 **Usage:**
 ```yaml
-judge_type: external
+task: external
 external_judge_path: examples/custom_judges/numeric_tolerance_judge.py
 external_judge_function: evaluate
 external_judge_config:
@@ -73,7 +73,7 @@ external_judge_config:
 **CLI:**
 ```bash
 run-clear-eval-analysis \
-  --judge-type external \
+  --task external \
   --external-judge-path examples/custom_judges/numeric_tolerance_judge.py \
   --external-judge-config '{"tolerance": 0.01, "extract_last_number": true}' \
   --data-path your_data.csv
@@ -119,7 +119,7 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 2. **Configure CLEAR to use your judge:**
 
 ```yaml
-judge_type: external
+task: external
 external_judge_path: path/to/your_judge.py
 external_judge_function: evaluate  # or your function name
 external_judge_config:
