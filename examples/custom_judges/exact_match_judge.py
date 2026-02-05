@@ -4,7 +4,9 @@ Example External Judge: Exact Match Evaluator
 This is a simple example of an external judge that performs exact string matching
 between the model response and ground truth.
 
-The judge receives the entire DataFrame and returns it with added evaluation columns.
+The judge receives the entire DataFrame and returns it with added evaluation columns:
+- 'evaluation_text': Text explanation of the evaluation
+- 'score': Numeric score between 0.0 and 1.0
 
 Usage:
     In your config file or CLI, set:
@@ -14,7 +16,6 @@ Usage:
 """
 
 import pandas as pd
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 
 def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
@@ -76,8 +77,8 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         evaluation_texts.append(eval_text)
         scores.append(score)
     
-    # Add results to DataFrame
-    df[EVALUATION_TEXT_COL] = evaluation_texts
-    df[SCORE_COL] = scores
+    # Add results to DataFrame using standard column names
+    df['evaluation_text'] = evaluation_texts
+    df['score'] = scores
     
     return df
