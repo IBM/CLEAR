@@ -210,6 +210,10 @@ Depending on your selected `--provider`:
 
 | Provider   | Required Environment Variables                                              |
 |------------|-----------------------------------------------------------------------------|
+| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
+| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
+| `rits`     | `RITS_API_KEY`                                                              |
+
 ## 🔌 Using External Judges
 
 CLEAR supports plugging in custom evaluation functions as an alternative to LLM-based evaluation. This is useful for:
@@ -311,12 +315,3 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     it wants (sequentially, in parallel, in batches, etc.).
     """
 ```
-
----
-
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
-| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
-| `rits`     | `RITS_API_KEY`                                                              |
-
----
-
