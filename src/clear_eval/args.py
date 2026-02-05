@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
     parser.add_argument("--task", default="general",
-                        help="task to evaluate: general, tool_call, math, rag")
+                        help="task to evaluate: general, tool_call, math, rag. external")
     parser.add_argument("--evaluation-criteria", type=parse_dict, help="Json of a dictionary of evaluation criteria for"
                                                 "the judge. Example: --evaluation-criteria '{\"correction\": \"Response is factually correct\"}'")
     parser.add_argument("--max-examples-to-analyze", type=int, help="Analyze only the specified number of examples")
@@ -51,6 +51,14 @@ def parse_args():
     parser.add_argument("--max-workers", type=int, default=None,
                         help="number of parallel inferences")
     parser.add_argument("--predefined-issues",nargs='+', help="Predefined issues to use")
+    
+    # External judge arguments (used when task is 'external')
+    parser.add_argument("--external-judge-path", default=None,
+                        help="Path to Python file containing external judge function (used when task is 'external')")
+    parser.add_argument("--external-judge-function", default=None,
+                        help="Name of the function to call in the external judge file (default: 'evaluate')")
+    parser.add_argument("--external-judge-config", type=parse_dict, default=None,
+                        help="JSON dictionary of additional configuration for the external judge")
 
     args = parser.parse_args()
 
