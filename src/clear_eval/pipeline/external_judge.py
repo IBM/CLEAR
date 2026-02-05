@@ -143,19 +143,15 @@ def call_external_judge(
                 f"Judge function must return a pandas DataFrame. Got: {type(result_df)}"
             )
 
-        # Check if columns need to be renamed (support both 'evaluation_text' and 'evaluation text')
-        if 'evaluation_text' in result_df.columns and EVALUATION_TEXT_COL not in result_df.columns:
-            result_df = result_df.rename(columns={'evaluation_text': EVALUATION_TEXT_COL})
-        if 'score' in result_df.columns and SCORE_COL not in result_df.columns:
-            result_df = result_df.rename(columns={'score': SCORE_COL})
-        
-        # Check that required columns exist
+        if EVALUATION_TEXT_COL not in result_df.columns or SCORE_COL not in result_df.columns:
+            result_df = result_df.rename(columns={'evaluation_text': EVALUATION_TEXT_COL, 'score':SCORE_COL})
+
         if EVALUATION_TEXT_COL not in result_df.columns:
             raise ExternalJudgeError(
                 f"Judge function must add '{EVALUATION_TEXT_COL}' column to the DataFrame. "
                 f"Found columns: {list(result_df.columns)}"
             )
-        
+
         if SCORE_COL not in result_df.columns:
             raise ExternalJudgeError(
                 f"Judge function must add '{SCORE_COL}' column to the DataFrame. "

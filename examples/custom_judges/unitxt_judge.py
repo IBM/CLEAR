@@ -59,7 +59,7 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     results = evaluate_with_unitxt(predictions=predictions, data=dataset)
     
     # Add results using standard column names
-    df['evaluation_text'] = [r["score"] for r in results.instance_scores]
-    df['score'] = [r[f"{r['score_name']}_assessment"] for r in results.instance_scores]
+    df['score'] = [r["score"] for r in results.instance_scores]
+    df['evaluation_text'] = [r[f"{r['score_name']}_assessment"] for r in results.instance_scores]
     
     return df
