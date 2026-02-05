@@ -216,23 +216,23 @@ Depending on your selected `--provider`:
 
 ## 🔌 Using External Judges
 
-CLEAR supports plugging in custom evaluation functions as an alternative to LLM-based evaluation. This is useful for:
-- **Deterministic metrics** (exact match, numeric tolerance, etc.)
-- **Cost reduction** (avoid LLM API calls)
-- **Faster evaluation** for large datasets
-- **Integration** of existing evaluation metrics
+CLEAR supports plugging in custom evaluation functions as an alternative to LLM-based evaluation. External judges receive the input DataFrame and must add a textual evaluation and numerical score for each record.
 
-### Quick Start with External Judge
+### Quick Start
 
 1. **Create a judge function** (or use provided examples):
 
 ```python
 # my_judge.py
 import pandas as pd
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """Evaluate all records in the dataset."""
+    """
+    Evaluate all records in the dataset.
+    
+    External judges must be standalone - no imports from clear_eval required.
+    Return DataFrame with 'evaluation_text' and 'score' columns added.
+    """
     response_col = config.get('model_output_column', 'response')
     reference_col = config.get('reference_column', 'ground_truth')
     
@@ -252,9 +252,9 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         evaluation_texts.append(eval_text)
         scores.append(score)
     
-    # Add results to DataFrame
-    df[EVALUATION_TEXT_COL] = evaluation_texts
-    df[SCORE_COL] = scores
+    # Add results using standard column names
+    df['evaluation_text'] = evaluation_texts
+    df['score'] = scores
     
     return df
 ```
@@ -290,14 +290,21 @@ run-clear-eval-analysis \
 
 CLEAR includes example judges in `examples/custom_judges/`:
 
-- **`exact_match_judge.py`**: Simple string matching
-- **`numeric_tolerance_judge.py`**: Numeric comparison with tolerance
+- **`exact_match_judge.py`**: Simple string matching evaluator for reference-based evaluation
+- **`unitxt_judge.py`**: Integration with Unitxt's LLM-as-judge framework
 
 See [`examples/custom_judges/README.md`](examples/custom_judges/README.md) for detailed documentation and more examples.
 
+### Key Features
+
+- **Standalone**: External judges don't require CLEAR imports - only pandas
+- **Flexible Processing**: Process data sequentially, in parallel, or with vectorized operations
+- **Path Support**: Works with absolute paths, relative paths, and `~` expansion
+- **Batch Interface**: Receive entire dataset for maximum control over processing strategy
+
 ### Judge Interface
 
-External judges must implement:
+External judges must implement this signature:
 
 ```python
 def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
@@ -307,11 +314,14 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         config: Full configuration dictionary
     
     Returns:
-        DataFrame with added 'evaluation_text' and 'score' columns
-        - evaluation_text: Textual feedback for each record
-        - score: 0.0-1.0, or pd.NA for failures
+        DataFrame with two added columns:
+        - 'evaluation_text': Textual feedback for each record
+        - 'score': Numeric score (0.0-1.0), or pd.NA for failures
     
-    The judge receives the entire dataset and can process it however
-    it wants (sequentially, in parallel, in batches, etc.).
+    The judge receives the entire dataset and can process it using any strategy:
+    sequential iteration, vectorized operations, parallel processing, or batching.
     """
 ```
+
+### Note
+It is the user's responsibility to make sure the supplied judge fits the given input data and configuration.  
