@@ -40,7 +40,10 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     # Get column names from config
     response_col = config.get('model_output_column', 'response')
     reference_col = config.get('reference_column', 'ground_truth')
-    
+
+    if reference_col not in df.columns:
+        raise ValueError('Reference column {} not found in dataframe.'.format(reference_col))
+
     # Initialize result columns
     evaluation_texts = []
     scores = []
