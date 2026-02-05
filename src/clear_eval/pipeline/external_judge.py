@@ -25,7 +25,8 @@ def load_external_judge(judge_path: str, function_name: str = "evaluate") -> Cal
     Dynamically load an external judge function from a Python file.
     
     Args:
-        judge_path: Path to the Python file containing the judge function
+        judge_path: Path to the Python file containing the judge function.
+                   Supports absolute paths, relative paths, and ~ expansion.
         function_name: Name of the function to load (default: "evaluate")
         
     Returns:
@@ -34,6 +35,9 @@ def load_external_judge(judge_path: str, function_name: str = "evaluate") -> Cal
     Raises:
         ExternalJudgeError: If the judge cannot be loaded or validated
     """
+    # Expand user path (~ to home directory) and convert to absolute path
+    judge_path = os.path.abspath(os.path.expanduser(judge_path))
+    
     # Validate file exists
     if not os.path.exists(judge_path):
         raise ExternalJudgeError(f"External judge file not found: {judge_path}")
@@ -204,10 +208,7 @@ def get_judge_info(config: dict) -> dict:
         Dictionary with judge type and parameters
     """
     return {
-        'judge_type': config.get('judge_type', 'llm'),
         'external_judge_path': config.get('external_judge_path'),
         'external_judge_function': config.get('external_judge_function', 'evaluate'),
         'external_judge_config': config.get('external_judge_config', {})
     }
-
-# Made with Bob

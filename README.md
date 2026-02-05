@@ -198,8 +198,7 @@ Arguments can be provided via:
 | `--agent_mode`          | boolean, if True - use a default evaluation criteria suited for an agentic step and not a single llm response                              | False             |
 | `--success_threshold`   | float, the minimum judge score required for a single record to be considered successful                                                    | 0.91              |
 | `--max_workers`         | Number of parallel inferences to run                                                                                                       | provider specific |
-| `--judge_type`          | Type of judge: `llm` (default) or `external` for custom evaluation functions                                                              | llm               |
-| `--external_judge_path` | Path to Python file with external judge function (required if `judge_type` is `external`)                                                 | None              |
+| `--external_judge_path` | Path to Python file with external judge function (used when `task` is `external`)                                                         | None              |
 | `--external_judge_function` | Name of function in external judge file to call                                                                                        | evaluate          |
 | `--external_judge_config` | JSON dict of additional config for external judge: `{"param": "value"}`                                                                  | {}                |
 
@@ -260,7 +259,7 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 
 ```yaml
 # config.yaml
-judge_type: external
+task: external  # Use external judge task
 external_judge_path: my_judge.py
 external_judge_function: evaluate
 data_path: your_data.csv
@@ -277,7 +276,7 @@ Or via CLI:
 
 ```bash
 run-clear-eval-analysis \
-  --judge-type external \
+  --task external \
   --external-judge-path my_judge.py \
   --data-path your_data.csv \
   --output-dir results/

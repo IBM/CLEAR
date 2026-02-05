@@ -8,7 +8,7 @@ The judge receives the entire DataFrame and returns it with added evaluation col
 
 Usage:
     In your config file, set:
-    - judge_type: external
+    - task: external
     - external_judge_path: examples/custom_judges/numeric_tolerance_judge.py
     - external_judge_function: evaluate
     - external_judge_config:
@@ -139,4 +139,3 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     
     return df
 
-# Made with Bob

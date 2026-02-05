@@ -8,7 +8,7 @@ The judge receives the entire DataFrame and returns it with added evaluation col
 
 Usage:
     In your config file or CLI, set:
-    - judge_type: external
+    - task: external
     - external_judge_path: examples/custom_judges/exact_match_judge.py
     - external_judge_function: evaluate
 """
@@ -81,5 +81,3 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     df[SCORE_COL] = scores
     
     return df
-
-# Made with Bob
