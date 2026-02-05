@@ -35,6 +35,8 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     pass
 ```
 
+**Important**: External judges must be **completely standalone** - they should not import anything from `clear_eval`. Use standard column names `'evaluation_text'` and `'score'` directly as strings.
+
 ## Available Examples
 
 ### 1. Exact Match Judge (`exact_match_judge.py`)
@@ -85,7 +87,6 @@ run-clear-eval-analysis \
 
 ```python
 import pandas as pd
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     """Evaluate all records in the dataset."""
@@ -109,9 +110,9 @@ def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         evaluation_texts.append(eval_text)
         scores.append(score)
     
-    # Add results to DataFrame
-    df[EVALUATION_TEXT_COL] = evaluation_texts
-    df[SCORE_COL] = scores
+    # Add results to DataFrame using standard column names
+    df['evaluation_text'] = evaluation_texts
+    df['score'] = scores
     
     return df
 ```
@@ -180,7 +181,8 @@ for idx, row in df.iterrows():
 **Vectorized Operations (fastest for simple logic):**
 ```python
 # Use pandas vectorized operations
-df[SCORE_COL] = (df[response_col] == df[reference_col]).astype(float)
+df['score'] = (df[response_col] == df[reference_col]).astype(float)
+df['evaluation_text'] = df['score'].apply(lambda x: 'Match' if x == 1.0 else 'No match')
 ```
 
 **Parallel Processing:**
@@ -225,7 +227,6 @@ Test your judge function before running the full pipeline:
 ```python
 import pandas as pd
 from your_judge import evaluate
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 # Create test data
 test_df = pd.DataFrame([
@@ -251,7 +252,7 @@ test_config = {
 
 # Test evaluation
 result_df = evaluate(test_df, test_config)
-print(result_df[[EVALUATION_TEXT_COL, SCORE_COL]])
+print(result_df[['evaluation_text', 'score']])
 ```
 
 Or use the provided test script:

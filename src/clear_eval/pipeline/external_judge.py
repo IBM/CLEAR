@@ -11,6 +11,7 @@ import logging
 import os
 from typing import Callable, Tuple, Any
 import pandas as pd
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,8 @@ def validate_judge_function(judge_func: Callable, function_name: str) -> None:
     
     Expected signature: (df: pd.DataFrame, config: dict) -> pd.DataFrame
     
+    The returned DataFrame must contain 'evaluation_text' and 'score' columns.
+    
     Args:
         judge_func: The function to validate
         function_name: Name of the function (for error messages)
@@ -118,6 +121,8 @@ def call_external_judge(
     """
     Call an external judge function and validate its output.
     
+    The judge function must return a DataFrame with 'evaluation_text' and 'score' columns.
+    
     Args:
         judge_func: The judge function to call
         df: The DataFrame with all records to evaluate
@@ -137,20 +142,26 @@ def call_external_judge(
             raise ExternalJudgeError(
                 f"Judge function must return a pandas DataFrame. Got: {type(result_df)}"
             )
+
+        # Check if columns need to be renamed (support both 'evaluation_text' and 'evaluation text')
+        if 'evaluation_text' in result_df.columns and EVALUATION_TEXT_COL not in result_df.columns:
+            result_df = result_df.rename(columns={'evaluation_text': EVALUATION_TEXT_COL})
+        if 'score' in result_df.columns and SCORE_COL not in result_df.columns:
+            result_df = result_df.rename(columns={'score': SCORE_COL})
         
         # Check that required columns exist
-        from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
-        
         if EVALUATION_TEXT_COL not in result_df.columns:
             raise ExternalJudgeError(
-                f"Judge function must add '{EVALUATION_TEXT_COL}' column to the DataFrame"
+                f"Judge function must add '{EVALUATION_TEXT_COL}' column to the DataFrame. "
+                f"Found columns: {list(result_df.columns)}"
             )
         
         if SCORE_COL not in result_df.columns:
             raise ExternalJudgeError(
-                f"Judge function must add '{SCORE_COL}' column to the DataFrame"
+                f"Judge function must add '{SCORE_COL}' column to the DataFrame. "
+                f"Found columns: {list(result_df.columns)}"
             )
-        
+
         # Validate that DataFrame has same number of rows
         if len(result_df) != len(df):
             raise ExternalJudgeError(
@@ -172,7 +183,7 @@ def call_external_judge(
             try:
                 # Check if scores are numeric
                 numeric_scores = pd.to_numeric(non_na_scores, errors='coerce')
-                if numeric_scores.isna().any():
+                if pd.isna(numeric_scores).any():
                     raise ExternalJudgeError(
                         f"'{SCORE_COL}' column must contain numeric values or pd.NA"
                     )
