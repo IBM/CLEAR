@@ -579,7 +579,7 @@ def convert_results_to_ui_input(df, config, task_data):
         df.loc[:, "recurring_issues_str"] = df.apply(lambda r: get_recurring_issues_list(r), axis=1)
         custom_output_df["recurring_issues_str"] = df["recurring_issues_str"]
 
-        required_cols =[config[r] for r in required_input_fields] + config.get("input_columns", []) + \
+        required_cols =[config.get(r, r) for r in required_input_fields] + config.get("input_columns", []) + \
                          ["question_id", 'model_input', 'response',
                          'score', 'evaluation_text', 'evaluation_summary',
                          'recurring_issues', 'recurring_issues_str', 'ground_truth']
