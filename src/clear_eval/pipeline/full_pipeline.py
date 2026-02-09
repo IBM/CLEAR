@@ -23,6 +23,14 @@ from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def get_issues_format(config):
+    """Get the issues format from config with default fallback.
+    
+    Returns:
+        str: Either 'shortcomings' (default) or 'recommendations'
+    """
+    return config.get('issues_format', 'shortcomings')
+
 def get_run_name(config):
     run_name = config.get("run_name")
     if not run_name:
@@ -70,6 +78,7 @@ def get_parquet_bytes(output_df):
 
 def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled):
     # step3: generate shortcomings
+    format_mode = get_issues_format(config)
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     shortcoming_list = None
     if resume_enabled:
@@ -89,7 +98,7 @@ def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resum
             deduplicated_shortcomings_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
         if deduplicated_shortcomings_list is None:
             deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm,
-                                                                            config["max_shortcomings"])
+                                                                            config["max_shortcomings"], format_mode=format_mode)
             save_json_to_cache(deduplicated_shortcomings_list, deduplicated_shortcomings_list_output_path)
             resume_enabled = False
     else:
@@ -107,6 +116,7 @@ def get_predefined_issues_list(config):
     return None
 
 def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
+    format_mode = get_issues_format(config)
     shortcoming_list = get_predefined_issues_list(config)
     if shortcoming_list:
         logger.info("Using predefined issues")
@@ -125,7 +135,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         max_workers = config['max_workers']
         high_score_threshold = config.get("success_threshold", 1)
         mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, shortcoming_list, use_full_text,
-                                                     qid_col, max_workers, high_score_threshold)
+                                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
     convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info)

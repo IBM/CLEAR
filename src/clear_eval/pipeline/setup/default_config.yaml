@@ -62,10 +62,14 @@ reference_column: ground_truth # required when is_reference_based is true
 model_input_column: model_input # optional
 qid_column: id # optional
 documents_column: documents # required for rag
-
 use_full_text_for_analysis: false
 #max_workers: 20
 max_shortcomings: 15
 min_shortcomings: 3
 max_eval_text_for_synthesis: 1000
+
+# Output format for identified issues: "shortcomings" (problem-focused) or "recommendations" (solution-focused)
+# Both analyze low-scoring examples, but recommendations frame issues as actionable advice for developers
+issues_format: "shortcomings"
+
 
