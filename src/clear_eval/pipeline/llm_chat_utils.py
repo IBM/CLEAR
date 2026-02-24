@@ -7,14 +7,16 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
         parameters = {}
     if provider == "watsonx":
         from langchain_ibm import ChatWatsonx
-        parameters = parameters or {
+        default_parameters = {
             "min_new_tokens": 1,
             "stop_sequences": [".", "<|eom_id|>"],
             "enable-auto-tool-choice": False,
             "tool-call-parser": False
         }
+        merged_parameters = {**default_parameters, **parameters}
         if eval_mode:
-            parameters["decoding_method"]= "greedy"
+            merged_parameters["decoding_method"] = "greedy"
+        parameters = merged_parameters
         url = os.getenv("WATSONX_URL")
         if not url:
             raise KeyError("WATSONX_URL env var must be specified for watsonx inference.")

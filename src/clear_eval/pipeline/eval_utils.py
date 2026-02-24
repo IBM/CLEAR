@@ -595,10 +595,10 @@ def convert_results_to_ui_input(df, config, task_data):
         logger.error(f"Warning: Error converting custom analysis results to CSV: {e}")
         return None
 
-def get_llm(provider, model_name, eval_mode=True):
+def get_llm(provider, model_name, parameters = None, eval_mode=True):
     try:
         logger.info(f"Getting llm for model: {model_name}, provider {provider}, eval_mode {eval_mode}")
-        llm = get_chat_llm(provider, model_name, eval_mode=eval_mode)
+        llm = get_chat_llm(provider, model_name, parameters=parameters, eval_mode=eval_mode)
     except Exception as e:
         raise Exception(f"Error initializing LLM {provider}, {model_name}). Details: {e}")
     if llm is None:
