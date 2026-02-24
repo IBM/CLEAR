@@ -164,7 +164,7 @@ def run_aggregation_pipeline(config):
 
 def run_evaluation_from_df(config, response_df, ):
     provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"])
+    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
     task_data = get_task_data_obj(config["task"])
     eval_df = task_data.eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
@@ -177,7 +177,7 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     if not task:
         raise ValueError(f"task config not specified")
     provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"])
+    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
@@ -202,7 +202,7 @@ def run_eval_pipeline(config):
         raise ValueError(f"task config not specified")
 
     provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"])
+    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']

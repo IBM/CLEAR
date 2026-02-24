@@ -59,6 +59,8 @@ def parse_args():
                         help="Name of the function to call in the external judge file (default: 'evaluate')")
     parser.add_argument("--external-judge-config", type=parse_dict, default=None,
                         help="JSON dictionary of additional configuration for the external judge")
+    parser.add_argument("--eval-model-params", type=parse_dict, default=None,
+                        help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'")
 
     args = parser.parse_args()
 

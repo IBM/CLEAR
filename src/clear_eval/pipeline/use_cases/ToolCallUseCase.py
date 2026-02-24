@@ -160,7 +160,7 @@ if __name__ == "__main__":
     config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider, eval_model_name=model_name)
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
-    llm = get_chat_llm(config["provider"], config["eval_model_name"], eval_mode=True)
+    llm = get_chat_llm(config["provider"], config["eval_model_name"], parameters=config["eval_model_params"], eval_mode=True)
 
     tool_call_use_case = ToolCallEvalUseCase()
     evaluated_df = tool_call_use_case.eval_records(df, llm, config)
