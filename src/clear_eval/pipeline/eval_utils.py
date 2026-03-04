@@ -7,10 +7,9 @@ import random
 from langchain_core.messages import HumanMessage, SystemMessage
 import pandas as pd
 from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
-    SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED
-from clear_eval.pipeline.propmts import get_summarization_prompt, get_shortcomings_synthesis_prompt, \
-     get_shortcomings_clustering_prompt, get_shortcomings_mapping_system_prompt, \
-    get_shortcomings_mapping_human_prompt, get_shortcomings_synthesis_prompt_cont
+    SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE
+from clear_eval.pipeline.propmts import get_summarization_prompt, \
+     get_shortcomings_clustering_prompt, get_issues_mapping_system_prompt, get_issues_mapping_human_prompt, get_synthesis_prompt, get_synthesis_prompt_cont
 import re
 from clear_eval.pipeline.threading_utils import run_func_in_threads
 logger = logging.getLogger(__name__)
@@ -202,17 +201,18 @@ def get_evaluation_texts_for_synthesis(df, use_full_text, score_col = SCORE_COL,
     logger.info(f"returning {len(valid_eval_texts)}/{len(valid_df)} valid evaluation texts ({len(df)} total)")
     return valid_eval_texts
 
-def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL, synthesis_template=None):
+def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL, synthesis_template=None, format_mode='shortcomings'):
     use_full_text = config['use_full_text_for_analysis']
     max_eval_text_for_synthesis = config['max_eval_text_for_synthesis']
     eval_texts = get_evaluation_texts_for_synthesis(df, use_full_text=use_full_text, score_col=score_col,
                                                     score_threshold=config.get("success_threshold", 1),
                                                     max_eval_text_for_synthesis=max_eval_text_for_synthesis)
     return synthesize_shortcomings(eval_texts, llm,
-                                   min_shortcomings=config['min_shortcomings'], synthesis_template=synthesis_template)
+                                   min_shortcomings=config['min_shortcomings'], synthesis_template=synthesis_template,
+                                   format_mode=format_mode)
 
 def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
-                            max_shortcomings = None, batch_size=100, synthesis_template=None):
+                            max_shortcomings = None, batch_size=100, synthesis_template=None, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
     """Analyzes evaluation texts to identify common shortcomings."""
     logger.info(f"\nSynthesizing Shortcomings List")
 
@@ -236,10 +236,12 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
             synthesis_prompt = synthesis_template.format(max_shortcomings, concatenated_texts)
         else:
             if not overall_shortcoming_list:
-                synthesis_prompt = get_shortcomings_synthesis_prompt(concatenated_texts, max_shortcomings)
+                from clear_eval.pipeline.propmts import get_synthesis_prompt
+                synthesis_prompt = get_synthesis_prompt(concatenated_texts, max_shortcomings, format_mode)
             else:
                 shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
-                synthesis_prompt = get_shortcomings_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings)
+                from clear_eval.pipeline.propmts import get_synthesis_prompt_cont
+                synthesis_prompt = get_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings, format_mode)
 
         try:
             messages = [
@@ -339,7 +341,7 @@ def parse_mapping_response(response, question_id, num_shortcomings, ):
     return shortcomings_result
 
 
-def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, system_prompt ):
+def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, system_prompt , format_mode):
         # Skip analysis if eval text is invalid or indicates prior errors
         num_shortcomings = len(shortcomings_list)
         if is_missing_or_error(eval_text):
@@ -351,7 +353,7 @@ def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, syst
             identified_shortcomings_names = []
             return shortcomings_result, identified_shortcomings_names
         else:
-            human_prompt = get_shortcomings_mapping_human_prompt(eval_text, num_shortcomings)
+            human_prompt = get_issues_mapping_human_prompt(eval_text, num_shortcomings, format_mode=format_mode)
             try:
                 messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
                 response = llm.invoke(messages).content.strip()
@@ -369,7 +371,7 @@ def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, syst
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list,
-                                use_full_text, qid_col, max_workers, high_score_threshold, score_col = SCORE_COL):
+                                use_full_text, qid_col, max_workers, high_score_threshold, score_col = SCORE_COL, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
     logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
     df[IDENTIFIED_SHORTCOMING_COL] = ""
@@ -386,7 +388,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
     #print(f"Analyzing shortcomings using {llm.model_name} against {num_shortcomings} synthesized criteria...")
 
     # Prepare components for the analysis prompt
-    system_prompt = get_shortcomings_mapping_system_prompt(shortcomings_list)
+    system_prompt = get_issues_mapping_system_prompt(shortcomings_list, format_mode)
 
     # Initialize shortcoming columns in DataFrame
     for i in range(num_shortcomings):
@@ -397,12 +399,12 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
     n_records_to_map = 0
     for idx, row in df.iterrows():
         if pd.isna(row[score_col]):
-            inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
+            inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
         elif row[score_col] >= high_score_threshold:
-            inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
+            inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
         else:
             n_records_to_map += 1
-            inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt))
+            inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
     thread_results = run_func_in_threads(
         analyze_shortcoming_row,
@@ -504,13 +506,13 @@ def generate_model_predictions(df, llm, config):
 
     return df
 
-def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_retries=3):
+def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_retries=3, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
     logger.info(f"Removing duplications from list of {len(shortcoming_list)} shortcomings")
     if not shortcoming_list:
         logger.info(f"No shortcomings found")
         return []
     try:
-        clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list, max_shortcomings)
+        clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list, max_shortcomings, format_mode)
         new_shortcoming_list = []
         retries = 0
         while retries < num_retries:
@@ -606,18 +608,18 @@ def get_llm(provider, model_name, parameters = None, eval_mode=True):
     return llm
 
 def create_aggregations_from_df(df, eval_llm, use_full_text, max_shortcomings, high_score_threshold, max_workers,
-                                score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None, synthesis_template=None):
+                                score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None, synthesis_template=None, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
     evaluation_text_list = get_evaluation_texts_for_synthesis(df, use_full_text, score_col, high_score_threshold, max_eval_text_for_synthesis)
     shortcoming_list = synthesize_shortcomings(evaluation_text_list, eval_llm, min_shortcomings=None,
-                            max_shortcomings = None, batch_size=100, synthesis_template=synthesis_template)
-    deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, max_shortcomings)
+                            max_shortcomings = None, batch_size=100, synthesis_template=synthesis_template, format_mode=format_mode)
+    deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm, max_shortcomings, format_mode=format_mode)
     return map_shortcomings_from_df(df, deduplicated_shortcomings_list,  eval_llm, use_full_text, high_score_threshold, max_workers,
-                                score_col = score_col, qid_col=qid_col)
+                                score_col = score_col, qid_col=qid_col, format_mode=format_mode)
 
-def map_shortcomings_from_df(df, shortcomings_list,  eval_llm, use_full_text, high_score_threshold, max_workers,
-                                score_col = SCORE_COL, qid_col="id"):
+def map_shortcomings_from_df(df, shortcomings_list, eval_llm, use_full_text, high_score_threshold, max_workers,
+                             score_col = SCORE_COL, qid_col="id", format_mode=DEFAULT_ISSUES_FORMAT_MODE):
     mapped_data_df = map_shortcomings_to_records(df, eval_llm, shortcomings_list, use_full_text,
-                                                 qid_col, max_workers, high_score_threshold, score_col)
+                                                 qid_col, max_workers, high_score_threshold, score_col, format_mode)
     qid_to_issues = dict(zip(mapped_data_df[qid_col], mapped_data_df[IDENTIFIED_SHORTCOMING_COL]))
     return qid_to_issues
 
