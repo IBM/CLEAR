@@ -20,7 +20,6 @@ provider_defaults:
 
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
-  max_tokens: 4096
 
 # unique run_ identifier (to appear in file name)
 run_name: null
