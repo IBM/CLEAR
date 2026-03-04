@@ -71,7 +71,7 @@ class ExternalJudgeUseCase(EvalUseCase):
             
             # Copy evaluation results back to original DataFrame
             df[EVALUATION_TEXT_COL] = result_df[EVALUATION_TEXT_COL]
-            df[score_col] = result_df[score_col]
+            df[score_col] = result_df[SCORE_COL]
             
             logger.info("Finished evaluating predictions with external judge.")
             
