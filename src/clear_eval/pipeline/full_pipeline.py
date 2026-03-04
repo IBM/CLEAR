@@ -11,7 +11,7 @@ import pandas as pd
 from clear_eval.pipeline.use_cases.use_case_utils import get_task_data_obj
 from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
                                            EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
-                                           MAPPING_FILE_PREFIX)
+                                           MAPPING_FILE_PREFIX, DEFAULT_ISSUES_FORMAT_MODE)
 
 from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
     ensure_dir, \
@@ -22,6 +22,9 @@ from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_mode
 from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def get_issues_format(config):
+        return config.get('issues_format', DEFAULT_ISSUES_FORMAT_MODE)
 
 def get_run_name(config):
     run_name = config.get("run_name")
@@ -70,6 +73,7 @@ def get_parquet_bytes(output_df):
 
 def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled):
     # step3: generate shortcomings
+    format_mode = get_issues_format(config)
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     shortcoming_list = None
     if resume_enabled:
@@ -77,7 +81,8 @@ def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resum
     if shortcoming_list is None:
         synthesis_template = config.get("synthesis_template")
         shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config,
-                                                           synthesis_template=synthesis_template)
+                                                           synthesis_template=synthesis_template,
+                                                           format_mode = format_mode)
         save_json_to_cache(shortcoming_list, shortcoming_list_output_path)
         resume_enabled = False
 
@@ -89,7 +94,8 @@ def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resum
             deduplicated_shortcomings_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
         if deduplicated_shortcomings_list is None:
             deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm,
-                                                                            config["max_shortcomings"])
+                                                                            max_shortcomings = config["max_shortcomings"],
+                                                                            format_mode=format_mode)
             save_json_to_cache(deduplicated_shortcomings_list, deduplicated_shortcomings_list_output_path)
             resume_enabled = False
     else:
@@ -107,6 +113,7 @@ def get_predefined_issues_list(config):
     return None
 
 def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
+    format_mode = get_issues_format(config)
     shortcoming_list = get_predefined_issues_list(config)
     if shortcoming_list:
         logger.info("Using predefined issues")
@@ -125,7 +132,7 @@ def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm,
         max_workers = config['max_workers']
         high_score_threshold = config.get("success_threshold", 1)
         mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, shortcoming_list, use_full_text,
-                                                     qid_col, max_workers, high_score_threshold)
+                                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode)
         save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
         resume_enabled = False
     convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info)

@@ -51,6 +51,8 @@ def parse_args():
     parser.add_argument("--max-workers", type=int, default=None,
                         help="number of parallel inferences")
     parser.add_argument("--predefined-issues",nargs='+', help="Predefined issues to use")
+    parser.add_argument("--issues-format", choices=["shortcomings", "recommendations"], default=None,
+                        help="Output format for identified issues: 'shortcomings' (problem-focused, default) or 'recommendations' (solution-focused)")
     
     # External judge arguments (used when task is 'external')
     parser.add_argument("--external-judge-path", default=None,
