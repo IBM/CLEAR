@@ -8,7 +8,7 @@ from clear_eval.pipeline.use_cases.EvalUseCase import EvalUseCase
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from altk.core.toolkit import AgentPhase, ComponentConfig
-from altk.pre_tool.core import SPARCReflectionRunInput, Track, SPARCReflectionResult
+from altk.pre_tool.core import SPARCReflectionRunInput, Track, SPARCReflectionResult, SPARCExecutionMode
 from altk.core.llm import get_llm, BaseLLMClient
 
 import logging
@@ -143,15 +143,18 @@ class ToolCallEvalUseCase(EvalUseCase):
 
     async def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[SPARCReflectionResult]:
         """Generates sparc evaluation results."""
+        has_spec = self.SPECS_COL in df.columns and df[self.SPECS_COL].notnull().any()
+        track = Track.SLOW_TRACK if has_spec else Track.SPEC_FREE
         sparc_component = SPARCReflectionComponent(
             config=ComponentConfig(llm_client=llm_client),
-            track=Track.SLOW_TRACK,  # Use slow track for performance
+            track=track,
+            execution_mode=SPARCExecutionMode.ASYNC,
         )
         reflection_results = []
         for _, example in tqdm(df.iterrows(), total=len(df), desc="Evaluating tool calls with SPARC"):
             run_input = SPARCReflectionRunInput(
                     messages=json.loads(example[self.CONTEXT_COL]),
-                    tool_specs=json.loads(example[self.SPECS_COL]),
+                    tool_specs=json.loads(example[self.SPECS_COL]) if has_spec else [],
                     tool_calls=[json.loads(example[self.RESPONSE_COL])],
                 )
             reflection_result = await sparc_component.aprocess(run_input, phase=AgentPhase.RUNTIME)
@@ -171,6 +174,9 @@ if __name__ == "__main__":
     config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider)#, eval_model_name=model_name)
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
+    spec_free = True
+    if spec_free:
+        df.drop(columns=["api_spec"], inplace=True)
     use_litellm = True #config.get("use_litellm", False)
     llm = get_llm_client(config["provider"], config["eval_model_name"],
                          use_litellm=use_litellm,
