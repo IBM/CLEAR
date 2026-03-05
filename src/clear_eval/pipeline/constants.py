@@ -2,6 +2,7 @@ IDENTIFIED_SHORTCOMING_COL = "identified_shortcomings"
 EVALUATION_TEXT_COL = "evaluation_text"
 EVALUATION_SUMMARY_COL = "evaluation_summary"
 SCORE_COL = "score"
+ERROR_COL = "error"
 SHORTCOMING_PREFIX ='shortcoming_'
 GENERATION_FILE_PREFIX = "dataset_with_generations"
 EVALUATION_FILE_PREFIX_NO_SUMMARIES = "per_record_evaluations_no_summaries"
