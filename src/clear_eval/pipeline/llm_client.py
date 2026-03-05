@@ -236,7 +236,8 @@ class LiteLLMClient(LLMClient):
             messages=normalized,
             **params
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content.strip() if content else ""
 
     async def ainvoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
         from litellm import acompletion
@@ -249,7 +250,8 @@ class LiteLLMClient(LLMClient):
             messages=normalized,
             **params
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content.strip() if content else ""
 
 
 # =============================================================================

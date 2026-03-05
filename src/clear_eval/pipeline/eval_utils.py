@@ -85,7 +85,7 @@ def produce_summaries_per_record(df, llm, config):
     logger.info(f"Generating evaluation summaries for {len(inputs)} items ...")
 
     results = run_parallel(
-        func=evaluate_row,
+        func=generate_evaluation_summary,
         inputs=inputs,
         use_async=True,
         max_workers=config['max_workers'],
@@ -108,7 +108,7 @@ async def predict_row(llm, model_input, question_id):
 
 def parse_evaluation_response(response_content):
     """Parses LLM response for evaluation text and score."""
-    text = response_content.strip()
+    text = response_content
     score = None
 
     # Attempt to find a score line like "Evaluation score: X.Y"
@@ -161,7 +161,7 @@ async def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
     prompt = get_summarization_prompt(evaluation_text)
     try:
         content = await llm.ainvoke(prompt)
-        return content.strip()
+        return content
     except Exception as e:
         logger.error(f"Error generating evaluation summary for QID {question_id}: {e}")
         return "Error: during summary generation."
@@ -244,7 +244,7 @@ async def _synthesize_shortcomings_impl(evaluation_text_list, llm, min_shortcomi
         while retries < num_retries:
             try:
                 content = await llm.ainvoke(messages)
-                synthesized_list = parse_shortcoming_list_response(content.strip())
+                synthesized_list = parse_shortcoming_list_response(content)
                 if synthesized_list:
                     logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
                     overall_shortcoming_list.extend(synthesized_list)
@@ -378,7 +378,7 @@ async def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm
                 {"role": "user", "content": human_prompt}
             ]
             content = await llm.ainvoke(messages)
-            response = content.strip()
+            response = content
 
             shortcomings_result = parse_mapping_response(response, question_id, num_shortcomings)
             identified_shortcomings_names = [shortcomings_list[i] for i, present in enumerate(shortcomings_result)
@@ -426,7 +426,7 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
 
     results = run_parallel(
-        func=evaluate_row,
+        func=analyze_shortcoming_row,
         inputs=inputs,
         use_async=True,
         max_workers=max_workers,
@@ -513,7 +513,7 @@ def generate_model_predictions(df, llm, config):
         inputs.append((llm, row[config['model_input_column']], row[config['qid_column']]))
 
     results = run_parallel(
-        func=evaluate_row,
+        func=predict_row,
         inputs=inputs,
         use_async=True,
         max_workers=config["max_workers"],
