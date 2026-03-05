@@ -174,9 +174,14 @@ def run_aggregation_pipeline(config):
     eval_df = pd.read_csv(eval_file)
     run_aggregation_from_df(config, eval_df, run_info)
 
+def get_llm_from_config(config):
+    use_litellm = config.get("use_litellm", False)
+    return get_llm(config["provider"], config["eval_model_name"], parameters=config.get('eval_model_params'),
+                       use_litellm=use_litellm)
+
+
 def run_evaluation_from_df(config, response_df, ):
-    provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
+    eval_llm = get_llm_from_config(config)
     task_data = get_task_data_obj(config["task"])
     eval_df = task_data.eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
@@ -188,8 +193,8 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
-    provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
+
+    eval_llm = get_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
@@ -213,8 +218,7 @@ def run_eval_pipeline(config):
     if not task:
         raise ValueError(f"task config not specified")
 
-    provider = config["provider"]
-    eval_llm = get_llm(provider, config["eval_model_name"], parameters = config.get('eval_model_params'))
+    eval_llm = get_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']

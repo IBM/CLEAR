@@ -2,16 +2,13 @@ import logging
 import os
 import numpy as np
 from clear_eval.pipeline.caching_utils import save_dataframe_to_cache
-from clear_eval.pipeline.llm_chat_utils import get_chat_llm
-import random
-from langchain_core.messages import HumanMessage, SystemMessage
 import pandas as pd
 from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
     SHORTCOMING_PREFIX, SCORE_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE
 from clear_eval.pipeline.propmts import get_summarization_prompt, \
      get_shortcomings_clustering_prompt, get_issues_mapping_system_prompt, get_issues_mapping_human_prompt, get_synthesis_prompt, get_synthesis_prompt_cont
 import re
-from clear_eval.pipeline.threading_utils import run_func_in_threads
+from clear_eval.pipeline.llm_client import run_parallel, run_async
 logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
@@ -25,15 +22,16 @@ def get_model_name_for_file(model_name):
         return "none"
     return model_name.split("/")[-1].replace("-", "_").lower().replace(".","_").replace("-vision", "")
 
-def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
-        prompt = generate_evaluation_model_prompt_func(row, config)
-        if prompt.startswith(ANALYSIS_SKIPPED):
-            return prompt, pd.NA
-        try:
-            response = llm.invoke(prompt)
-            return parse_evaluation_response(response.content)
-        except Exception as e:
-            return f"Error: during evaluation: {str(e)}", pd.NA
+async def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
+    """Evaluates a single row using LLM."""
+    prompt = generate_evaluation_model_prompt_func(row, config)
+    if prompt.startswith(ANALYSIS_SKIPPED):
+        return prompt, pd.NA
+    try:
+        content = await llm.ainvoke(prompt)
+        return parse_evaluation_response(content)
+    except Exception as e:
+        return f"Error: during evaluation: {str(e)}", pd.NA
 
 
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
@@ -49,20 +47,19 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
     df[EVALUATION_TEXT_COL] = ""
     df[score_col] = pd.NA  # Use Pandas NA for missing scores
 
-    inputs_for_threading = []
+    inputs = []
     for idx, row in df.iterrows():
-        inputs_for_threading.append((
-           row, config, llm, get_evaluation_prompt_func
-        )
-    )
+        inputs.append((row, config, llm, get_evaluation_prompt_func))
 
-    results = run_func_in_threads(
-        evaluate_row,
-        inputs_for_threading,
+    results = run_parallel(
+        func=evaluate_row,
+        inputs=inputs,
+        use_async=True,
         max_workers=config['max_workers'],
         error_prefix="Error: Evaluation Error for ",
-        progress_desc=f"Evaluating predictions "
+        progress_desc="Evaluating predictions"
     )
+
     for i, result in enumerate(results):
         if result.is_success:
             (eval_text, score) = result.result
@@ -81,27 +78,29 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
 
 def produce_summaries_per_record(df, llm, config):
     #### generate evaluation summaries
-    inputs_for_summary = []
+    inputs = []
     for _, row in df.iterrows():
-        inputs_for_summary.append((row.get(EVALUATION_TEXT_COL), llm, row.get(config['qid_column'], 'N/A')))
+        inputs.append((row.get(EVALUATION_TEXT_COL), llm, row.get(config['qid_column'], 'N/A')))
 
-    # Use run_func_in_threads for parallel summary generation
-    logger.info(f"Generating evaluation summaries for {len(inputs_for_summary)} items ...")
-    thread_results = run_func_in_threads(
-        generate_evaluation_summary,
-        inputs_for_summary,
+    logger.info(f"Generating evaluation summaries for {len(inputs)} items ...")
+
+    results = run_parallel(
+        func=evaluate_row,
+        inputs=inputs,
+        use_async=True,
         max_workers=config['max_workers'],
         error_prefix="Error: Summary Generation Error for ",
-        progress_desc=f"Generating evaluation summaries"
+        progress_desc="Generating evaluation summaries"
     )
-    results = [r.result if r.is_success else r.error for r in thread_results]
-    df[EVALUATION_SUMMARY_COL] = results
+
+    df[EVALUATION_SUMMARY_COL] = [r.result if r.is_success else r.error for r in results]
     return df
 
-def predict_row(llm, model_input, question_id):
+
+async def predict_row(llm, model_input, question_id):
+    """Generates prediction for a single row."""
     try:
-        response = llm.invoke(model_input)
-        return response.content
+        return await llm.ainvoke(model_input)
     except Exception as e:
         logger.error(f"Error processing example ({question_id}): {e}")
         return f"Error: {str(e)}"
@@ -151,8 +150,8 @@ def parse_evaluation_response(response_content):
     return text, score
 
 
-def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
-    """Generates a concise summary of the evaluation text using an LLM."""
+async def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
+    """Generates a concise summary of the evaluation text."""
     if is_missing_or_error(evaluation_text):
         return "Evaluation text was empty or missing."
     if llm is None:
@@ -161,10 +160,8 @@ def generate_evaluation_summary(evaluation_text, llm, question_id="N/A"):
 
     prompt = get_summarization_prompt(evaluation_text)
     try:
-        messages = [HumanMessage(content=prompt)]
-        response = llm.invoke(messages)
-        summary = response.content.strip()
-        return summary
+        content = await llm.ainvoke(prompt)
+        return content.strip()
     except Exception as e:
         logger.error(f"Error generating evaluation summary for QID {question_id}: {e}")
         return "Error: during summary generation."
@@ -212,8 +209,18 @@ def synthesize_shortcomings_from_df(df, llm, config, score_col=SCORE_COL, synthe
                                    format_mode=format_mode)
 
 def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
-                            max_shortcomings = None, batch_size=100, synthesis_template=None, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
+                            max_shortcomings=None, batch_size=100, synthesis_template=None,
+                            format_mode=DEFAULT_ISSUES_FORMAT_MODE, num_retries=3):
     """Analyzes evaluation texts to identify common shortcomings."""
+    return run_async(_synthesize_shortcomings_impl(
+        evaluation_text_list, llm, min_shortcomings, max_shortcomings,
+        batch_size, synthesis_template, format_mode, num_retries
+    ))
+
+
+async def _synthesize_shortcomings_impl(evaluation_text_list, llm, min_shortcomings, max_shortcomings,
+                                         batch_size, synthesis_template, format_mode, num_retries):
+    """Unified async implementation that handles both sync and async LLMs."""
     logger.info(f"\nSynthesizing Shortcomings List")
 
     if llm is None:
@@ -226,47 +233,62 @@ def synthesize_shortcomings(evaluation_text_list, llm, min_shortcomings=None,
     batches = [evaluation_text_list[x:x+batch_size] for x in range(0, len(evaluation_text_list), batch_size)]
     logger.info(f"Sending {len(evaluation_text_list)} evaluation texts to LLM for shortcoming synthesis in {len(batches)} batches")
     overall_shortcoming_list = []
-    for evaluation_text_batch in batches:
-        # Concatenate texts with separators
-        concatenated_texts = "\n---\n".join(evaluation_text_batch)
 
-        # Create the prompt for synthesis
-        # If synthesis template is given, use it for each batch and only merge duplicates later.
-        if synthesis_template is not None:
-            synthesis_prompt = synthesis_template.format(max_shortcomings, concatenated_texts)
-        else:
-            if not overall_shortcoming_list:
-                from clear_eval.pipeline.propmts import get_synthesis_prompt
-                synthesis_prompt = get_synthesis_prompt(concatenated_texts, max_shortcomings, format_mode)
-            else:
-                shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
-                from clear_eval.pipeline.propmts import get_synthesis_prompt_cont
-                synthesis_prompt = get_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings, format_mode)
+    for batch_idx, evaluation_text_batch in enumerate(batches):
+        synthesis_prompt = _build_synthesis_prompt(
+            evaluation_text_batch, overall_shortcoming_list, synthesis_template, max_shortcomings, format_mode
+        )
+        messages = _build_synthesis_messages(synthesis_prompt)
 
-        try:
-            messages = [
-                SystemMessage(
-                    content="You are an analyst synthesizing common shortcomings from evaluation texts. Respond ONLY with a Python list of strings."),
-                HumanMessage(content=synthesis_prompt)
-            ]
-            response = llm.invoke(messages).content.strip()
+        retries = 0
+        while retries < num_retries:
+            try:
+                content = await llm.ainvoke(messages)
+                synthesized_list = parse_shortcoming_list_response(content.strip())
+                if synthesized_list:
+                    logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
+                    overall_shortcoming_list.extend(synthesized_list)
+                else:
+                    logger.info(f"Could not identify new shortcomings")
+                break  # Success, move to next batch
+            except Exception as e:
+                retries += 1
+                if retries < num_retries:
+                    logger.warning(f"Batch {batch_idx + 1} synthesis failed (attempt {retries}/{num_retries}): {e}")
+                    continue
+                else:
+                    logger.error(f"Batch {batch_idx + 1} synthesis failed after {num_retries} attempts: {e}")
+                    # Continue to next batch after exhausting retries
+
+    return _finalize_shortcoming_list(overall_shortcoming_list, min_shortcomings)
 
 
-            synthesized_list = parse_shortcoming_list_response(response)
-            if synthesized_list:
-                logger.info(f"Received synthesis response of {len(synthesized_list)} shortcomings")
-                overall_shortcoming_list.extend(synthesized_list)
-            else:
-                logger.info(f"Could not identify new shortcomings")
-        except Exception as e:
-            logger.error(f"key points synthesis failed: {e}")
-            continue
+def _build_synthesis_prompt(evaluation_text_batch, overall_shortcoming_list, synthesis_template, max_shortcomings, format_mode):
+    """Build the synthesis prompt for a batch."""
+    concatenated_texts = "\n---\n".join(evaluation_text_batch)
+    if synthesis_template is not None:
+        return synthesis_template.format(max_shortcomings, concatenated_texts)
+    elif not overall_shortcoming_list:
+        return get_synthesis_prompt(concatenated_texts, max_shortcomings, format_mode)
+    else:
+        shortcoming_list_text = "\n---\n".join(overall_shortcoming_list)
+        return get_synthesis_prompt_cont(concatenated_texts, shortcoming_list_text, max_shortcomings, format_mode)
 
+
+def _build_synthesis_messages(synthesis_prompt):
+    """Build messages for synthesis call."""
+    return [
+        {"role": "system", "content": "You are an analyst synthesizing common shortcomings from evaluation texts. Respond ONLY with a Python list of strings."},
+        {"role": "user", "content": synthesis_prompt}
+    ]
+
+
+def _finalize_shortcoming_list(overall_shortcoming_list, min_shortcomings):
+    """Finalize and validate the shortcoming list."""
     if overall_shortcoming_list:
         if min_shortcomings and len(overall_shortcoming_list) < min_shortcomings:
             logger.warning(
                 f"Warning: Only {len(overall_shortcoming_list)} shortcomings identified, below minimum of {min_shortcomings}")
-
         return overall_shortcoming_list
     else:
         logger.warning("Failed to parse a valid list from the synthesis response.")
@@ -341,33 +363,30 @@ def parse_mapping_response(response, question_id, num_shortcomings, ):
     return shortcomings_result
 
 
-def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, system_prompt , format_mode):
-        # Skip analysis if eval text is invalid or indicates prior errors
-        num_shortcomings = len(shortcomings_list)
-        if is_missing_or_error(eval_text):
-            shortcomings_result = [0] * num_shortcomings
-            identified_shortcomings_names = []
-            return shortcomings_result, identified_shortcomings_names
-        elif eval_text.startswith(MAPPING_NO_ISSUES):
-            shortcomings_result = [0] * num_shortcomings
-            identified_shortcomings_names = []
-            return shortcomings_result, identified_shortcomings_names
-        else:
-            human_prompt = get_issues_mapping_human_prompt(eval_text, num_shortcomings, format_mode=format_mode)
-            try:
-                messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
-                response = llm.invoke(messages).content.strip()
+async def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm, system_prompt, format_mode):
+    """Analyzes evaluation text for shortcomings."""
+    num_shortcomings = len(shortcomings_list)
+    if is_missing_or_error(eval_text):
+        return [0] * num_shortcomings, []
+    elif eval_text.startswith(MAPPING_NO_ISSUES):
+        return [0] * num_shortcomings, []
+    else:
+        human_prompt = get_issues_mapping_human_prompt(eval_text, num_shortcomings, format_mode=format_mode)
+        try:
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": human_prompt}
+            ]
+            content = await llm.ainvoke(messages)
+            response = content.strip()
 
-                shortcomings_result =  parse_mapping_response(response, question_id, num_shortcomings)
-                identified_shortcomings_names = [shortcomings_list[i] for i, present in enumerate(shortcomings_result)
-                                                 if present == 1]
-                return shortcomings_result, identified_shortcomings_names
-
-            except Exception as e:
-                logger.error(f"LLM analysis failed for {question_id}: {e}")
-                shortcomings_result = [0] * num_shortcomings
-                identified_shortcomings_names = ["Analysis Error"]
-                return shortcomings_result, identified_shortcomings_names
+            shortcomings_result = parse_mapping_response(response, question_id, num_shortcomings)
+            identified_shortcomings_names = [shortcomings_list[i] for i, present in enumerate(shortcomings_result)
+                                             if present == 1]
+            return shortcomings_result, identified_shortcomings_names
+        except Exception as e:
+            logger.error(f"LLM analysis failed for {question_id}: {e}")
+            return [0] * num_shortcomings, ["Analysis Error"]
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list,
@@ -385,7 +404,6 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
         return df
 
     num_shortcomings = len(shortcomings_list)
-    #print(f"Analyzing shortcomings using {llm.model_name} against {num_shortcomings} synthesized criteria...")
 
     # Prepare components for the analysis prompt
     system_prompt = get_issues_mapping_system_prompt(shortcomings_list, format_mode)
@@ -395,26 +413,28 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
         df[f'{SHORTCOMING_PREFIX}{i + 1}'] = 0  # Initialize with 0
     df[IDENTIFIED_SHORTCOMING_COL] = ""  # Initialize as empty string
 
-    inputs_for_threading = []
+    inputs = []
     n_records_to_map = 0
     for idx, row in df.iterrows():
         if pd.isna(row[score_col]):
-            inputs_for_threading.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
+            inputs.append(("", row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
         elif row[score_col] >= high_score_threshold:
-            inputs_for_threading.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
+            inputs.append((MAPPING_NO_ISSUES, row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
         else:
             n_records_to_map += 1
-            inputs_for_threading.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
+            inputs.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
-    thread_results = run_func_in_threads(
-        analyze_shortcoming_row,
-        inputs_for_threading,
+
+    results = run_parallel(
+        func=evaluate_row,
+        inputs=inputs,
+        use_async=True,
         max_workers=max_workers,
         error_prefix="Error: Shortcoming Analysis Error for ",
-        progress_desc=f"Analyzing shortcomings"
+        progress_desc="Analyzing shortcomings"
     )
 
-    for i, result in enumerate(thread_results):
+    for i, result in enumerate(results):
         if result.is_success:
             (shortcomings_result, identified_shortcomings_names) = result.result
         else:
@@ -488,37 +508,47 @@ def generate_model_predictions(df, llm, config):
 
     logger.info(f"Generating responses for {len(df)} examples")
 
-    inputs_for_threading = []
+    inputs = []
     for i, row in df.iterrows():
-        inputs_for_threading.append((llm, row[config['model_input_column']], row[config['qid_column']]))
+        inputs.append((llm, row[config['model_input_column']], row[config['qid_column']]))
 
-    thread_results = run_func_in_threads(
-        predict_row,
-        inputs_for_threading,
+    results = run_parallel(
+        func=evaluate_row,
+        inputs=inputs,
+        use_async=True,
         max_workers=config["max_workers"],
         error_prefix="Error: Prediction Error for ",
-        progress_desc=f"Generating predictions"
+        progress_desc="Generating predictions"
     )
 
-    for i, result in enumerate(thread_results):
-        result = result.result if result.is_success else result.error
-        df.at[df.index[i], config["model_output_column"]] = result
+    for i, result in enumerate(results):
+        output = result.result if result.is_success else result.error
+        df.at[df.index[i], config["model_output_column"]] = output
 
     return df
 
 def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_retries=3, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
+    """Remove duplicate shortcomings using LLM clustering."""
+    return run_async(_remove_duplicates_shortcomings_impl(
+        shortcoming_list, llm, max_shortcomings, num_retries, format_mode
+    ))
+
+
+async def _remove_duplicates_shortcomings_impl(shortcoming_list, llm, max_shortcomings, num_retries, format_mode):
+    """Unified async implementation that handles both sync and async LLMs."""
     logger.info(f"Removing duplications from list of {len(shortcoming_list)} shortcomings")
     if not shortcoming_list:
         logger.info(f"No shortcomings found")
         return []
+
     try:
         clustering_prompt = get_shortcomings_clustering_prompt(shortcoming_list, max_shortcomings, format_mode)
         new_shortcoming_list = []
         retries = 0
+
         while retries < num_retries:
             try:
-                analysis_result = llm.invoke(clustering_prompt)
-                analysis_result = analysis_result.content
+                analysis_result = await llm.ainvoke(clustering_prompt)
                 if is_missing_or_error(analysis_result):
                     raise RuntimeError(f"Failed to get shortcomings without duplications response")
 
@@ -535,7 +565,6 @@ def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_
                 else:
                     raise e
 
-
         if new_shortcoming_list and max_shortcomings and len(new_shortcoming_list) > max_shortcomings:
             logger.warning(f"Limiting to top {max_shortcomings}/{len(new_shortcoming_list)} most significant shortcomings")
             return new_shortcoming_list[:max_shortcomings]
@@ -544,7 +573,7 @@ def remove_duplicates_shortcomings(shortcoming_list, llm, max_shortcomings, num_
             return new_shortcoming_list
 
     except Exception as e:
-       raise Exception(f"Failed to get shortcomings without duplications: {e}")
+        raise Exception(f"Failed to get shortcomings without duplications: {e}")
 
 def convert_results_to_ui_input(df, config, task_data):
     try:
@@ -597,10 +626,25 @@ def convert_results_to_ui_input(df, config, task_data):
         logger.error(f"Warning: Error converting custom analysis results to CSV: {e}")
         return None
 
-def get_llm(provider, model_name, parameters = None, eval_mode=True):
+def get_llm(provider, model_name, parameters=None, eval_mode=True, use_litellm=False):
+    """
+    Get an LLM client for inference.
+
+    Args:
+        provider: Provider name (openai, azure, watsonx, rits, or any litellm provider)
+        model_name: Model identifier
+        parameters: Additional model parameters
+        eval_mode: If True, use temperature=0 for deterministic output
+        use_litellm: If True, use LiteLLM backend. If False, use LangChain.
+
+    Returns:
+        LLMClient instance (always returns LLMClient for unified interface)
+    """
+    from clear_eval.pipeline.llm_client import get_llm_client
+
     try:
-        logger.info(f"Getting llm for model: {model_name}, provider {provider}, eval_mode {eval_mode}")
-        llm = get_chat_llm(provider, model_name, parameters=parameters, eval_mode=eval_mode)
+        logger.info(f"Getting llm for model: {model_name}, provider {provider}, eval_mode {eval_mode}, use_litellm {use_litellm}")
+        llm = get_llm_client(provider, model_name, use_litellm=use_litellm, eval_mode=eval_mode, parameters=parameters)
     except Exception as e:
         raise Exception(f"Error initializing LLM {provider}, {model_name}). Details: {e}")
     if llm is None:

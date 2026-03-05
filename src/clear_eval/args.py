@@ -24,7 +24,7 @@ def parse_args():
 
     parser.add_argument("--data-path", help="Path to the data csv file")
     parser.add_argument("--output-dir", default=None, help="Output directory")
-    parser.add_argument("--provider", choices=["azure", "openai", "watsonx", "rits"])
+    parser.add_argument("--provider", help="LLM provider (e.g., openai, watsonx, rits, or any LiteLLM provider with --use-litellm)")
     parser.add_argument("--eval-model-name", help="Name of the model used by CLEAR for evaluating and analyzing outputs")
     parser.add_argument("--gen-model-name", help="Name of the generator model whose responses are evaluated (e.g. gpt-3.5-turbo)",
                         default=None)
@@ -63,7 +63,7 @@ def parse_args():
                         help="JSON dictionary of additional configuration for the external judge")
     parser.add_argument("--eval-model-params", type=parse_dict, default=None,
                         help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'")
-
+    parser.add_argument("--use-litellm", type=str2bool, default=None, help="Whether to use a litellm for inference")
     args = parser.parse_args()
 
     # Only keep explicitly passed args (ignore None)

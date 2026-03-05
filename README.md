@@ -187,7 +187,8 @@ Arguments can be provided via:
 | `--run_name`            | Unique run name (used in result file names)                                                                                                |                   |
 | `--data_path`           | Path to input CSV file                                                                                                                     |                   |
 | `--output_dir`          | Output directory to write results                                                                                                          |                   |
-| `--provider`            | Model provider: `openai`, `watsonx`, `rits`                                                                                                |                   |
+| `--provider`            | Model provider: `openai`, `watsonx`, `rits`, `azure`, or any LiteLLM provider                                                              |                   |
+| `--use_litellm`         | Use LiteLLM backend for async execution and extended provider support                                                                      | False             |
 | `--eval_model_name`     | Name of judge model (e.g. `gpt-4o`)                                                                                                        |                   |
 | `--gen_model_name`      | Name of the generator model to evaluate. If not running generations - the generator name to display.                                       |                   |
 | `--perform_generation`  | Whether to generate responses or use existing `response` column                                                                            | True              |  
@@ -206,13 +207,48 @@ Arguments can be provided via:
 
 ## 🔑Supported providers and credentials
 
+### Built-in Providers
+
 Depending on your selected `--provider`:
 
 | Provider   | Required Environment Variables                                              |
 |------------|-----------------------------------------------------------------------------|
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |                                   |
+| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |
 | `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
 | `rits`     | `RITS_API_KEY`                                                              |
+
+### Extended Provider Support via LiteLLM
+
+By setting `use_litellm: true` in your config, CLEAR uses the [LiteLLM](https://docs.litellm.ai/docs/providers) backend which supports 100+ LLM providers including:
+
+- **Azure**: `azure`
+- **Anthropic**: `anthropic`
+- **AWS Bedrock**: `bedrock`
+- **Google**: `vertex_ai`, `gemini`
+- **Groq**: `groq`
+- **Together AI**: `together_ai`
+- **And many more**: See [LiteLLM providers](https://docs.litellm.ai/docs/providers)
+
+#### Example with LiteLLM:
+
+```yaml
+# config.yaml
+provider: gemini
+use_litellm: true
+eval_model_name: gemini-2.0-flash
+```
+ 
+```bash
+export GOOGLE_API_KEY=your_key
+run-clear-eval-analysis --config_path config.yaml
+```
+
+#### Benefits of LiteLLM mode:
+- **Async execution**: Better concurrency with async I/O instead of threads
+- **100+ providers**: Use any LiteLLM-supported provider
+- **Unified interface**: Same code works across all providers
+
+> ⚠️ **Credentials**: When using LiteLLM, it is your responsibility to set the required environment variables for your chosen provider according to [LiteLLM's documentation](https://docs.litellm.ai/docs/providers). CLEAR passes credentials through to LiteLLM without additional configuration.
 
 ## 🔌 Using External Judges
 
