@@ -1,20 +1,20 @@
 import json
+import os
+from tqdm import tqdm
 from importlib.resources import files
-from typing import Tuple, Any, List, Dict
-import numpy as np
+from typing import Tuple, List
 import pandas as pd
 from clear_eval.pipeline.use_cases.EvalUseCase import EvalUseCase
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from altk.core.toolkit import AgentPhase, ComponentConfig
-from altk.pre_tool.core import SPARCExecutionMode, SPARCReflectionRunInput, Track, SPARCReflectionResult
+from altk.pre_tool.core import SPARCReflectionRunInput, Track, SPARCReflectionResult
 from altk.core.llm import get_llm, BaseLLMClient
 
 import logging
 
 from clear_eval.pipeline.config_loader import load_config
-from clear_eval.pipeline.llm_chat_utils import get_chat_llm
-from clear_eval.pipeline.llm_client import run_async
+from clear_eval.pipeline.llm_client import run_async, get_llm_client, LiteLLMClient, LangChainClient
 
 logger = logging.getLogger(__name__)
 
@@ -54,53 +54,62 @@ class ToolCallEvalUseCase(EvalUseCase):
         return df
     
 
-    def clear_llm_client_to_altk_llm_client(self, llm, provider: str, model_name: str) -> BaseLLMClient:
+    def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str) -> BaseLLMClient:
         """Convert CLEAR's LLM object to ALTK's LLM Object."""
+
+        # LiteLLMClient - use ALTK's native litellm support
+        if isinstance(llm_client, LiteLLMClient):
+            MetricsClientCls = get_llm("litellm.output_val")
+            # LiteLLM model format: provider/model_name (consistent with LiteLLMClient)
+            litellm_model = f"{provider}/{model_name}"
+            return MetricsClientCls(model_name=litellm_model)
+
+        # LangChainClient - extract from underlying LangChain object
+        if isinstance(llm_client, LangChainClient):
+            llm = llm_client.llm
+        else:
+            # Fallback for raw LangChain objects
+            llm = llm_client
 
         if provider == "watsonx":
             MetricsClientCls = get_llm("watsonx.output_val")
             if llm.space_id:
-                llm_client = MetricsClientCls(
+                return MetricsClientCls(
                     model_id=llm.model_id,
                     api_key=llm.api_key._secret_value,
                     url=llm.url,
                     space_id=llm.space_id,
                 )
             elif llm.project_id:
-                llm_client = MetricsClientCls(
+                return MetricsClientCls(
                     model_id=llm.model_id,
                     api_key=llm.api_key._secret_value,
                     url=llm.url._secret_value,
                     project_id=llm.project_id
-            )
+                )
             else:
                 raise KeyError("Either space_id or project_id must be specified for watsonx inference.")
-            
+
         elif provider == "azure":
             MetricsClientCls = get_llm("azure_openai.async.output_val")
-            llm_client = MetricsClientCls(
+            return MetricsClientCls(
                 model=model_name,
                 api_key=llm.api_key._secret_value,
             )
         elif provider == "openai":
             MetricsClientCls = get_llm("openai.async.output_val")
-            # Extract base_url and api_key from LangChain ChatOpenAI client
             kwargs = {"model": llm.model_name}
-            
-            # Check if custom base_url is set (for OpenAI-compatible endpoints)
+
             if hasattr(llm, 'openai_api_base') and llm.openai_api_base:
                 kwargs["base_url"] = llm.openai_api_base
-            
-            # Check if custom api_key is set (LangChain uses SecretStr type)
+
             if hasattr(llm, 'openai_api_key') and llm.openai_api_key:
                 kwargs["api_key"] = llm.openai_api_key._secret_value
-            
-            llm_client = MetricsClientCls(**kwargs)
+
+            return MetricsClientCls(**kwargs)
         else:
             raise ValueError(f"Unsupported provider '{provider}' for tool_call task. "
-                           f"Supported providers: openai, watsonx, azure.")
-        
-        return llm_client
+                           f"Supported providers: openai, watsonx, azure, or use_litellm=True.")
 
 
     @staticmethod
@@ -139,7 +148,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             track=Track.SLOW_TRACK,  # Use slow track for performance
         )
         reflection_results = []
-        for _, example in df.iterrows():
+        for _, example in tqdm(df.iterrows(), total=len(df), desc="Evaluating tool calls with SPARC"):
             run_input = SPARCReflectionRunInput(
                     messages=json.loads(example[self.CONTEXT_COL]),
                     tool_specs=json.loads(example[self.SPECS_COL]),
@@ -157,11 +166,16 @@ if __name__ == "__main__":
     # provider = "openai"
     # model_name = "gpt-4o-mini"
     provider = "watsonx"
-    model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
-    config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider, eval_model_name=model_name)
+#    model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
+    model_name = "openai/gpt-oss-120b"
+    config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider)#, eval_model_name=model_name)
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
-    llm = get_chat_llm(config["provider"], config["eval_model_name"], parameters=config["eval_model_params"], eval_mode=True)
+    use_litellm = True #config.get("use_litellm", False)
+    llm = get_llm_client(config["provider"], config["eval_model_name"],
+                         use_litellm=use_litellm,
+                         parameters=config["eval_model_params"],
+                         eval_mode=True)
 
     tool_call_use_case = ToolCallEvalUseCase()
     evaluated_df = tool_call_use_case.eval_records(df, llm, config)
