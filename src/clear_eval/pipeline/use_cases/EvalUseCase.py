@@ -51,6 +51,10 @@ class EvalUseCase:
         else:
             return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
 
+    def get_evaluation_prompt_func(self, config):
+        """Return the evaluation prompt function for this use case."""
+        return self.generate_evaluation_model_prompt
+
     def eval_records(self, df, llm, config, score_col=SCORE_COL):
         get_evaluation_prompt_func = self.generate_evaluation_model_prompt
         return evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col)

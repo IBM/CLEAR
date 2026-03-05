@@ -1,4 +1,3 @@
-import asyncio
 import json
 from importlib.resources import files
 from typing import Tuple, Any, List, Dict
@@ -15,6 +14,7 @@ import logging
 
 from clear_eval.pipeline.config_loader import load_config
 from clear_eval.pipeline.llm_chat_utils import get_chat_llm
+from clear_eval.pipeline.llm_client import run_async
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class ToolCallEvalUseCase(EvalUseCase):
     required_input_fields = [CONTEXT_COL, SPECS_COL]
 
     def eval_records(self, df, llm, config, score_col = SCORE_COL):
-        return asyncio.run(self.eval_records_async(df, llm, config, score_col))
+        return run_async(self.eval_records_async(df, llm, config, score_col))
 
     async def eval_records_async(self, df, llm, config, score_col=SCORE_COL):
         """Evaluates predictions and adds scores."""
@@ -97,7 +97,8 @@ class ToolCallEvalUseCase(EvalUseCase):
             
             llm_client = MetricsClientCls(**kwargs)
         else:
-            raise ValueError(f"Unsupported provider: {provider}")
+            raise ValueError(f"Unsupported provider '{provider}' for tool_call task. "
+                           f"Supported providers: openai, watsonx, azure.")
         
         return llm_client
 

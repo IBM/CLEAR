@@ -1,10 +1,17 @@
-# supported: rits, azure, watsonx, openai
+# Built-in providers: rits, azure, watsonx, openai
+# With use_litellm=true: any litellm provider works (anthropic, bedrock, groq, etc.)
+# See https://docs.litellm.ai/docs/providers for full list
 provider: watsonx
+
+# Use async litellm backend instead of LangChain (threaded)
+# Set to true for async inference with better concurrency
+# Enables support for 100+ LLM providers via litellm
+use_litellm: false
 provider_defaults:
   openai:
     gen_model_name: gpt-4o
     eval_model_name: gpt-3.5-turbo
-    max_workers: 10
+    max_workers: 20
   azure:
     gen_model_name: gpt-4o-mini-2024-07-18
     eval_model_name: gpt-4o-2024-08-06
@@ -12,7 +19,7 @@ provider_defaults:
   watsonx:
     gen_model_name: ibm/granite-3-3-8b-instruct
     eval_model_name: meta-llama/llama-3-3-70b-instruct
-    max_workers: 5
+    max_workers: 10
   rits:
     gen_model_name: ibm-granite/granite-3.3-8b-instruct
     eval_model_name: meta-llama/llama-3-3-70b-instruct
@@ -66,7 +73,7 @@ model_input_column: model_input # optional
 qid_column: id # optional
 documents_column: documents # required for rag
 use_full_text_for_analysis: false
-#max_workers: 20
+max_workers: 15
 max_shortcomings: 15
 min_shortcomings: 3
 max_eval_text_for_synthesis: 1000

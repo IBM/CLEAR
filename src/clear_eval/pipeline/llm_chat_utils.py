@@ -43,11 +43,9 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             )
         raise KeyError("Either WATSONX_SPACE_ID or WATSONX_PROJECT_ID must be specified for watsonx inference.")
     if provider == "rits":
-        model_base = model_name_to_rits_base.get(model_id)
+        model_base = get_rits_base(model_id)
         if eval_mode:
             parameters["temperature"] = 0
-        if not model_base:
-            model_base = model_id.split("/")[-1].replace(".", "-").lower().replace("-vision", "")
         return ChatOpenAI(
             model=model_id,
             api_key='/',
@@ -56,20 +54,6 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             max_retries=2,
             **parameters
         )
-    if provider == "azure":
-        azure_openapi_host = os.getenv("AZURE_OPENAI_HOST")
-        api_version = os.getenv("OPENAI_API_VERSION")
-        model_id = model_id or "gpt-4o-2024-08-06"
-        model_base = model_id.split("/")[-1]
-        azure_endpoint = f'{azure_openapi_host}/openai/deployments/{model_base}/chat/completions?api-version={api_version}'
-        if eval_mode:
-            parameters["temperature"] = 0
-        return AzureChatOpenAI(api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-                               azure_endpoint=azure_endpoint,
-                               api_version=api_version,
-                               max_retries=2,
-                               **parameters
-                               )
     if provider == "openai":
         if eval_mode:
             parameters["temperature"] = 0
@@ -80,7 +64,8 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             **parameters
 
         )
-    raise ValueError(f"Unknown provider {provider}, supported providers: watsonx, rits, azure or openai")
+    raise ValueError(f"Unknown provider '{provider}'. Built-in providers: openai, watsonx, rits. "
+                     f"For other providers, set use_litellm=True to use LiteLLM backend.")
 
 model_name_to_rits_base = {
     "microsoft/phi-4": "microsoft-phi-4",
@@ -94,3 +79,10 @@ model_name_to_rits_base = {
     "mistralai/Mistral-Small-3.1-24B-Instruct-2503": "mistral-small-3-1-24b-2503",
     "ibm-granite/granite-guardian-3.2-5b": "granite-guardian-3-2-5b-ris",
 }
+
+def get_rits_base(model: str) -> str:
+    """Get RITS base URL component for a model."""
+    model_base = model_name_to_rits_base.get(model)
+    if not model_base:
+        model_base = model.split("/")[-1].replace(".", "-").lower().replace("-vision", "")
+    return model_base

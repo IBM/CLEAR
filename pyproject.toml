@@ -34,6 +34,9 @@ dependencies = [
     "langchain_community",
     "numpy",
     "pyarrow>=15.0.0",
+    # Async litellm backend (use_litellm=true)
+    "litellm>=1.0.0",
+    "nest-asyncio",
 ]
 
 [project.optional-dependencies]
