@@ -170,7 +170,7 @@ def run_aggregation_pipeline(config):
         eval_file = config.get("data_path")
         if not os.path.exists(eval_file):
             logger.info(f"No evaluation file found at {eval_file}")
-        return
+            return
     eval_df = pd.read_csv(eval_file)
     run_aggregation_from_df(config, eval_df, run_info)
 
