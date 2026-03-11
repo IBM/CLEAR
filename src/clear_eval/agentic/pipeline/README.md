@@ -200,9 +200,13 @@ python -m clear_eval.agentic.pipeline.build_json_results \
 
 ## Environment Setup
 
-Set environment variables for your provider:
+The pipeline uses [LiteLLM](https://docs.litellm.ai/) for model inference, which supports 100+ LLM providers.
 
-**OpenAI:**
+Set environment variables according to your chosen provider. You are responsible for configuring credentials based on your provider's requirements. See the [LiteLLM provider documentation](https://docs.litellm.ai/docs/providers) for details.
+
+#### Examples:
+
+OpenAI:
 ```bash
 export OPENAI_API_KEY=your_key
 ```
@@ -212,10 +216,4 @@ export OPENAI_API_KEY=your_key
 export WATSONX_APIKEY=your_key
 export WATSONX_PROJECT_ID=your_project_id
 export WATSONX_URL=your_url
-```
-
-**Azure:**
-```bash
-export AZURE_OPENAI_API_KEY=your_key
-export AZURE_OPENAI_ENDPOINT=your_endpoint
 ```
