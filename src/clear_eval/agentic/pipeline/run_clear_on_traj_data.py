@@ -48,7 +48,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
 
     group.add_argument(
         "--agentic-config-path",
-        help="Path to YAML config file that overrides defaults"
+        help="Path to config file (JSON or YAML) that overrides defaults"
     )
     group.add_argument(
         "--traces-data-dir",
@@ -356,9 +356,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Using config file (recommended)
+  # Using config file (recommended) - supports JSON or YAML
   python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
       --agentic-config-path my_config.yaml
+
+  # Using JSON config file
+  python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
+      --agentic-config-path my_config.json
 
   # Config file with CLI overrides
   python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
@@ -372,7 +376,7 @@ Examples:
       --provider watsonx \\
       --eval-model-name meta-llama/llama-3-3-70b-instruct
 
-Config file structure (see setup/default_config.yaml):
+Config file structure (YAML format - see setup/default_config.yaml):
   # Agentic pipeline arguments
   traces_data_dir: output/traces_data
   agentic_output_dir: output/analysis
