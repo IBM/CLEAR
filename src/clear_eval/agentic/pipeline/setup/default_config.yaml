@@ -1,0 +1,100 @@
+# Agentic pipeline configuration
+traces_input_dir: null       # For run_clear_pipeline.py (full pipeline from raw traces)
+traces_data_dir: null        # For run_clear_on_traj_data.py (from preprocessed trajectory data)
+agentic_output_dir: null
+agent_framework: langgraph
+observability_framework: mlflow
+separate_tools: false
+overwrite: true
+
+# CLEAR evaluation configuration
+
+  # inference params
+provider: watsonx
+use_litellm: true
+eval_model_name: openai/gpt-oss-120b
+max_workers: 20
+eval_model_params:
+  temperature: 0.0  # Default for deterministic evaluation
+  max_tokens: 8096
+
+#use cached results if available
+resume_enabled: false
+
+# dict {criteria_name: criteria_desc}, specific
+evaluation_criteria: null
+
+max_examples_to_analyze: null # for debugging
+
+success_threshold: 0.9
+
+# unique run_ identifier (to appear in file name)
+run_name: null
+
+# External judge configuration (only used when task is "external")
+# Path to Python file containing external judge function
+external_judge_path: null
+# Name of the function to call in the external judge file (default: "evaluate")
+external_judge_function: evaluate
+# Additional configuration passed to the external judge
+external_judge_config: {}
+
+
+provider_defaults:
+  openai:
+    gen_model_name: gpt-4o
+    eval_model_name: gpt-3.5-turbo
+    max_workers: 10
+  azure:
+    gen_model_name: gpt-4o-mini-2024-07-18
+    eval_model_name: gpt-4o-2024-08-06
+    max_workers: 20
+  watsonx:
+    gen_model_name: ibm/granite-3-3-8b-instruct
+    eval_model_name: meta-llama/llama-3-3-70b-instruct
+    max_workers: 5
+  rits:
+    gen_model_name: ibm-granite/granite-3.3-8b-instruct
+    eval_model_name: meta-llama/llama-3-3-70b-instruct
+    max_workers: 20
+
+
+# whether to perform generation or take existing ones from data
+perform_generation: false
+predefined_issues: null
+
+# whether to use reference in the evaluations.
+is_reference_based: false
+
+
+use_general_prompt: true
+perform_clustering: true
+
+#general, rag, math
+task: general
+
+question_column: question
+model_output_column: response
+reference_column: ground_truth # required when is_reference_based is true
+model_input_column: model_input # optional
+qid_column: id # optional
+documents_column: documents # required for rag
+
+use_full_text_for_analysis: false
+#max_workers: 20
+max_shortcomings: 15
+min_shortcomings: 3
+max_eval_text_for_synthesis: 1000
+
+# agentic params:
+
+agent_mode: true
+input_columns:
+  - agent_name
+  - Name
+  - intent
+  - task_id
+  - step_in_trace_general
+  - step_in_trace_node
+  - id
+  - traj_score
