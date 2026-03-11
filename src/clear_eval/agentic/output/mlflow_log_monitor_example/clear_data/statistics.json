@@ -1,0 +1,14 @@
+{
+  "total_rows": 6,
+  "unique_agents": 3,
+  "unique_tasks": 2,
+  "agent_counts": {
+    "classify_log": 2,
+    "diagnose_problem": 2,
+    "assess_severity": 2
+  },
+  "task_counts": {
+    "tr-e08208946684c866332b7416670bad41": 3,
+    "tr-236907d3019ea2a5f8e81baeb258753b": 3
+  }
+}
