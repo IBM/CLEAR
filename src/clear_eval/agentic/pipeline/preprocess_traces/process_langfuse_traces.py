@@ -74,8 +74,16 @@ def _build_llm_rows_for_observation(
     api_spec = extract_api_spec(input_data)
     api_spec_str = json.dumps(api_spec) if api_spec else ""
 
-    # Build metadata
+    # Build metadata with span-level info
     meta_data = {
+        # Span-level info
+        "span_id": obs_id,
+        "span_name": obs.get("name"),
+        "span_type": obs.get("type"),
+        "parent_span_id": parent_id,
+        "duration_ms": obs.get("latency"),
+        "status": obs.get("statusMessage"),
+        # Model-level info
         "observation_id": obs_id,
         "parent_observation_id": parent_id,
         "agent_name": agent_name,

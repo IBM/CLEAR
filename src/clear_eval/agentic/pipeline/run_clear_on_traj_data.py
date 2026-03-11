@@ -454,7 +454,6 @@ Argument Precedence (lowest to highest):
     json_results = save_comprehensive_json_results(
         judge_results_dir = judge_results_dir,
         traces_data_dir = traces_data_dir,
-        raw_traces_dir = None,
         config_dict = config_dict,
     )
 
