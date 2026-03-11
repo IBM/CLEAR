@@ -143,7 +143,7 @@ def _extract_input_output_from_span(
                     response_text = normalize_messages(out_msgs) if isinstance(out_msgs, list) else json.dumps(out_msgs, ensure_ascii=False)
                     break
 
-    # Build metadata
+    # Build metadata (model-level, span-level added separately)
     meta_data = {
         "model": _extract_model_name(attrs, inputs, outputs_obj),
         "provider": attrs.get("gen_ai.provider.name") or attrs.get("gen_ai.system") or attrs.get("provider"),
@@ -157,6 +157,40 @@ def _extract_input_output_from_span(
     }
 
     return model_input_str, response_text, tool_calls, api_spec, meta_data
+
+
+def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Build complete metadata including span-level information.
+
+    Args:
+        s: The span dict
+        model_meta: Model-level metadata from _extract_input_output_from_span
+
+    Returns:
+        Complete metadata dict with span info
+    """
+    attrs = s.get("attributes", {})
+
+    # Calculate duration if timestamps available
+    duration_ms = s.get("duration_ms")
+    if duration_ms is None:
+        start_ns = s.get("start_time_unix_nano")
+        end_ns = s.get("end_time_unix_nano")
+        if start_ns is not None and end_ns is not None:
+            duration_ms = (end_ns - start_ns) / 1_000_000
+
+    span_meta = {
+        "span_id": s.get("span_id"),
+        "span_name": s.get("name"),
+        "span_type": _span_type(s),
+        "parent_span_id": s.get("parent_span_id"),
+        "duration_ms": duration_ms,
+        "status": s.get("status", {}).get("status_code"),
+    }
+
+    # Merge span metadata with model metadata
+    return {**span_meta, **model_meta}
 
 
 # ----------------- core extraction -----------------
@@ -269,10 +303,13 @@ def extract_llm_calls_from_mlflow_trace(
         per_node_counter.setdefault(agent_name, 0)
         per_node_counter[agent_name] += 1
 
-        model_input_str, response_text, tool_calls, api_spec, meta_data = _extract_input_output_from_span(
+        model_input_str, response_text, tool_calls, api_spec, model_meta = _extract_input_output_from_span(
             s, system_trunc_limit
         )
         api_spec_str = json.dumps(api_spec) if api_spec else ""
+
+        # Build complete metadata with span info
+        meta_data = _build_span_metadata(s, model_meta)
 
         attrs = s.get("attributes", {})
         intent = (

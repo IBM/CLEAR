@@ -2,9 +2,10 @@
 Build comprehensive JSON results from CLEAR pipeline output.
 
 Creates a structured JSON with all issues mapped to spans, including:
-- Per-agent issues with span mappings
+- Per-agent issues with span mappings (issues are unique per agent)
 - Input/output pairs with scores and evaluations
-- Trace-level summaries
+- Spans with no issues listed separately
+- All span metadata from the preprocessed CSV
 """
 
 import json
@@ -20,10 +21,62 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def _safe_float(val, default=0.0):
+    """Safely convert value to float."""
+    if pd.isna(val):
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_str(val, max_len=None):
+    """Safely convert value to string with optional truncation."""
+    if pd.isna(val):
+        return ""
+    s = str(val)
+    if max_len and len(s) > max_len:
+        return s[:max_len]
+    return s
+
+
+def _parse_meta_data(meta_data_str):
+    """Parse meta_data JSON string from CSV."""
+    if pd.isna(meta_data_str) or not meta_data_str:
+        return {}
+    try:
+        if isinstance(meta_data_str, dict):
+            return meta_data_str
+        return json.loads(meta_data_str)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+def _parse_issues_list(recurring_issues_str):
+    """Parse recurring issues string into a list."""
+    if pd.isna(recurring_issues_str) or not recurring_issues_str:
+        return []
+
+    if isinstance(recurring_issues_str, list):
+        return recurring_issues_str
+
+    if isinstance(recurring_issues_str, str) and recurring_issues_str.strip():
+        # Try to parse as Python list first
+        if recurring_issues_str.startswith('['):
+            try:
+                return eval(recurring_issues_str)
+            except:
+                pass
+        # Fall back to semicolon-separated
+        return [x.strip() for x in recurring_issues_str.split(';') if x.strip()]
+
+    return []
+
+
 def build_comprehensive_json_results(
     judge_results_dir: str | Path,
     traces_data_dir: str | Path,
-    raw_traces_dir: Optional[str | Path] = None,
     config_dict: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """
@@ -31,14 +84,14 @@ def build_comprehensive_json_results(
 
     Structure:
     - metadata: pipeline info and statistics
-    - issues_catalog: all discovered issues across agents
-    - agents: per-agent issues with span mappings
-    - traces_index: trace-level summary with spans that have issues
+    - agents: per-agent data with:
+      - issues_catalog: issues discovered for this agent
+      - issues: list of issues with their occurrences
+      - no_issues: spans that had no issues mapped
 
     Args:
         judge_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
-        raw_traces_dir: Optional directory containing original trace JSON files
         config_dict: Optional pipeline configuration
 
     Returns:
@@ -46,7 +99,6 @@ def build_comprehensive_json_results(
     """
     judge_results_path = Path(judge_results_dir)
     traces_data_path = Path(traces_data_dir)
-    raw_traces_path = Path(raw_traces_dir) if raw_traces_dir else None
 
     # Initialize result structure
     results = {
@@ -59,31 +111,18 @@ def build_comprehensive_json_results(
                 "total_agents": 0,
                 "total_issues_discovered": 0,
                 "total_interactions_analyzed": 0,
+                "total_interactions_with_issues": 0,
+                "total_interactions_no_issues": 0,
             }
         },
-        "issues_catalog": {},
         "agents": {},
-        "traces_index": {}
     }
 
-    # Load raw traces for span context (if available)
-    raw_traces_data = {}
-    if raw_traces_path and raw_traces_path.exists():
-        for trace_file in raw_traces_path.glob("*.json"):
-            try:
-                with open(trace_file, 'r', encoding='utf-8') as f:
-                    trace_data = json.load(f)
-                    trace_id = trace_data.get("trace_id", trace_file.stem)
-                    raw_traces_data[trace_id] = trace_data
-            except Exception as e:
-                logger.warning(f"Could not load raw trace {trace_file}: {e}")
-
-    # Load trajectory data for input/output context
+    # Load trajectory data for additional context (keyed by task_id_step)
     traj_data = {}
     for csv_file in traces_data_path.glob("*.csv"):
         try:
             df = pd.read_csv(csv_file)
-            # Rename trace_id to task_id if needed
             if 'trace_id' in df.columns and 'task_id' not in df.columns:
                 df = df.rename(columns={"trace_id": "task_id"})
 
@@ -95,10 +134,10 @@ def build_comprehensive_json_results(
         except Exception as e:
             logger.warning(f"Could not load trajectory data {csv_file}: {e}")
 
-    # Collect all issues and build agent results
-    global_issue_id = 0
-    issue_text_to_id = {}
     all_traces = set()
+    total_with_issues = 0
+    total_no_issues = 0
+    total_issues_discovered = 0
 
     # Process each agent's results
     agent_dirs = [d for d in judge_results_path.iterdir() if d.is_dir()]
@@ -106,7 +145,7 @@ def build_comprehensive_json_results(
     for agent_dir in sorted(agent_dirs):
         agent_name = agent_dir.name
 
-        # Find the analysis results CSV (not zip)
+        # Find the analysis results CSV
         csv_files = list(agent_dir.glob("analysis_results_*.csv"))
         if not csv_files:
             logger.warning(f"No analysis_results CSV found for agent {agent_name}")
@@ -137,26 +176,31 @@ def build_comprehensive_json_results(
         if results_df is None:
             continue
 
-        # Initialize agent entry
+        # Build agent-specific issue ID mapping
+        issue_text_to_id = {}
+        for idx, shortcoming in enumerate(agent_shortcomings):
+            issue_id = f"issue_{idx + 1}"
+            issue_text_to_id[shortcoming] = issue_id
+
+        # Initialize agent entry with its own issues_catalog
         agent_result = {
             "agent_summary": {
                 "total_interactions": len(results_df),
-                "avg_score": float(results_df['score'].mean()) if 'score' in results_df.columns else 0.0,
+                "avg_score": _safe_float(results_df['score'].mean()) if 'score' in results_df.columns else 0.0,
+                "interactions_with_issues": 0,
+                "interactions_no_issues": 0,
                 "issues_count": {}
             },
-            "issues": []
+            "issues_catalog": {issue_text_to_id[s]: s for s in agent_shortcomings},
+            "issues": [],
+            "no_issues": []
         }
 
-        # Map shortcomings to global issue IDs
-        for shortcoming in agent_shortcomings:
-            if shortcoming not in issue_text_to_id:
-                global_issue_id += 1
-                issue_id = f"issue_{global_issue_id}"
-                issue_text_to_id[shortcoming] = issue_id
-                results["issues_catalog"][issue_id] = shortcoming
+        total_issues_discovered += len(agent_shortcomings)
 
         # Group results by issue
         issue_occurrences = defaultdict(list)
+        no_issue_spans = []
 
         for _, row in results_df.iterrows():
             task_id = row.get('task_id', row.get('question_id', ''))
@@ -167,128 +211,96 @@ def build_comprehensive_json_results(
                 all_traces.add(str(task_id))
 
             # Get recurring issues for this row
-            recurring_issues_str = row.get('recurring_issues_str', '')
-            if pd.isna(recurring_issues_str) or not recurring_issues_str:
-                recurring_issues_str = ''
+            row_issues = _parse_issues_list(row.get('recurring_issues_str', ''))
 
-            # Parse recurring issues - handle both string and list formats
-            row_issues = []
-            if isinstance(recurring_issues_str, str) and recurring_issues_str.strip():
-                # Try to parse as Python list first
-                if recurring_issues_str.startswith('['):
-                    try:
-                        row_issues = eval(recurring_issues_str)
-                    except:
-                        row_issues = [x.strip() for x in recurring_issues_str.split(';') if x.strip()]
-                else:
-                    row_issues = [x.strip() for x in recurring_issues_str.split(';') if x.strip()]
-            elif isinstance(recurring_issues_str, list):
-                row_issues = recurring_issues_str
+            # Get span metadata from the CSV's meta_data column
+            meta_data = _parse_meta_data(row.get('meta_data', ''))
 
-            # Build span occurrence data
+            # Build span data using CSV columns
             traj_key = f"{task_id}_{step}"
             traj_row = traj_data.get(traj_key, {})
 
-            # Get span context from raw trace
-            span_context = {}
-            str_task_id = str(task_id)
-            if str_task_id in raw_traces_data:
-                trace = raw_traces_data[str_task_id]
-                spans = trace.get('spans', [])
-                # Try to find matching span by step index
-                step_int = int(step) if not pd.isna(step) else 0
-                if step_int < len(spans):
-                    span = spans[step_int]
-                    span_context = {
-                        "span_id": span.get('span_id'),
-                        "span_name": span.get('name'),
-                        "span_type": span.get('attributes', {}).get('mlflow.spanType',
-                                     span.get('span_type', '')),
-                        "parent_span_id": span.get('parent_span_id'),
-                        "duration_ms": span.get('duration_ms'),
-                        "token_usage": span.get('attributes', {}).get('mlflow.chat.tokenUsage', {})
-                    }
-
-            # Safely get values with truncation
+            # Get values - prefer from results_df, fallback to traj_data
             model_input = row.get('model_input', traj_row.get('model_input', ''))
             response = row.get('response', traj_row.get('response', ''))
             eval_text = row.get('evaluation_text', '')
             eval_summary = row.get('evaluation_summary', '')
             score_val = row.get('score', 0)
 
-            occurrence_data = {
+            # Get tool_or_agent from CSV (indicates if this is a tool call or agent response)
+            tool_or_agent = row.get('tool_or_agent', traj_row.get('tool_or_agent', ''))
+
+            span_data = {
                 "trace_id": str(task_id),
                 "span_reference": {
-                    "span_id": span_context.get('span_id', f"{task_id}_span_{step}"),
-                    "span_name": span_context.get('span_name', traj_row.get('Name', agent_name)),
-                    "span_type": span_context.get('span_type', traj_row.get('tool_or_agent', '')),
+                    "span_id": meta_data.get('span_id', f"{task_id}_span_{step}"),
+                    "span_name": meta_data.get('span_name', traj_row.get('Name', agent_name)),
+                    "span_type": meta_data.get('span_type', ''),  # Original span type (CHAT_MODEL, LLM, AGENT, etc.)
+                    "tool_or_agent": _safe_str(tool_or_agent),  # "tool" or "agent" from preprocessing
+                    "parent_span_id": meta_data.get('parent_span_id'),
                     "step_in_trace": int(step) if not pd.isna(step) else 0
                 },
                 "input_output_pair": {
-                    "id": str(row.get('id', traj_key)),
-                    "model_input": str(model_input)[:10000] if not pd.isna(model_input) else "",
-                    "response": str(response)[:10000] if not pd.isna(response) else "",
-                    "score": float(score_val) if not pd.isna(score_val) else 0.0
+                    "id": _safe_str(row.get('id', traj_key)),
+                    "model_input": _safe_str(model_input, max_len=10000),
+                    "response": _safe_str(response, max_len=10000),
+                    "score": _safe_float(score_val)
                 },
                 "evaluation": {
-                    "evaluation_text": str(eval_text)[:5000] if not pd.isna(eval_text) else "",
-                    "evaluation_summary": str(eval_summary)[:2000] if not pd.isna(eval_summary) else ""
+                    "evaluation_text": _safe_str(eval_text, max_len=5000),
+                    "evaluation_summary": _safe_str(eval_summary, max_len=2000)
                 },
-                "span_context": span_context if span_context else None
+                "span_metadata": {
+                    "duration_ms": meta_data.get('duration_ms'),
+                    "status": meta_data.get('status'),
+                    "model": meta_data.get('model'),
+                    "provider": meta_data.get('provider'),
+                    "tokens": meta_data.get('tokens', {}),
+                    "latency": meta_data.get('latency'),
+                    "cost": meta_data.get('cost'),
+                }
             }
 
-            # Add to each issue this row is mapped to
-            for issue_text in row_issues:
-                if issue_text in issue_text_to_id:
-                    issue_id = issue_text_to_id[issue_text]
-                    issue_occurrences[issue_id].append(occurrence_data)
+            if row_issues:
+                # This span has issues - add to each issue's occurrences
+                for issue_text in row_issues:
+                    if issue_text in issue_text_to_id:
+                        issue_id = issue_text_to_id[issue_text]
+                        issue_occurrences[issue_id].append(span_data)
 
-                    # Update count
-                    agent_result["agent_summary"]["issues_count"][issue_id] = \
-                        agent_result["agent_summary"]["issues_count"].get(issue_id, 0) + 1
+                        # Update count
+                        agent_result["agent_summary"]["issues_count"][issue_id] = \
+                            agent_result["agent_summary"]["issues_count"].get(issue_id, 0) + 1
+
+                agent_result["agent_summary"]["interactions_with_issues"] += 1
+                total_with_issues += 1
+            else:
+                # No issues for this span
+                no_issue_spans.append(span_data)
+                agent_result["agent_summary"]["interactions_no_issues"] += 1
+                total_no_issues += 1
 
         # Build issues list for this agent
         for issue_id, occurrences in issue_occurrences.items():
             agent_result["issues"].append({
                 "issue_id": issue_id,
-                "issue_text": results["issues_catalog"].get(issue_id, ""),
+                "issue_text": agent_result["issues_catalog"].get(issue_id, ""),
+                "occurrence_count": len(occurrences),
                 "occurrences": occurrences
             })
+
+        # Add spans with no issues
+        agent_result["no_issues"] = no_issue_spans
 
         results["agents"][agent_name] = agent_result
         results["metadata"]["statistics"]["total_interactions_analyzed"] += len(results_df)
 
-    # Build traces index
-    for trace_id in all_traces:
-        spans_with_issues = set()
-        agents_involved = set()
-
-        for agent_name, agent_data in results["agents"].items():
-            for issue in agent_data.get("issues", []):
-                for occ in issue.get("occurrences", []):
-                    if occ["trace_id"] == trace_id:
-                        spans_with_issues.add(occ["span_reference"]["span_id"])
-                        agents_involved.add(agent_name)
-
-        trace_info = {
-            "spans_with_issues": list(spans_with_issues),
-            "agents_involved": list(agents_involved),
-            "issue_count": len(spans_with_issues)
-        }
-
-        # Add extra context from raw trace
-        if trace_id in raw_traces_data:
-            raw_trace = raw_traces_data[trace_id]
-            trace_info["execution_time_ms"] = raw_trace.get("execution_time_ms")
-            trace_info["state"] = raw_trace.get("state")
-            trace_info["total_spans"] = len(raw_trace.get("spans", []))
-
-        results["traces_index"][trace_id] = trace_info
-
     # Update statistics
     results["metadata"]["statistics"]["total_traces"] = len(all_traces)
     results["metadata"]["statistics"]["total_agents"] = len(results["agents"])
-    results["metadata"]["statistics"]["total_issues_discovered"] = len(results["issues_catalog"])
+    results["metadata"]["statistics"]["total_issues_discovered"] = total_issues_discovered
+    results["metadata"]["statistics"]["total_interactions_with_issues"] = total_with_issues
+    results["metadata"]["statistics"]["total_interactions_no_issues"] = total_no_issues
 
     return results
 
@@ -297,7 +309,6 @@ def save_comprehensive_json_results(
     judge_results_dir: str | Path,
     traces_data_dir: str | Path,
     output_dir: str | Path = None,
-    raw_traces_dir: Optional[str | Path] = None,
     config_dict: Optional[Dict] = None,
     output_filename: str = "clear_results.json"
 ) -> Path:
@@ -307,8 +318,7 @@ def save_comprehensive_json_results(
     Args:
         judge_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
-        output_dir: Directory to save the JSON output
-        raw_traces_dir: Optional directory containing original trace JSON files
+        output_dir: Directory to save the JSON output (defaults to judge_results_dir)
         config_dict: Optional pipeline configuration
         output_filename: Name of the output JSON file
 
@@ -322,7 +332,6 @@ def save_comprehensive_json_results(
     results = build_comprehensive_json_results(
         judge_results_dir=judge_results_dir,
         traces_data_dir=traces_data_dir,
-        raw_traces_dir=raw_traces_dir,
         config_dict=config_dict
     )
 
@@ -336,11 +345,14 @@ def save_comprehensive_json_results(
     with open(json_output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, default=str)
 
+    stats = results["metadata"]["statistics"]
     logger.info(f"Saved comprehensive results to: {json_output_path}")
-    logger.info(f"  Total agents: {results['metadata']['statistics']['total_agents']}")
-    logger.info(f"  Total traces: {results['metadata']['statistics']['total_traces']}")
-    logger.info(f"  Total issues discovered: {results['metadata']['statistics']['total_issues_discovered']}")
-    logger.info(f"  Total interactions analyzed: {results['metadata']['statistics']['total_interactions_analyzed']}")
+    logger.info(f"  Total agents: {stats['total_agents']}")
+    logger.info(f"  Total traces: {stats['total_traces']}")
+    logger.info(f"  Total issues discovered: {stats['total_issues_discovered']}")
+    logger.info(f"  Total interactions analyzed: {stats['total_interactions_analyzed']}")
+    logger.info(f"  Interactions with issues: {stats['total_interactions_with_issues']}")
+    logger.info(f"  Interactions with no issues: {stats['total_interactions_no_issues']}")
     logger.info("=" * 80)
 
     return json_output_path
@@ -368,14 +380,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=str,
-        required=True,
-        help="Directory to save the JSON output"
-    )
-    parser.add_argument(
-        "--raw-traces-dir",
-        type=str,
         default=None,
-        help="Optional directory containing original trace JSON files"
+        help="Directory to save the JSON output (defaults to judge-results-dir)"
     )
     parser.add_argument(
         "--output-filename",
@@ -393,7 +399,6 @@ def main():
         judge_results_dir=args.judge_results_dir,
         traces_data_dir=args.traces_data_dir,
         output_dir=args.output_dir,
-        raw_traces_dir=args.raw_traces_dir,
         output_filename=args.output_filename
     )
 
