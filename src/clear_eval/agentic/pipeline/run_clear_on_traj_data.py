@@ -21,6 +21,7 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
+from agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
@@ -450,15 +451,15 @@ Argument Precedence (lowest to highest):
         traces_data_dir
     )
 
+    json_results = save_comprehensive_json_results(
+        judge_results_dir = judge_results_dir,
+        traces_data_dir = traces_data_dir,
+        raw_traces_dir = None,
+        config_dict = config_dict,
+    )
+
     logger.info("=" * 80)
     logger.info("PIPELINE COMPLETE")
-    logger.info(f"UI Results: {ui_results_path}")
-    logger.info("=" * 80)
-    logger.info("Next steps:")
-    logger.info("  1. Start the dashboard:")
-    logger.info("     streamlit run src/clear_eval/agentic/dashboard/launch_dashboard.py")
-    logger.info(f"  2. Upload: {ui_results_path}")
-    logger.info("=" * 80)
 
 
 if __name__ == "__main__":

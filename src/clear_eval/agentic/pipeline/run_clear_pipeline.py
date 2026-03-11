@@ -20,6 +20,8 @@ import argparse
 import logging
 import os
 
+from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, \
+    save_comprehensive_json_results
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
     convert_to_clear_format,
@@ -150,15 +152,15 @@ def run_full_pipeline(config_dict: dict) -> str:
 
     logger.info("=" * 80)
     logger.info("PIPELINE COMPLETE")
-    logger.info(f"UI Results: {ui_results_path}")
-    logger.info("=" * 80)
-    logger.info("Next steps:")
-    logger.info("  1. Start the dashboard:")
-    logger.info("     streamlit run src/clear_eval/agentic/dashboard/launch_dashboard.py")
-    logger.info(f"  2. Upload: {ui_results_path}")
-    logger.info("=" * 80)
 
-    return str(ui_results_path)
+    json_results = save_comprehensive_json_results(
+        judge_results_dir = judge_results_dir,
+        traces_data_dir = traces_data_dir,
+        raw_traces_dir = traces_input_dir,
+        config_dict = config_dict,
+    )
+
+    return json_results
 
 
 def build_cli_overrides(args: argparse.Namespace) -> dict:
