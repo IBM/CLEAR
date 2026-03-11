@@ -1,4 +1,5 @@
 import os
+import json
 import yaml
 from pathlib import Path
 import logging
@@ -7,8 +8,49 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 EXPERIMENTS_DIR = os.path.join(Path(CURRENT_DIR).parents[1], "experiments")
 
 
+def load_config_file(filepath):
+    """
+    Load configuration file (JSON or YAML) if it exists.
+    
+    Args:
+        filepath: Path to config file (.json, .yaml, or .yml)
+        
+    Returns:
+        Dictionary containing configuration
+        
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If file format is not supported
+    """
+    if not filepath:
+        return {}
+        
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Config file not found: {filepath}")
+    
+    filepath_lower = filepath.lower()
+    
+    with open(filepath, "r") as file:
+        logger.info(f"Loading config file: {filepath}")
+        
+        if filepath_lower.endswith('.json'):
+            return json.load(file) or {}
+        elif filepath_lower.endswith(('.yaml', '.yml')):
+            return yaml.safe_load(file) or {}
+        else:
+            raise ValueError(
+                f"Unsupported config file format: {filepath}. "
+                "Supported formats: .json, .yaml, .yml"
+            )
+
+
 def load_yaml(filepath):
-    """Load YAML file if it exists."""
+    """
+    Load YAML file if it exists.
+    
+    DEPRECATED: Use load_config_file() instead for JSON/YAML support.
+    Kept for backward compatibility.
+    """
     if filepath and os.path.exists(filepath):
         with open(filepath, "r") as file:
             logger.info(f"Loading config file {filepath}")
@@ -36,11 +78,20 @@ def resolve_provider_config(merged_config):
     return merged_config
 
 def load_config(default_configs_path, user_config_path=None, **overrides):
-    """Load and merge configuration."""
-
-    default_config = load_yaml(default_configs_path)
+    """
+    Load and merge configuration from JSON or YAML files.
+    
+    Args:
+        default_configs_path: Path to default config file (.json, .yaml, or .yml)
+        user_config_path: Optional path to user config file (.json, .yaml, or .yml)
+        **overrides: Additional config overrides as keyword arguments
+        
+    Returns:
+        Merged configuration dictionary
+    """
+    default_config = load_config_file(default_configs_path)
     if user_config_path:
-        user_config = load_yaml(user_config_path)
+        user_config = load_config_file(user_config_path)
         merged_config = merge_configs(default_config, user_config)
     else:
         merged_config = default_config
