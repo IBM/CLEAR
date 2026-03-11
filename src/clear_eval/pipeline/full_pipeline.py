@@ -166,6 +166,7 @@ def run_aggregation_pipeline(config):
     run_info = get_run_info(config)
     eval_dir = config["output_dir"]
     eval_file = os.path.join(eval_dir, f"{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv")
+    # if evaluation file doesn't exist, fallback to treat data_path as input for aggregation
     if not os.path.exists(eval_file):
         eval_file = config.get("data_path")
         if not os.path.exists(eval_file):
