@@ -1,0 +1,24 @@
+# Agentic pipeline configuration
+traces_input_dir: /Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/data/mlflow_log_monitor       # For run_clear_pipeline.py (full pipeline from raw traces)
+agentic_output_dir: /Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/mlflow_log_monitor
+agent_framework: langgraph
+separate_tools: false
+overwrite: true
+
+# CLEAR evaluation configuration
+
+# inference params
+provider: openai
+eval_model_name: Azure/gpt-4.1
+eval_model_params:
+  temperature: 0.0  # Default for deterministic evaluation
+  max_tokens: 8096
+
+#use cached results if available
+resume_enabled: false
+
+# dict {criteria_name: criteria_desc}, specific
+evaluation_criteria: null
+
+# unique run_ identifier (to appear in file name)
+run_name: null
