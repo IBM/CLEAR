@@ -94,20 +94,109 @@ agentic_output_dir/
 └── clear_results/          # CLEAR analysis results
     └── <judge-model>/
         ├── <agent_1>/
+        │   ├── analysis_results_*.csv
+        │   └── shortcoming_list_*_dedup.json
         ├── <agent_2>/
-        └── ui_results.zip  # Upload this to the dashboard
+        └── clear_results.json  # Comprehensive JSON output
 ```
 
-## Viewing Results
+## JSON Output Format
 
-After running the pipeline:
+The pipeline generates `clear_results.json` with all issues mapped to spans:
 
-1. Start the dashboard:
-   ```bash
-   streamlit run src/clear_eval/agentic/dashboard/launch_dashboard.py
-   ```
+```json
+{
+  "metadata": {
+    "pipeline_version": "1.0",
+    "created_at": "2024-03-11T10:30:00",
+    "statistics": {
+      "total_traces": 10,
+      "total_agents": 3,
+      "total_issues_discovered": 12,
+      "total_interactions_analyzed": 150,
+      "total_interactions_with_issues": 45,
+      "total_interactions_no_issues": 105
+    }
+  },
+  "agents": {
+    "classify_log": {
+      "agent_summary": {
+        "total_interactions": 50,
+        "avg_score": 0.72,
+        "interactions_with_issues": 15,
+        "interactions_no_issues": 35,
+        "issues_count": {"issue_1": 8, "issue_2": 7}
+      },
+      "issues_catalog": {
+        "issue_1": "Incomplete reasoning in classification",
+        "issue_2": "Missing confidence scores"
+      },
+      "issues": [
+        {
+          "issue_id": "issue_1",
+          "issue_text": "Incomplete reasoning in classification",
+          "occurrence_count": 8,
+          "occurrences": [
+            {
+              "trace_id": "tr-7d2e6a006ccb9332bd146903ff2a7cba",
+              "span_reference": {
+                "span_id": "42918ea30be390fb",
+                "span_name": "Completions",
+                "span_type": "CHAT_MODEL",
+                "tool_or_agent": "agent",
+                "parent_span_id": "7f8d1c10018586dc",
+                "step_in_trace": 3
+              },
+              "input_output_pair": {
+                "id": "tr-7d2e6a006ccb9332bd146903ff2a7cba_3",
+                "model_input": "Analyze this server log...",
+                "response": "{\"classification\":\"warning\"...}",
+                "score": 0.65
+              },
+              "evaluation": {
+                "evaluation_text": "The model correctly classified...",
+                "evaluation_summary": "Correct classification but incomplete reasoning"
+              },
+              "span_metadata": {
+                "duration_ms": 1200,
+                "status": "OK",
+                "model": "Azure/gpt-4.1",
+                "tokens": {"prompt": 272, "completion": 34, "total": 306}
+              }
+            }
+          ]
+        }
+      ],
+      "no_issues": [
+        { /* same span structure for interactions without issues */ }
+      ]
+    }
+  }
+}
+```
 
-2. Upload the generated `ui_results.zip` file
+### Key Fields
+
+| Field | Description |
+|-------|-------------|
+| `agents.<name>.issues_catalog` | Issues discovered for this agent (unique per agent) |
+| `agents.<name>.issues` | List of issues with all occurrences mapped to spans |
+| `agents.<name>.no_issues` | Spans that had no issues detected |
+| `span_reference.span_type` | Original MLflow/Langfuse span type (CHAT_MODEL, LLM, AGENT, TOOL, etc.) |
+| `span_reference.tool_or_agent` | Preprocessing classification: "tool" (tool call) or "agent" (text response) |
+| `span_metadata` | Span-level info from trace (duration, model, tokens, etc.) |
+
+## Building JSON Results Separately
+
+You can also build the JSON output from existing CLEAR results:
+
+```bash
+python -m clear_eval.agentic.pipeline.build_json_results \
+    --judge-results-dir /path/to/clear_results/<judge-model> \
+    --traces-data-dir /path/to/traces_data \
+    --output-dir /path/to/output \
+    --output-filename clear_results.json
+```
 
 ## Environment Setup
 
