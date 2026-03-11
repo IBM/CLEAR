@@ -1,0 +1,23 @@
+agent_name,id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+classify_log,tr-e08208946684c866332b7416670bad41_1,classify_log,,tr-e08208946684c866332b7416670bad41,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Database connection failed for user admin
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 1.0, ""indicators"": [""ERROR"", ""failed""]}",agent,,"{""span_id"": ""6d8c87016cadbf14"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""fadafe3f2f9800ba"", ""duration_ms"": 1134.637, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 254, ""completion"": 20, ""total"": 274}}",
+classify_log,tr-236907d3019ea2a5f8e81baeb258753b_1,classify_log,,tr-236907d3019ea2a5f8e81baeb258753b,1,1,"user: Analyze this server log message and classify it.
+
+Log message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.99, ""indicators"": [""WARNING"", ""Memory usage at 94%"", ""OOMKilled likely imminent""]}",agent,,"{""span_id"": ""04ef971534b08bbf"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""593bc1fcdd889cb5"", ""duration_ms"": 1489.271, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 272, ""completion"": 30, ""total"": 302}}",

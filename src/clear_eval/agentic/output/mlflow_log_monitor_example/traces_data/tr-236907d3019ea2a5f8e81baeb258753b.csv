@@ -1,0 +1,32 @@
+id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+tr-236907d3019ea2a5f8e81baeb258753b_1,classify_log,,tr-236907d3019ea2a5f8e81baeb258753b,1,1,"user: Analyze this server log message and classify it.
+
+Log message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.99, ""indicators"": [""WARNING"", ""Memory usage at 94%"", ""OOMKilled likely imminent""]}",agent,,"{""span_id"": ""04ef971534b08bbf"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""593bc1fcdd889cb5"", ""duration_ms"": 1489.271, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 272, ""completion"": 30, ""total"": 302}}",
+tr-236907d3019ea2a5f8e81baeb258753b_2,diagnose_problem,,tr-236907d3019ea2a5f8e81baeb258753b,2,1,"system: In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent","{
+  ""id"": ""call_BjHswKMaIWfEqIvGkucwcsmu"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""797488b6567ff67e"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""de8b9a3142cddf78"", ""duration_ms"": 1552.596, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 108, ""completion"": 43, ""total"": 151}}",
+tr-236907d3019ea2a5f8e81baeb258753b_3,assess_severity,,tr-236907d3019ea2a5f8e81baeb258753b,3,1,"user: Assess the severity of this problem.
+
+Log message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent
+Diagnosis: 
+
+Determine if this is HIGH or LOW severity:
+- HIGH: Immediate user impact, service degradation, data loss risk, security issue
+- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue
+
+If uncertain, default to LOW severity.","{""severity"": ""high"", ""reasoning"": ""The log message indicates memory usage at 94% with a warning that the pod is likely to be OOMKilled soon. Impending OOMKill can cause immediate service disruption, potential data loss, and degraded availability for services relying on this pod, making it a high severity issue requiring prompt attention."", ""confidence"": 0.95}",agent,,"{""span_id"": ""825a2ae4913f5da8"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""f2dba62ce6746aa4"", ""duration_ms"": 1453.658, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>"", ""tokens"": {""prompt"": 250, ""completion"": 75, ""total"": 325}}",
