@@ -1,6 +1,6 @@
 # Agentic pipeline configuration
-traces_input_dir: /Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/data/mlflow_log_monitor       # For run_clear_pipeline.py (full pipeline from raw traces)
-agentic_output_dir: /Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/mlflow_log_monitor
+traces_input_dir: ../data/log_monitor_agent       # For run_clear_pipeline.py (full pipeline from raw traces)
+agentic_output_dir: ../output/mlflow_log_monitor_example
 agent_framework: langgraph
 separate_tools: false
 overwrite: true
