@@ -45,9 +45,9 @@ agent_framework: langgraph                  # langgraph | crewai
 separate_tools: false                       # Separate tool calls from text responses
 overwrite: true                             # Overwrite existing results
 
-# CLEAR evaluation configuration
+# CLEAR evaluation configuration (uses LiteLLM)
 provider: openai                            # LLM provider
-eval_model_name: Azure/gpt-4.1              # Model for evaluation
+eval_model_name: gpt-4o                     # LiteLLM model name
 eval_model_params:
   temperature: 0.0
   max_tokens: 8096
@@ -67,8 +67,8 @@ run_name: null                              # Unique run identifier
 | `agent_framework` | `--agent-framework` | `langgraph` | Agent framework: `langgraph` or `crewai` |
 | `separate_tools` | `--separate-tools` | `false` | Emit separate rows for tool calls vs text responses |
 | `overwrite` | `--overwrite` | `true` | Overwrite existing CLEAR results |
-| `provider` | `--provider` | `watsonx` | LLM provider (e.g., `openai`, `watsonx`, `rits`) |
-| `eval_model_name` | `--eval-model-name` | `openai/gpt-oss-120b` | Model name for CLEAR evaluation |
+| `provider` | `--provider` | `openai` | LLM provider for LiteLLM |
+| `eval_model_name` | `--eval-model-name` | `gpt-4o` | LiteLLM model name (e.g., `gpt-4o`, `claude-3-opus`, `gemini/gemini-pro`) |
 | `eval_model_params` | `--eval-model-params` | `{temperature: 0.0, max_tokens: 8096}` | Model parameters |
 | `resume_enabled` | `--resume-enabled` | `false` | Reuse intermediate results from previous runs |
 | `evaluation_criteria` | `--evaluation-criteria` | `null` | Custom evaluation criteria dict |

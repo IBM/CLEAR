@@ -6,10 +6,11 @@ separate_tools: false
 overwrite: true
 
 # CLEAR evaluation configuration
+# Uses LiteLLM - see https://docs.litellm.ai/docs/providers for model naming
 
 # inference params
 provider: openai
-eval_model_name: Azure/gpt-4.1
+eval_model_name: gpt-4o  # LiteLLM model name (e.g., gpt-4o, claude-3-opus, gemini/gemini-pro)
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
   max_tokens: 8096
