@@ -1,0 +1,21 @@
+agent_name,id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+diagnose_problem,tr-e08208946684c866332b7416670bad41_2,diagnose_problem,,tr-e08208946684c866332b7416670bad41,2,1,"system: In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: ERROR: Database connection failed for user admin","{
+  ""id"": ""call_MUaJctpOaxzPYnICozpY01Mb"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""ERROR: Database connection failed for user admin\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""615451afb8e093bb"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""933a01b8c8f10121"", ""duration_ms"": 1118.831, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 90, ""completion"": 25, ""total"": 115}}",
+diagnose_problem,tr-236907d3019ea2a5f8e81baeb258753b_2,diagnose_problem,,tr-236907d3019ea2a5f8e81baeb258753b,2,1,"system: In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent","{
+  ""id"": ""call_BjHswKMaIWfEqIvGkucwcsmu"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""797488b6567ff67e"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""de8b9a3142cddf78"", ""duration_ms"": 1552.596, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 108, ""completion"": 43, ""total"": 151}}",
