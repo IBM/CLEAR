@@ -1,7 +1,9 @@
 [
-    "omission of required reasoning or analysis",
-    "incomplete response lacking requested elements",
-    "failure to fully address user's intent",
-    "lack of explanation reducing clarity and transparency",
-    "insufficient error handling"
+    "omission of required reasoning sentence",
+    "incomplete response failing to meet system instructions",
+    "failure to directly address user's request",
+    "selection of suboptimal or inappropriate tool",
+    "reduced actionability and transparency due to missing reasoning",
+    "lack of explanation or actionable diagnostic steps",
+    "response not fully relevant to user's needs"
 ]

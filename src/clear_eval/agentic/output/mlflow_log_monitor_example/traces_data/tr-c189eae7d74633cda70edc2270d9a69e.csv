@@ -1,0 +1,32 @@
+id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+tr-c189eae7d74633cda70edc2270d9a69e_1,classify_log,,tr-c189eae7d74633cda70edc2270d9a69e,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Internal server error while processing request /api/v1/user/profile
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Internal server error""]}",agent,,"{""span_id"": ""b2aa2c3acb2ca5f3"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""a5769fb7d1234e01"", ""duration_ms"": 1685.124, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 260, ""completion"": 22, ""total"": 282}}",
+tr-c189eae7d74633cda70edc2270d9a69e_2,diagnose_problem,,tr-c189eae7d74633cda70edc2270d9a69e,2,1,"system: In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: ERROR: Internal server error while processing request /api/v1/user/profile","{
+  ""id"": ""call_wl36q7wT7Av1pghd7yWWaCLo"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""ERROR: Internal server error while processing request /api/v1/user/profile\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""76ba38efbdfcdb52"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""25124d35057115e6"", ""duration_ms"": 996.633, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 95, ""completion"": 31, ""total"": 126}}",
+tr-c189eae7d74633cda70edc2270d9a69e_3,assess_severity,,tr-c189eae7d74633cda70edc2270d9a69e,3,1,"user: Assess the severity of this problem.
+
+Log message: ERROR: Internal server error while processing request /api/v1/user/profile
+Diagnosis: 
+
+Determine if this is HIGH or LOW severity:
+- HIGH: Immediate user impact, service degradation, data loss risk, security issue
+- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue
+
+If uncertain, default to LOW severity.","{""severity"": ""high"", ""reasoning"": ""The internal server error indicates a failure in processing user profile requests, which directly impacts users' ability to access or update their profiles, causing immediate user impact and potential service degradation."", ""confidence"": 0.9}",agent,,"{""span_id"": ""0c3c3542a42ff1f3"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""e165a7bbb6ff7046"", ""duration_ms"": 2140.873, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>"", ""tokens"": {""prompt"": 238, ""completion"": 50, ""total"": 288}}",

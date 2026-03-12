@@ -1,5 +1,5 @@
 agent_name,id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
-classify_log,tr-e08208946684c866332b7416670bad41_1,classify_log,,tr-e08208946684c866332b7416670bad41,1,1,"user: Analyze this server log message and classify it.
+classify_log,tr-6e650c38d1fd46109888e7f45eb2b978_1,classify_log,,tr-6e650c38d1fd46109888e7f45eb2b978,1,1,"user: Analyze this server log message and classify it.
 
 Log message: ERROR: Database connection failed for user admin
 
@@ -9,10 +9,10 @@ Look for indicators like:
 - WARNING, WARN, threshold, approaching limit → warning
 - INFO, DEBUG, success, started, completed → normal
 
-Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 1.0, ""indicators"": [""ERROR"", ""failed""]}",agent,,"{""span_id"": ""6d8c87016cadbf14"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""fadafe3f2f9800ba"", ""duration_ms"": 1134.637, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 254, ""completion"": 20, ""total"": 274}}",
-classify_log,tr-236907d3019ea2a5f8e81baeb258753b_1,classify_log,,tr-236907d3019ea2a5f8e81baeb258753b,1,1,"user: Analyze this server log message and classify it.
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.99, ""indicators"": [""ERROR"", ""connection failed""]}",agent,,"{""span_id"": ""027ec5b39f19b46e"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""f088ef59a97d3b21"", ""duration_ms"": 1237.088, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 254, ""completion"": 21, ""total"": 275}}",
+classify_log,tr-c811dfbe1a61403a5a6693ed610fa056_1,classify_log,,tr-c811dfbe1a61403a5a6693ed610fa056,1,1,"user: Analyze this server log message and classify it.
 
-Log message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent
+Log message: ERROR: Unable to reach Elasticsearch endpoint: read timeout after 30s
 
 Determine if this is an error, warning, or normal informational message.
 Look for indicators like:
@@ -20,4 +20,92 @@ Look for indicators like:
 - WARNING, WARN, threshold, approaching limit → warning
 - INFO, DEBUG, success, started, completed → normal
 
-Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.99, ""indicators"": [""WARNING"", ""Memory usage at 94%"", ""OOMKilled likely imminent""]}",agent,,"{""span_id"": ""04ef971534b08bbf"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""593bc1fcdd889cb5"", ""duration_ms"": 1489.271, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 272, ""completion"": 30, ""total"": 302}}",
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Unable to reach Elasticsearch endpoint"", ""read timeout""]}",agent,,"{""span_id"": ""08dc42f904044860"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""35c6ad06652da325"", ""duration_ms"": 1051.027, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 260, ""completion"": 27, ""total"": 287}}",
+classify_log,tr-c189eae7d74633cda70edc2270d9a69e_1,classify_log,,tr-c189eae7d74633cda70edc2270d9a69e,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Internal server error while processing request /api/v1/user/profile
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Internal server error""]}",agent,,"{""span_id"": ""b2aa2c3acb2ca5f3"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""a5769fb7d1234e01"", ""duration_ms"": 1685.124, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 260, ""completion"": 22, ""total"": 282}}",
+classify_log,tr-c17802eea1fc9baf1ba0017862047a49_1,classify_log,,tr-c17802eea1fc9baf1ba0017862047a49,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Failed to deserialize""]}",agent,,"{""span_id"": ""30a3546151714a16"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""310bc6a1778f33ff"", ""duration_ms"": 1308.806, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 258, ""completion"": 22, ""total"": 280}}",
+classify_log,tr-f3226c2c6d7738bf2393e2fe26c7711a_1,classify_log,,tr-f3226c2c6d7738bf2393e2fe26c7711a,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Timeout waiting for response from authentication provider
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Timeout waiting for response"", ""authentication provider""]}",agent,,"{""span_id"": ""e3d82fa179c2eba4"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""e4807aca8a880bfd"", ""duration_ms"": 873.203, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 255, ""completion"": 26, ""total"": 281}}",
+classify_log,tr-18d6bf0c052bb9e43c654d062308e678_1,classify_log,,tr-18d6bf0c052bb9e43c654d062308e678,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: NullReferenceException in PaymentService at line 182
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Exception""]}",agent,,"{""span_id"": ""f960c931882718b4"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""fd85f9e83babdbec"", ""duration_ms"": 880.97, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 258, ""completion"": 20, ""total"": 278}}",
+classify_log,tr-8c94740f20a1a3c54ac6b88bfa23b4c5_1,classify_log,,tr-8c94740f20a1a3c54ac6b88bfa23b4c5,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Redis cluster unavailable - all nodes in state FAIL
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""FAIL""]}",agent,,"{""span_id"": ""0598096fbaa06c58"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""c447c9f8513421e6"", ""duration_ms"": 689.103, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 257, ""completion"": 20, ""total"": 277}}",
+classify_log,tr-a82e2d6bd35ee88716709b1e60bd973f_1,classify_log,,tr-a82e2d6bd35ee88716709b1e60bd973f,1,1,"user: Analyze this server log message and classify it.
+
+Log message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.95, ""indicators"": [""WARNING"", ""Memory usage at 94%"", ""OOMKilled likely imminent""]}",agent,,"{""span_id"": ""da97409fd7233aa2"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""26bbf324520cf71f"", ""duration_ms"": 1084.401, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 272, ""completion"": 30, ""total"": 302}}",
+classify_log,tr-cf35b6d215413a7d335e55a4da967e8b_1,classify_log,,tr-cf35b6d215413a7d335e55a4da967e8b,1,1,"user: Analyze this server log message and classify it.
+
+Log message: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.95, ""indicators"": [""WARNING"", ""Latency spike"", ""p95 = 1.8s""]}",agent,,"{""span_id"": ""a740d84da45012ea"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""4fcc34e8ff7e2997"", ""duration_ms"": 1417.661, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 266, ""completion"": 30, ""total"": 296}}",
+classify_log,tr-832c8917508a4c093e8be6e22a6b812d_1,classify_log,,tr-832c8917508a4c093e8be6e22a6b812d,1,1,"user: Analyze this server log message and classify it.
+
+Log message: WARNING: Disk usage on node gpu-runner-03 reached 92%
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""warning"", ""confidence"": 0.95, ""indicators"": [""WARNING"", ""Disk usage reached 92%"", ""approaching limit""]}",agent,,"{""span_id"": ""c76c85c76c856668"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""899883cadb030b7b"", ""duration_ms"": 792.396, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 260, ""completion"": 29, ""total"": 289}}",
