@@ -65,7 +65,7 @@ def add_clear_args_to_parser(parser: argparse.ArgumentParser | None = None, grou
                         help="Analyze only the specified number of examples")
     target.add_argument("--input-columns", nargs='+', default=None,
                         help="List of column names to present in the ui")
-    target.add_argument("--success-threshold", type=float, default=None,
+    target.add_argument("--high-score-threshold", type=float, default=None,
                         help="The minimum judge score required for a single record to be considered successful")
     target.add_argument("--agent-mode", type=str2bool, default=None,
                         help="Whether to use a default evaluation criteria suited for an agentic step and not a single llm response")
