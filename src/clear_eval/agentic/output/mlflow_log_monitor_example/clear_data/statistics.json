@@ -1,14 +1,22 @@
 {
-  "total_rows": 6,
+  "total_rows": 30,
   "unique_agents": 3,
-  "unique_tasks": 2,
+  "unique_tasks": 10,
   "agent_counts": {
-    "classify_log": 2,
-    "diagnose_problem": 2,
-    "assess_severity": 2
+    "classify_log": 10,
+    "diagnose_problem": 10,
+    "assess_severity": 10
   },
   "task_counts": {
-    "tr-e08208946684c866332b7416670bad41": 3,
-    "tr-236907d3019ea2a5f8e81baeb258753b": 3
+    "tr-6e650c38d1fd46109888e7f45eb2b978": 3,
+    "tr-c811dfbe1a61403a5a6693ed610fa056": 3,
+    "tr-c189eae7d74633cda70edc2270d9a69e": 3,
+    "tr-c17802eea1fc9baf1ba0017862047a49": 3,
+    "tr-f3226c2c6d7738bf2393e2fe26c7711a": 3,
+    "tr-18d6bf0c052bb9e43c654d062308e678": 3,
+    "tr-8c94740f20a1a3c54ac6b88bfa23b4c5": 3,
+    "tr-a82e2d6bd35ee88716709b1e60bd973f": 3,
+    "tr-cf35b6d215413a7d335e55a4da967e8b": 3,
+    "tr-832c8917508a4c093e8be6e22a6b812d": 3
   }
 }
