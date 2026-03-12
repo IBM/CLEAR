@@ -1,0 +1,32 @@
+id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+tr-f3226c2c6d7738bf2393e2fe26c7711a_1,classify_log,,tr-f3226c2c6d7738bf2393e2fe26c7711a,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Timeout waiting for response from authentication provider
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Timeout waiting for response"", ""authentication provider""]}",agent,,"{""span_id"": ""e3d82fa179c2eba4"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""e4807aca8a880bfd"", ""duration_ms"": 873.203, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 255, ""completion"": 26, ""total"": 281}}",
+tr-f3226c2c6d7738bf2393e2fe26c7711a_2,diagnose_problem,,tr-f3226c2c6d7738bf2393e2fe26c7711a,2,1,"system: In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: ERROR: Timeout waiting for response from authentication provider","{
+  ""id"": ""call_xn4IeZJUgqj1c0oIDM21pb4Z"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""ERROR: Timeout waiting for response from authentication provider\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""8fc8c2364b95136a"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""576ca3e50679d30d"", ""duration_ms"": 1073.438, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 90, ""completion"": 26, ""total"": 116}}",
+tr-f3226c2c6d7738bf2393e2fe26c7711a_3,assess_severity,,tr-f3226c2c6d7738bf2393e2fe26c7711a,3,1,"user: Assess the severity of this problem.
+
+Log message: ERROR: Timeout waiting for response from authentication provider
+Diagnosis: 
+
+Determine if this is HIGH or LOW severity:
+- HIGH: Immediate user impact, service degradation, data loss risk, security issue
+- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue
+
+If uncertain, default to LOW severity.","{""severity"": ""high"", ""reasoning"": ""The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption."", ""confidence"": 0.95}",agent,,"{""span_id"": ""a7ef50d605852ff1"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""01084814c5b5d659"", ""duration_ms"": 1284.232, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>"", ""tokens"": {""prompt"": 233, ""completion"": 44, ""total"": 277}}",

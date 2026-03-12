@@ -1,0 +1,32 @@
+id,Name,intent,task_id,step_in_trace_general,step_in_trace_node,model_input,response,tool_or_agent,api_spec,meta_data,traj_score
+tr-c811dfbe1a61403a5a6693ed610fa056_1,classify_log,,tr-c811dfbe1a61403a5a6693ed610fa056,1,1,"user: Analyze this server log message and classify it.
+
+Log message: ERROR: Unable to reach Elasticsearch endpoint: read timeout after 30s
+
+Determine if this is an error, warning, or normal informational message.
+Look for indicators like:
+- ERROR, FAIL, Exception, stack traces → error
+- WARNING, WARN, threshold, approaching limit → warning
+- INFO, DEBUG, success, started, completed → normal
+
+Provide your classification with confidence score and the indicators you found.","{""classification"": ""error"", ""confidence"": 0.95, ""indicators"": [""ERROR"", ""Unable to reach Elasticsearch endpoint"", ""read timeout""]}",agent,,"{""span_id"": ""08dc42f904044860"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""35c6ad06652da325"", ""duration_ms"": 1051.027, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.LogClassificationSchema'>"", ""tokens"": {""prompt"": 260, ""completion"": 27, ""total"": 287}}",
+tr-c811dfbe1a61403a5a6693ed610fa056_2,diagnose_problem,,tr-c811dfbe1a61403a5a6693ed610fa056,2,1,"system: In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.
+
+user: Diagnose the following log: ERROR: Unable to reach Elasticsearch endpoint: read timeout after 30s","{
+  ""id"": ""call_YVggdiaWHANBYnfc5hRPD8m2"",
+  ""function"": {
+    ""arguments"": ""{\""log_message\"":\""ERROR: Unable to reach Elasticsearch endpoint: read timeout after 30s\""}"",
+    ""name"": ""summarize_log""
+  },
+  ""type"": ""function""
+}",agent,"[{""name"": ""summarize_log"", ""description"": ""Summarize a log line so the LLM can reference it."", ""parameters"": {""properties"": {""log_message"": {""type"": ""string""}}, ""required"": [""log_message""], ""type"": ""object""}}]","{""span_id"": ""8b3e9668558d2cd7"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""67a6bdecf6789b99"", ""duration_ms"": 775.5, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": null, ""tokens"": {""prompt"": 95, ""completion"": 31, ""total"": 126}}",
+tr-c811dfbe1a61403a5a6693ed610fa056_3,assess_severity,,tr-c811dfbe1a61403a5a6693ed610fa056,3,1,"user: Assess the severity of this problem.
+
+Log message: ERROR: Unable to reach Elasticsearch endpoint: read timeout after 30s
+Diagnosis: 
+
+Determine if this is HIGH or LOW severity:
+- HIGH: Immediate user impact, service degradation, data loss risk, security issue
+- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue
+
+If uncertain, default to LOW severity.","{""severity"": ""high"", ""reasoning"": ""The inability to reach the Elasticsearch endpoint with a read timeout of 30s likely results in service degradation or downtime, impacting user experience and potentially data operations that depend on Elasticsearch. Hence, this issue has immediate user impact and requires urgent attention."", ""confidence"": 0.9}",agent,,"{""span_id"": ""b1ea88bfe4d7a346"", ""span_name"": ""Completions"", ""span_type"": ""CHAT_MODEL"", ""parent_span_id"": ""3ae9a18dd45372ba"", ""duration_ms"": 1718.72, ""status"": ""OK"", ""model"": ""Azure/gpt-4.1-mini"", ""provider"": null, ""operation"": null, ""response_format"": ""<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>"", ""tokens"": {""prompt"": 238, ""completion"": 63, ""total"": 301}}",
