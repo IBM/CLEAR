@@ -26,7 +26,12 @@ evaluation_criteria: null
 
 max_examples_to_analyze: null # for debugging
 
-success_threshold: 0.9
+# Threshold for issue analysis: records with score >= this are excluded from issue synthesis
+high_score_threshold: 0.9
+
+# Pass/fail analysis thresholds
+success_threshold: 0.7  # Threshold for pass/fail determination
+pass_criteria: avg      # "avg" or "min" - which score to compare against threshold
 
 # unique run_ identifier (to appear in file name)
 run_name: null

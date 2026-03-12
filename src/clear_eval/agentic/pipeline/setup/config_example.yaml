@@ -21,5 +21,9 @@ resume_enabled: false
 # dict {criteria_name: criteria_desc}, specific
 evaluation_criteria: null
 
+# Pass/fail analysis
+success_threshold: 0.7  # Threshold for pass/fail determination
+pass_criteria: avg      # "avg" or "min" - which score to compare against threshold
+
 # unique run_ identifier (to appear in file name)
 run_name: null

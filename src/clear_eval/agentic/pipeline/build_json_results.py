@@ -10,6 +10,7 @@ Creates a structured JSON with all issues mapped to spans, including:
 
 import json
 import logging
+import math
 import os
 from collections import defaultdict
 from datetime import datetime
@@ -19,6 +20,15 @@ from typing import Optional, Dict, Any, List
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+def _calc_std(values: List[float]) -> float:
+    """Calculate standard deviation."""
+    if len(values) < 2:
+        return 0.0
+    mean = sum(values) / len(values)
+    variance = sum((x - mean) ** 2 for x in values) / len(values)
+    return math.sqrt(variance)
 
 
 def _safe_float(val, default=0.0):
@@ -77,7 +87,7 @@ def _parse_issues_list(recurring_issues_str):
 def build_comprehensive_json_results(
     judge_results_dir: str | Path,
     traces_data_dir: str | Path,
-    config_dict: Optional[Dict] = None,
+    config_dict: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Build comprehensive JSON results with all issues mapped to spans.
@@ -88,15 +98,21 @@ def build_comprehensive_json_results(
       - issues_catalog: issues discovered for this agent
       - issues: list of issues with their occurrences
       - no_issues: spans that had no issues mapped
+    - pass_fail_summary: pass/fail metrics per trace and agent
 
     Args:
         judge_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
-        config_dict: Optional pipeline configuration
+        config_dict: Pipeline configuration containing:
+            - success_threshold: Threshold for pass/fail (default: 0.7)
+            - pass_criteria: "avg" or "min" (default: "avg")
 
     Returns:
         Comprehensive results dictionary
     """
+    # Extract pass/fail config from config_dict
+    success_threshold = config_dict.get("success_threshold", 0.7)
+    pass_criteria = config_dict.get("pass_criteria", "avg")
     judge_results_path = Path(judge_results_dir)
     traces_data_path = Path(traces_data_dir)
 
@@ -138,6 +154,13 @@ def build_comprehensive_json_results(
     total_with_issues = 0
     total_no_issues = 0
     total_issues_discovered = 0
+
+    # Track per-trace metrics: {trace_id: {"scores": [], "has_issues": []}}
+    trace_metrics = defaultdict(lambda: {"scores": [], "has_issues": []})
+
+    # Track per-agent metrics for pass/fail
+    agent_all_scores = {}  # {agent_name: [scores]}
+    agent_weighted_severity = {}  # {agent_name: sum(freq * severity)}
 
     # Process each agent's results
     agent_dirs = [d for d in judge_results_path.iterdir() if d.is_dir()]
@@ -261,6 +284,11 @@ def build_comprehensive_json_results(
                 }
             }
 
+            # Track trace-level metrics
+            trace_id_str = str(task_id)
+            trace_metrics[trace_id_str]["scores"].append(_safe_float(score_val))
+            trace_metrics[trace_id_str]["has_issues"].append(len(row_issues) > 0)
+
             if row_issues:
                 # This span has issues - add to each issue's occurrences
                 for issue_text in row_issues:
@@ -281,16 +309,40 @@ def build_comprehensive_json_results(
                 total_no_issues += 1
 
         # Build issues list for this agent
+        total_agent_spans = len(results_df)
         for issue_id, occurrences in issue_occurrences.items():
+            occurrence_count = len(occurrences)
+
+            # Calculate frequency: num occurrences / total agent spans
+            frequency = occurrence_count / total_agent_spans if total_agent_spans > 0 else 0.0
+
+            # Calculate severity: 1 - average score for spans mapped to this issue
+            scores = [occ["input_output_pair"]["score"] for occ in occurrences]
+            avg_score = sum(scores) / len(scores) if scores else 0.0
+            severity = 1.0 - avg_score
+
             agent_result["issues"].append({
                 "issue_id": issue_id,
                 "issue_text": agent_result["issues_catalog"].get(issue_id, ""),
-                "occurrence_count": len(occurrences),
+                "occurrence_count": occurrence_count,
+                "frequency": round(frequency, 4),
+                "severity": round(severity, 4),
                 "occurrences": occurrences
             })
 
         # Add spans with no issues
         agent_result["no_issues"] = no_issue_spans
+
+        # Store agent scores for pass/fail calculation
+        all_scores = [_safe_float(row.get('score', 0)) for _, row in results_df.iterrows()]
+        agent_all_scores[agent_name] = all_scores
+
+        # Calculate weighted severity: sum(frequency * severity) for all issues
+        weighted_sev = sum(
+            issue.get("frequency", 0) * issue.get("severity", 0)
+            for issue in agent_result["issues"]
+        )
+        agent_weighted_severity[agent_name] = weighted_sev
 
         results["agents"][agent_name] = agent_result
         results["metadata"]["statistics"]["total_interactions_analyzed"] += len(results_df)
@@ -302,14 +354,78 @@ def build_comprehensive_json_results(
     results["metadata"]["statistics"]["total_interactions_with_issues"] = total_with_issues
     results["metadata"]["statistics"]["total_interactions_no_issues"] = total_no_issues
 
+    # Build pass/fail summary
+    pass_fail_summary = {
+        "threshold": success_threshold,
+        "pass_criteria": pass_criteria,
+        "traces": {},
+        "agents": {}
+    }
+
+    # Per-trace metrics
+    for trace_id, metrics in trace_metrics.items():
+        scores = metrics["scores"]
+        has_issues = metrics["has_issues"]
+
+        if not scores:
+            continue
+
+        avg_score = sum(scores) / len(scores)
+        min_score = min(scores)
+        issue_free_count = sum(1 for h in has_issues if not h)
+        issue_free_ratio = issue_free_count / len(has_issues) if has_issues else 1.0
+
+        # Determine pass based on criteria
+        check_score = avg_score if pass_criteria == "avg" else min_score
+        passed = check_score >= success_threshold
+
+        pass_fail_summary["traces"][trace_id] = {
+            "pass": passed,
+            "avg_score": round(avg_score, 4),
+            "min_score": round(min_score, 4),
+            "issue_free_ratio": round(issue_free_ratio, 4)
+        }
+
+    # Per-agent metrics
+    for agent_name, scores in agent_all_scores.items():
+        if not scores:
+            continue
+
+        avg_score = sum(scores) / len(scores)
+        min_score = min(scores)
+        consistency = _calc_std(scores)
+        weighted_severity = agent_weighted_severity.get(agent_name, 0.0)
+
+        # Get issue_free_ratio from agent summary
+        agent_data = results["agents"].get(agent_name, {})
+        summary = agent_data.get("agent_summary", {})
+        total = summary.get("total_interactions", 0)
+        no_issues = summary.get("interactions_no_issues", 0)
+        issue_free_ratio = no_issues / total if total > 0 else 1.0
+
+        # Determine pass based on criteria
+        check_score = avg_score if pass_criteria == "avg" else min_score
+        passed = check_score >= success_threshold
+
+        pass_fail_summary["agents"][agent_name] = {
+            "pass": passed,
+            "avg_score": round(avg_score, 4),
+            "min_score": round(min_score, 4),
+            "issue_free_ratio": round(issue_free_ratio, 4),
+            "consistency": round(consistency, 4),
+            "weighted_severity": round(weighted_severity, 4)
+        }
+
+    results["pass_fail_summary"] = pass_fail_summary
+
     return results
 
 
 def save_comprehensive_json_results(
     judge_results_dir: str | Path,
     traces_data_dir: str | Path,
+    config_dict: Dict[str, Any],
     output_dir: str | Path = None,
-    config_dict: Optional[Dict] = None,
     output_filename: str = "clear_results.json"
 ) -> Path:
     """
@@ -318,8 +434,8 @@ def save_comprehensive_json_results(
     Args:
         judge_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
+        config_dict: Pipeline configuration containing success_threshold and pass_criteria
         output_dir: Directory to save the JSON output (defaults to judge_results_dir)
-        config_dict: Optional pipeline configuration
         output_filename: Name of the output JSON file
 
     Returns:
@@ -358,12 +474,67 @@ def save_comprehensive_json_results(
     return json_output_path
 
 
+# Path to agentic pipeline default config
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_config.yaml")
+
+
+def build_cli_overrides(args) -> dict:
+    """
+    Build CLI overrides dictionary from parsed arguments.
+
+    Args:
+        args: Parsed command line arguments
+
+    Returns:
+        Dictionary of CLI overrides ready for load_config()
+    """
+    return {
+        key: value
+        for key, value in vars(args).items()
+        if value is not None and key != 'agentic_config_path'
+    }
+
+
 def main():
     """CLI entry point for building JSON results."""
     import argparse
+    from clear_eval.pipeline.config_loader import load_config
 
     parser = argparse.ArgumentParser(
-        description="Build comprehensive JSON results from CLEAR pipeline output"
+        description="Build comprehensive JSON results from CLEAR pipeline output",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Configuration Precedence (lowest to highest):
+  1. Default config (setup/default_config.yaml)
+  2. User config file (--agentic-config-path)
+  3. CLI arguments
+
+Examples:
+  # Using default config only
+  python -m clear_eval.agentic.pipeline.build_json_results \\
+      --judge-results-dir /path/to/clear_results/<judge-model> \\
+      --traces-data-dir /path/to/traces_data
+
+  # With user config file
+  python -m clear_eval.agentic.pipeline.build_json_results \\
+      --agentic-config-path my_config.yaml \\
+      --judge-results-dir /path/to/clear_results/<judge-model> \\
+      --traces-data-dir /path/to/traces_data
+
+  # With CLI overrides
+  python -m clear_eval.agentic.pipeline.build_json_results \\
+      --judge-results-dir /path/to/clear_results/<judge-model> \\
+      --traces-data-dir /path/to/traces_data \\
+      --success-threshold 0.8 \\
+      --pass-criteria min
+        """
+    )
+    parser.add_argument(
+        "--agentic-config-path",
+        type=str,
+        default=None,
+        help="Path to config file (JSON or YAML) that overrides defaults"
     )
     parser.add_argument(
         "--judge-results-dir",
@@ -389,15 +560,38 @@ def main():
         default="clear_results.json",
         help="Name of the output JSON file (default: clear_results.json)"
     )
+    parser.add_argument(
+        "--success-threshold",
+        type=float,
+        default=None,
+        help="Threshold for pass/fail determination (default: 0.7)"
+    )
+    parser.add_argument(
+        "--pass-criteria",
+        choices=['avg', 'min'],
+        default=None,
+        help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
+    )
 
     args = parser.parse_args()
 
     # Setup logging
     logging.basicConfig(level=logging.INFO)
 
+    # Build CLI overrides from non-None args
+    cli_overrides = build_cli_overrides(args)
+
+    # Load configuration with precedence: default -> user config -> CLI overrides
+    config_dict = load_config(
+        AGENTIC_DEFAULT_CONFIG_PATH,
+        args.agentic_config_path,
+        **cli_overrides
+    )
+
     save_comprehensive_json_results(
         judge_results_dir=args.judge_results_dir,
         traces_data_dir=args.traces_data_dir,
+        config_dict=config_dict,
         output_dir=args.output_dir,
         output_filename=args.output_filename
     )

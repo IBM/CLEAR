@@ -12,5 +12,7 @@
   },
   "resume_enabled": false,
   "evaluation_criteria": null,
-  "run_name": null
+  "run_name": null,
+  "success_threshold": 0.7,
+  "pass_criteria": "avg"
 }
