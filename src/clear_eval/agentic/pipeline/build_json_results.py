@@ -116,12 +116,15 @@ def build_comprehensive_json_results(
     judge_results_path = Path(judge_results_dir)
     traces_data_path = Path(traces_data_dir)
 
+    # Filter config for JSON output (exclude internal params)
+    filtered_config = {k: v for k, v in config_dict.items() if k != "provider_defaults"}
+
     # Initialize result structure
     results = {
         "metadata": {
             "pipeline_version": "1.0",
             "created_at": datetime.now().isoformat(),
-            "config": config_dict or {},
+            "config": filtered_config,
             "statistics": {
                 "total_traces": 0,
                 "total_agents": 0,
@@ -236,12 +239,14 @@ def build_comprehensive_json_results(
             # Get recurring issues for this row
             row_issues = _parse_issues_list(row.get('recurring_issues_str', ''))
 
-            # Get span metadata from the CSV's meta_data column
-            meta_data = _parse_meta_data(row.get('meta_data', ''))
-
             # Build span data using CSV columns
             traj_key = f"{task_id}_{step}"
             traj_row = traj_data.get(traj_key, {})
+
+            # Get span metadata - prefer from results, fallback to trajectory data
+            meta_data = _parse_meta_data(row.get('meta_data', ''))
+            if not meta_data:
+                meta_data = _parse_meta_data(traj_row.get('meta_data', ''))
 
             # Get values - prefer from results_df, fallback to traj_data
             model_input = row.get('model_input', traj_row.get('model_input', ''))
@@ -393,7 +398,8 @@ def build_comprehensive_json_results(
 
         avg_score = sum(scores) / len(scores)
         min_score = min(scores)
-        consistency = _calc_std(scores)
+        std = _calc_std(scores)
+        consistency = max(0.0, 1.0 - std)  # Higher consistency = lower std
         weighted_severity = agent_weighted_severity.get(agent_name, 0.0)
 
         # Get issue_free_ratio from agent summary
@@ -413,7 +419,7 @@ def build_comprehensive_json_results(
             "min_score": round(min_score, 4),
             "issue_free_ratio": round(issue_free_ratio, 4),
             "consistency": round(consistency, 4),
-            "weighted_severity": round(weighted_severity, 4)
+       #     "weighted_severity": round(weighted_severity, 4)
         }
 
     results["pass_fail_summary"] = pass_fail_summary
