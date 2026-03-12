@@ -1,6 +1,7 @@
-# Built-in providers: rits, azure, watsonx, openai
+# Built-in providers: rits, azure, watsonx, openai, endpoint
 # With use_litellm=true: any litellm provider works (anthropic, bedrock, groq, etc.)
 # See https://docs.litellm.ai/docs/providers for full list
+# Use provider: endpoint for custom OpenAI-compatible endpoints
 provider: watsonx
 provider_defaults:
   openai:
@@ -19,6 +20,16 @@ provider_defaults:
     gen_model_name: ibm-granite/granite-3.3-8b-instruct
     eval_model_name: meta-llama/llama-3-3-70b-instruct
     max_workers: 20
+  endpoint:
+    # For endpoint provider, specify model as dict with url and name
+    # gen_model_name:
+    #   url: "http://127.0.0.1:8000/v1"
+    #   name: "your-model-name"
+    # eval_model_name:
+    #   url: "http://127.0.0.1:8000/v1"
+    #   name: "your-model-name"
+    use_litellm: true
+    max_workers: 10
 
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
@@ -46,7 +57,7 @@ output_dir: "results/gsm8k/sample_output/"
 
 max_examples_to_analyze: null # for debugging
 
-success_threshold: 0.91
+high_score_threshold: 0.91
 # whether to use reference in the evaluations.
 is_reference_based: false
 
