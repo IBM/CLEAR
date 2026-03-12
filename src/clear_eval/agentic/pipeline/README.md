@@ -55,6 +55,10 @@ eval_model_params:
 resume_enabled: false                       # Reuse cached results
 evaluation_criteria: null                   # Custom criteria dict
 run_name: null                              # Unique run identifier
+
+# Pass/fail analysis
+success_threshold: 0.7                      # Threshold for pass/fail determination
+pass_criteria: avg                          # "avg" or "min" score for pass/fail
 ```
 
 ### Configuration Parameters
@@ -73,6 +77,8 @@ run_name: null                              # Unique run identifier
 | `resume_enabled` | `--resume-enabled` | `false` | Reuse intermediate results from previous runs |
 | `evaluation_criteria` | `--evaluation-criteria` | `null` | Custom evaluation criteria dict |
 | `run_name` | `--run-name` | `null` | Unique run identifier (appears in file names) |
+| `success_threshold` | `--success-threshold` | `0.7` | Threshold for pass/fail determination |
+| `pass_criteria` | `--pass-criteria` | `avg` | Score type for pass/fail: `avg` or `min` |
 
 **Note:** Use `snake_case` in YAML files and `--kebab-case` for CLI arguments.
 
@@ -136,6 +142,8 @@ The pipeline generates `clear_results.json` with all issues mapped to spans:
           "issue_id": "issue_1",
           "issue_text": "Incomplete reasoning in classification",
           "occurrence_count": 8,
+          "frequency": 0.16,
+          "severity": 0.35,
           "occurrences": [
             {
               "trace_id": "tr-7d2e6a006ccb9332bd146903ff2a7cba",
@@ -171,6 +179,28 @@ The pipeline generates `clear_results.json` with all issues mapped to spans:
         { /* same span structure for interactions without issues */ }
       ]
     }
+  },
+  "pass_fail_summary": {
+    "threshold": 0.7,
+    "pass_criteria": "avg",
+    "traces": {
+      "tr-7d2e6a006ccb9332bd146903ff2a7cba": {
+        "pass": true,
+        "avg_score": 0.82,
+        "min_score": 0.65,
+        "issue_free_ratio": 0.9
+      }
+    },
+    "agents": {
+      "classify_log": {
+        "pass": true,
+        "avg_score": 0.78,
+        "min_score": 0.55,
+        "issue_free_ratio": 0.85,
+        "consistency": 0.12,
+        "weighted_severity": 0.18
+      }
+    }
   }
 }
 ```
@@ -182,20 +212,36 @@ The pipeline generates `clear_results.json` with all issues mapped to spans:
 | `agents.<name>.issues_catalog` | Issues discovered for this agent (unique per agent) |
 | `agents.<name>.issues` | List of issues with all occurrences mapped to spans |
 | `agents.<name>.no_issues` | Spans that had no issues detected |
+| `issues[].frequency` | Issue frequency: occurrence_count / total_agent_spans |
+| `issues[].severity` | Issue severity: 1 - avg_score of spans with this issue |
 | `span_reference.span_type` | Original MLflow/Langfuse span type (CHAT_MODEL, LLM, AGENT, TOOL, etc.) |
 | `span_reference.tool_or_agent` | Preprocessing classification: "tool" (tool call) or "agent" (text response) |
 | `span_metadata` | Span-level info from trace (duration, model, tokens, etc.) |
+| `pass_fail_summary.traces` | Per-trace pass/fail with avg_score, min_score, issue_free_ratio |
+| `pass_fail_summary.agents` | Per-agent pass/fail with consistency and weighted_severity |
 
 ## Building JSON Results Separately
 
 You can also build the JSON output from existing CLEAR results:
 
 ```bash
+# Using default config
+python -m clear_eval.agentic.pipeline.build_json_results \
+    --judge-results-dir /path/to/clear_results/<judge-model> \
+    --traces-data-dir /path/to/traces_data
+
+# With user config file
+python -m clear_eval.agentic.pipeline.build_json_results \
+    --agentic-config-path my_config.yaml \
+    --judge-results-dir /path/to/clear_results/<judge-model> \
+    --traces-data-dir /path/to/traces_data
+
+# With CLI overrides
 python -m clear_eval.agentic.pipeline.build_json_results \
     --judge-results-dir /path/to/clear_results/<judge-model> \
     --traces-data-dir /path/to/traces_data \
-    --output-dir /path/to/output \
-    --output-filename clear_results.json
+    --success-threshold 0.8 \
+    --pass-criteria min
 ```
 
 ## Environment Setup

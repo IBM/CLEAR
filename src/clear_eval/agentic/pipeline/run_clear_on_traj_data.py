@@ -63,6 +63,16 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         type=str2bool,
         help="Whether to overwrite existing results (default: true)"
     )
+    group.add_argument(
+        "--success-threshold",
+        type=float,
+        help="Threshold for pass/fail determination (default: 0.7)"
+    )
+    group.add_argument(
+        "--pass-criteria",
+        choices=['avg', 'min'],
+        help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
+    )
 
 
 def build_cli_overrides(args: argparse.Namespace) -> dict:
