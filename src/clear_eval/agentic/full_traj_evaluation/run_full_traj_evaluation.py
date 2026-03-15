@@ -23,19 +23,13 @@ Four evaluation methods (--method flag):
     full_traj_evaluation/results_{judge}/{method}/
 """
 
-import os
 import re
-import sys
 import json
-import argparse
 import logging
 import time
 from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
-
-from dotenv import load_dotenv
-
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import _cap_trajectory, discover_trajectories, \
     get_max_trajectory_chars
@@ -43,9 +37,16 @@ from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
     get_llm_client_adapter,
     evaluate_batch_parallel
 )
+
 # Import centralized modules
-from dataset_base import get_dataset_obj, get_available_datasets, DEFAULT_MODEL_CONTEXT_TOKENS, TRAJ_DATA_DIR, \
-    RESULTS_DIR, get_results_dir
+from clear_eval.agentic.full_traj_evaluation.dataset_base import (
+    get_dataset_obj,
+    get_available_datasets,
+    DEFAULT_MODEL_CONTEXT_TOKENS,
+    TRAJ_DATA_DIR,
+    RESULTS_DIR,
+    get_results_dir,
+)
 
 # ---------------------------------------------------------------------------
 # Evaluation dimensions
@@ -344,20 +345,11 @@ def evaluate_single_trajectory(
     prompt = build_dimensions_prompt(trajectory_text, max_len=max_traj_chars)
     system_message = SYSTEM_MESSAGE_DIMENSIONS
 
-    #logger.info("Evaluating [%s]: %s/%s/%s", method, dataset, model_name, traj_name)
-    start_time = time.time()
-
     # Call judge using the provided client
     response_text = llm_client.call(
         prompt=prompt,
         system_message=system_message
     )
-
-    elapsed = time.time() - start_time
-
-    if not response_text:
-        logger.error("No response for %s/%s/%s", dataset, model_name, traj_name)
-        return None
 
     # Parse response
     evaluation = parse_evaluation_response(response_text)
@@ -395,8 +387,6 @@ def evaluate_single_trajectory(
         "source_file": str(file_path),
         "judge_model": judge_model_id,
         "method": "dimensions_prompt",
-        "evaluation_timestamp": datetime.now().isoformat(),
-        "evaluation_time_seconds": round(elapsed, 2),
         "detailed_feedback": detailed_feedback,
         "overall_score": overall_score,
         "dimension_scores": dimension_scores,
@@ -408,13 +398,6 @@ def evaluate_single_trajectory(
     output_dir.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-    #
-    # logger.info(
-    #     "Saved: %s (overall=%.2f, time=%.1fs)",
-    #     output_file.relative_to(results_dir),
-    #     overall_score if overall_score is not None else 0,
-    #     elapsed,
-    # )
 
     return result
 
@@ -428,8 +411,6 @@ def run_evaluation_batch(
     entries: list[dict],
     results_dir: Path,
     judge_model_id: str,
-    judge_short_name: str,
-    judge_key: str,
     provider: str,
     overwrite: bool,
     concurrency: int,
@@ -438,7 +419,7 @@ def run_evaluation_batch(
     """Evaluate a batch of trajectories using pipeline's run_parallel."""
     
     # Get LLM client once (will be reused for all evaluations)
-    llm_client = get_llm_client_adapter(
+    llm_client = get_llm_client_adapter( # TODO ADD EVALUATION PARAMS
         provider=provider,
         model_id=judge_model_id,
         eval_mode=True,
@@ -471,7 +452,7 @@ def run_evaluation_batch(
 
 
 # ---------------------------------------------------------------------------
-# 10. Summary report generation
+# Summary report generation
 # ---------------------------------------------------------------------------
 
 
@@ -557,7 +538,6 @@ def parse_args():
 def run_main(args):
     """Main entry point for evaluation."""
     judge_model_id = args.model_id
-    judge_short_name = judge_model_id.split("/")[-1].replace("-","_")
     results_dir = get_results_dir("dimensions_prompt", judge_model_id)
 
     # Discover trajectories
@@ -573,13 +553,7 @@ def run_main(args):
 
     # Apply max-files limit per dataset/model
     if args.max_files:
-        grouped = defaultdict(list)
-        for e in entries:
-            key = (e["dataset"], e["model_name"])
-            grouped[key].append(e)
-        entries = []
-        for key, group in grouped.items():
-            entries.extend(group[: args.max_files])
+        entries = entries[:args.max_files]
 
     # Print plan
     counts = Counter((e["dataset"], e["model_name"]) for e in entries)
@@ -613,8 +587,6 @@ def run_main(args):
         entries=entries,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
-        judge_short_name=judge_short_name,
-        judge_key=args.model_id,
         provider=args.provider,
         overwrite=args.overwrite,
         concurrency=args.concurrency,

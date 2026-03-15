@@ -41,7 +41,6 @@ import os
 import re
 import sys
 import json
-import asyncio
 import argparse
 import logging
 import time
@@ -49,15 +48,20 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-import aiohttp
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from clear_eval.agentic.full_traj_evaluation.full_traj_utils import discover_trajectories
+from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
+    get_llm_client_adapter,
+    evaluate_batch_parallel,
+)
 # Import centralized modules
-from dataset_base import get_dataset_obj, get_available_datasets, TRAJ_DATA_DIR, RESULTS_DIR
-from inference_utils import call_llm_async, get_supported_providers
+from clear_eval.agentic.full_traj_evaluation.dataset_base import (
+    get_dataset_obj,
+    get_available_datasets,
+    TRAJ_DATA_DIR,
+    RESULTS_DIR,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Configuration
@@ -203,11 +207,11 @@ def parse_rubrics_response(response_text: str) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
-async def generate_rubrics_single(
+def generate_rubrics_single(
     entry: dict,
-    session: aiohttp.ClientSession,
     rubrics_dir: Path,
     judge_model_id: str,
+    llm_client,
     provider = "rits",
     overwrite: bool = False,
 ) -> dict | None:
@@ -243,17 +247,11 @@ async def generate_rubrics_single(
 
     prompt = build_rubrics_prompt(task_objective)
 
-    # logger.info(
-    #     "Generating rubrics: %s/%s/%s", dataset, model_name, traj_name,
-    # )
     start_time = time.time()
 
-    response_text = await call_llm_async(
-        prompt,
+    response_text = llm_client.call(
+        prompt=prompt,
         system_message=SYSTEM_MESSAGE_RUBRICS,
-        provider=provider,
-        model_id=judge_model_id,
-        session=session,
     )
 
     elapsed = time.time() - start_time
@@ -295,14 +293,6 @@ async def generate_rubrics_single(
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    # logger.info(
-    #     "Saved: %s (%d rubrics, complexity=%s, time=%.1fs)",
-    #     output_file.relative_to(rubrics_dir),
-    #     len(rubrics),
-    #     complexity or "?",
-    #     elapsed,
-    # )
-
     return result
 
 
@@ -311,7 +301,7 @@ async def generate_rubrics_single(
 # ---------------------------------------------------------------------------
 
 
-async def generate_rubrics_batch(
+def run_generation_batch(
     entries: list[dict],
     rubrics_dir: Path,
     judge_model_id: str,
@@ -320,44 +310,24 @@ async def generate_rubrics_batch(
     provider: str = "rits",
 ) -> list[dict]:
     """Generate rubrics for a batch of trajectories with concurrency."""
-    semaphore = asyncio.Semaphore(concurrency)
-    timeout = aiohttp.ClientTimeout(total=120)
-    connector = aiohttp.TCPConnector(limit=concurrency + 2)
-
-    results = []
-    completed = 0
-    skipped = 0
-
-    pbar = tqdm(
-        total=len(entries), desc="Generating rubrics", unit="task",
+    llm_client = get_llm_client_adapter(
+        provider=provider,
+        model_id=judge_model_id,
     )
 
-    async def sem_generate(entry):
-        async with semaphore:
-            return await generate_rubrics_single(
-                entry, session, rubrics_dir,
-                judge_model_id,
-                provider=provider,
-                overwrite=overwrite,
-            )
+    inputs = [
+        (entry, rubrics_dir, judge_model_id, llm_client, provider, overwrite)
+        for entry in entries
+    ]
 
-    async with aiohttp.ClientSession(
-        connector=connector, timeout=timeout,
-    ) as session:
-        tasks = [sem_generate(e) for e in entries]
-        for coro in asyncio.as_completed(tasks):
-            result = await coro
-            if result:
-                results.append(result)
-                n = result.get("num_rubrics", 0)
-                completed += 1
-                pbar.set_postfix(done=completed, skip=skipped, rubrics=n)
-            else:
-                skipped += 1
-                pbar.set_postfix(done=completed, skip=skipped)
-            pbar.update(1)
+    results = evaluate_batch_parallel(
+        evaluate_func=generate_rubrics_single,
+        entries=inputs,
+        max_workers=concurrency,
+        use_async=False,
+        progress_desc="Generating rubrics",
+    )
 
-    pbar.close()
     return results
 
 
@@ -457,8 +427,8 @@ def get_rubrics_dir(judge_key: str) -> Path:
     return RESULTS_DIR / f"rubrics_{judge_short_name}"
 
 
-async def async_main(args):
-    """Async entry point."""
+def run_main(args):
+    """Main entry point."""
     judge_model_id = args.model_id
     rubrics_dir = get_rubrics_dir(judge_model_id)
 
@@ -485,13 +455,7 @@ async def async_main(args):
         return
 
     if args.max_files:
-        grouped = defaultdict(list)
-        for e in entries:
-            key = (e["dataset"], e["model_name"])
-            grouped[key].append(e)
-        entries = []
-        for key, group in grouped.items():
-            entries.extend(group[: args.max_files])
+        entries = entries[:args.max_files]
 
     counts = Counter((e["dataset"], e["model_name"]) for e in entries)
 
@@ -510,7 +474,7 @@ async def async_main(args):
     print("=" * 70)
 
     start = time.time()
-    results = await generate_rubrics_batch(
+    results = run_generation_batch(
         entries,
         rubrics_dir=rubrics_dir,
         judge_model_id=judge_model_id,
@@ -534,7 +498,7 @@ async def async_main(args):
 
 def main():
     args = parse_args()
-    asyncio.run(async_main(args))
+    run_main(args)
 
 
 if __name__ == "__main__":

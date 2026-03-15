@@ -19,8 +19,8 @@ def get_max_trajectory_chars(context_tokens: int = DEFAULT_CONTEXT_TOKENS) -> in
 
 def discover_trajectories(
         base_dir: Path,
-        filter_dataset: str | None = None,
-        filter_model: str | None = None,
+        filter_dataset: str,
+        filter_model: str,
     ) -> list[dict]:
         """Discover all trajectory JSON files.
 

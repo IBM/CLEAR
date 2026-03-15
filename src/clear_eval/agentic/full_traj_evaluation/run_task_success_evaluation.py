@@ -43,7 +43,6 @@ import os
 import re
 import sys
 import json
-import asyncio
 import argparse
 import logging
 import time
@@ -51,16 +50,23 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-import aiohttp
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import discover_trajectories, _cap_trajectory, \
     get_max_trajectory_chars
+from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
+    get_llm_client_adapter,
+    evaluate_batch_parallel,
+)
 # Import centralized modules
-from dataset_base import get_available_datasets, TRAJ_DATA_DIR, RESULTS_DIR, get_dataset_obj, get_results_dir
-from inference_utils import call_llm_async, get_supported_providers
+from clear_eval.agentic.full_traj_evaluation.dataset_base import (
+    get_available_datasets,
+    TRAJ_DATA_DIR,
+    RESULTS_DIR,
+    get_dataset_obj,
+    get_results_dir,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Configuration
@@ -235,13 +241,13 @@ def parse_evaluation_response(response_text: str) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
-async def evaluate_single_trajectory(
+def evaluate_single_trajectory(
     entry: dict,
-    session: aiohttp.ClientSession,
     results_dir: Path,
     judge_model_id: str,
     judge_short_name: str,
     judge_key: str,
+    llm_client,
     provider: str = "rits",
     context_tokens: int = 128_000,
     overwrite: bool = False,
@@ -277,15 +283,11 @@ async def evaluate_single_trajectory(
     )
     system_message = SYSTEM_MESSAGE_TASK_SUCCESS
 
-    #logger.info("Evaluating: %s/%s/%s", dataset, model_name, traj_name)
     start_time = time.time()
 
-    response_text = await call_llm_async(
-        prompt,
+    response_text = llm_client.call(
+        prompt=prompt,
         system_message=system_message,
-        provider=provider,
-        model_id=judge_model_id,
-        session=session,
     )
 
     elapsed = time.time() - start_time
@@ -337,13 +339,6 @@ async def evaluate_single_trajectory(
     output_dir.mkdir(parents=True, exist_ok=True)
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-    #
-    # logger.info(
-    #     "Saved: %s (success=%s, time=%.1fs)",
-    #     output_file.relative_to(results_dir),
-    #     success if success is not None else "N/A",
-    #     elapsed,
-    # )
 
     return result
 
@@ -353,7 +348,7 @@ async def evaluate_single_trajectory(
 # ---------------------------------------------------------------------------
 
 
-async def evaluate_batch(
+def run_evaluation_batch(
     entries: list[dict],
     results_dir: Path,
     judge_model_id: str,
@@ -365,45 +360,25 @@ async def evaluate_batch(
     concurrency: int = 2,
 ) -> list[dict]:
     """Evaluate a batch of trajectories with concurrency control."""
-    semaphore = asyncio.Semaphore(concurrency)
-    timeout = aiohttp.ClientTimeout(total=180)
-    connector = aiohttp.TCPConnector(limit=concurrency + 2)
+    llm_client = get_llm_client_adapter(
+        provider=provider,
+        model_id=judge_model_id,
+    )
 
-    results = []
-    completed = 0
-    skipped = 0
+    inputs = [
+        (entry, results_dir, judge_model_id, judge_short_name,
+         judge_key, llm_client, provider, context_tokens, overwrite)
+        for entry in entries
+    ]
 
-    pbar = tqdm(total=len(entries), desc="Evaluating task success", unit="traj")
+    results = evaluate_batch_parallel(
+        evaluate_func=evaluate_single_trajectory,
+        entries=inputs,
+        max_workers=concurrency,
+        use_async=False,
+        progress_desc="Evaluating task success",
+    )
 
-    async def sem_evaluate(entry):
-        async with semaphore:
-            return await evaluate_single_trajectory(
-                entry, session, results_dir,
-                judge_model_id, judge_short_name,
-                judge_key=judge_key,
-                provider=provider,
-                context_tokens=context_tokens,
-                overwrite=overwrite,
-            )
-
-    async with aiohttp.ClientSession(
-        connector=connector, timeout=timeout
-    ) as session:
-        tasks = [sem_evaluate(e) for e in entries]
-        for coro in asyncio.as_completed(tasks):
-            result = await coro
-            if result:
-                results.append(result)
-                s = result.get("success")
-                s_str = str(s) if s is not None else "N/A"
-                completed += 1
-                pbar.set_postfix(done=completed, skip=skipped, last=s_str)
-            else:
-                skipped += 1
-                pbar.set_postfix(done=completed, skip=skipped)
-            pbar.update(1)
-
-    pbar.close()
     return results
 
 
@@ -501,8 +476,8 @@ def parse_args():
     parser = create_base_parser(description="Task Success Evaluation (binary success label)")
     return parser.parse_args()
 
-async def async_main(args):
-    """Async entry point."""
+def run_main(args):
+    """Main entry point."""
     judge_model_id = args.model_id
     results_dir = get_results_dir("success_results", args.model_id)
     context_tokens = args.context_tokens
@@ -530,13 +505,7 @@ async def async_main(args):
         return
 
     if args.max_files:
-        grouped = defaultdict(list)
-        for e in entries:
-            key = (e["dataset"], e["model_name"])
-            grouped[key].append(e)
-        entries = []
-        for key, group in grouped.items():
-            entries.extend(group[: args.max_files])
+        entries = entries[:args.max_files]
 
     counts = Counter((e["dataset"], e["model_name"]) for e in entries)
 
@@ -561,11 +530,11 @@ async def async_main(args):
     print("=" * 70)
 
     start = time.time()
-    results = await evaluate_batch(
+    results = run_evaluation_batch(
         entries,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
-        judge_short_name="",  # Not needed anymore
+        judge_short_name="",
         judge_key=args.model_id,
         provider=args.provider,
         context_tokens=context_tokens,
@@ -589,7 +558,7 @@ async def async_main(args):
 def main():
     args = parse_args()
 
-    asyncio.run(async_main(args))
+    run_main(args)
 
 
 if __name__ == "__main__":

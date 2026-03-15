@@ -45,7 +45,6 @@ import os
 import re
 import sys
 import json
-import asyncio
 import argparse
 import logging
 import time
@@ -53,17 +52,24 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-import aiohttp
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import _cap_trajectory, discover_trajectories, \
     get_max_trajectory_chars
 from clear_eval.agentic.full_traj_evaluation.generate_task_rubrics import get_rubrics_dir
+from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
+    get_llm_client_adapter,
+    evaluate_batch_parallel,
+)
 # Import centralized modules
-from dataset_base import get_dataset_obj, get_available_datasets, TRAJ_DATA_DIR, RESULTS_DIR, get_results_dir
-from inference_utils import call_llm_async, get_supported_providers
+from clear_eval.agentic.full_traj_evaluation.dataset_base import (
+    get_dataset_obj,
+    get_available_datasets,
+    TRAJ_DATA_DIR,
+    RESULTS_DIR,
+    get_results_dir,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Configuration
@@ -233,16 +239,12 @@ def parse_evaluation_response(response_text: str) -> dict | None:
 # 7. Single trajectory evaluation
 # ---------------------------------------------------------------------------
 
-async def evaluate_single(
+def evaluate_single(
     entry: dict,
-    session: aiohttp.ClientSession,
     rubrics_dir: Path,
     results_dir: Path,
     judge_model_id: str,
-    judge_short_name: str,
-    judge_key: str,
-    provider: str = "rits",
-    context_tokens: int = 128_000,
+    llm_client,
     overwrite: bool = False,
 ) -> dict | None:
     """Evaluate a single trajectory against its rubrics and save results."""
@@ -299,15 +301,11 @@ async def evaluate_single(
         task_objective, rubrics, trajectory_text, max_len=max_traj_chars,
     )
 
-    #logger.info("Evaluating: %s/%s/%s (%d rubrics)", dataset, model_name, traj_name, len(rubrics))
     start_time = time.time()
 
-    response_text = await call_llm_async(
-        prompt,
+    response_text = llm_client.call(
+        prompt=prompt,
         system_message=SYSTEM_MESSAGE_RUBRIC_EVAL,
-        provider=provider,
-        model_id=judge_model_id,
-        session=session,
     )
 
     elapsed = time.time() - start_time
@@ -369,15 +367,6 @@ async def evaluate_single(
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    # logger.info(
-    #     "Saved: %s (fulfilled=%d/%d, score=%.2f, time=%.1fs)",
-    #     output_file.relative_to(results_dir),
-    #     fulfilled_count,
-    #     total_count,
-    #     score if score is not None else 0,
-    #     elapsed,
-    # )
-
     return result
 
 
@@ -386,7 +375,7 @@ async def evaluate_single(
 # ---------------------------------------------------------------------------
 
 
-async def evaluate_batch(
+def run_evaluation_batch(
     entries: list[dict],
     rubrics_dir: Path,
     results_dir: Path,
@@ -399,47 +388,24 @@ async def evaluate_batch(
     concurrency: int = 2,
 ) -> list[dict]:
     """Evaluate a batch of trajectories with concurrency control."""
-    semaphore = asyncio.Semaphore(concurrency)
-    timeout = aiohttp.ClientTimeout(total=180)
-    connector = aiohttp.TCPConnector(limit=concurrency + 2)
-
-    results = []
-    completed = 0
-    skipped = 0
-
-    pbar = tqdm(
-        total=len(entries), desc="Evaluating rubrics", unit="traj",
+    llm_client = get_llm_client_adapter(
+        provider=provider,
+        model_id=judge_model_id,
     )
 
-    async def sem_evaluate(entry):
-        async with semaphore:
-            return await evaluate_single(
-                entry, session, rubrics_dir, results_dir,
-                judge_model_id, judge_short_name,
-                judge_key=judge_key,
-                provider=provider,
-                context_tokens=context_tokens,
-                overwrite=overwrite,
-            )
+    inputs = [
+        (entry, rubrics_dir, results_dir, judge_model_id, llm_client, overwrite)
+        for entry in entries
+    ]
 
-    async with aiohttp.ClientSession(
-        connector=connector, timeout=timeout,
-    ) as session:
-        tasks = [sem_evaluate(e) for e in entries]
-        for coro in asyncio.as_completed(tasks):
-            result = await coro
-            if result:
-                results.append(result)
-                sc = result.get("score")
-                sc_str = f"{sc:.2f}" if sc is not None else "N/A"
-                completed += 1
-                pbar.set_postfix(done=completed, skip=skipped, score=sc_str)
-            else:
-                skipped += 1
-                pbar.set_postfix(done=completed, skip=skipped)
-            pbar.update(1)
+    results = evaluate_batch_parallel(
+        evaluate_func=evaluate_single,
+        entries=inputs,
+        max_workers=concurrency,
+        use_async=False,
+        progress_desc="Evaluating rubrics",
+    )
 
-    pbar.close()
     return results
 
 
@@ -509,43 +475,6 @@ def generate_summary_report(results_dir: Path) -> dict:
 
     return summary
 
-
-def print_summary(summary: dict, judge_model_id: str):
-    """Pretty-print the summary report."""
-    print("\n" + "=" * 80)
-    print("RUBRIC-BASED EVALUATION SUMMARY")
-    print(f"Judge Model: {judge_model_id}")
-    print("=" * 80)
-
-    for dataset, models in summary.items():
-        print(f"\n{'#' * 70}")
-        print(f"# Dataset: {dataset}")
-        print(f"{'#' * 70}")
-
-        for model_name, stats in models.items():
-            avg = stats.get("average_score")
-            avg_str = f"{avg:.3f}" if avg is not None else "N/A"
-            min_s = stats.get("min_score")
-            max_s = stats.get("max_score")
-            range_str = (
-                f"{min_s:.3f} – {max_s:.3f}"
-                if min_s is not None and max_s is not None
-                else "N/A"
-            )
-            fr = stats.get("overall_fulfillment_rate")
-            fr_str = f"{fr:.1%}" if fr is not None else "N/A"
-
-            print(f"\n  Model: {model_name}")
-            print(f"  Evaluations:           {stats['total_evaluations']}")
-            print(f"  Average Score:         {avg_str}")
-            print(f"  Score Range:           {range_str}")
-            print(f"  Total Rubrics:         {stats['total_rubrics']}")
-            print(f"  Total Fulfilled:       {stats['total_fulfilled']}")
-            print(f"  Overall Fulfillment:   {fr_str}")
-
-    print("\n" + "=" * 80)
-
-
 # ---------------------------------------------------------------------------
 # 10. Main
 # ---------------------------------------------------------------------------
@@ -565,8 +494,8 @@ def parse_args():
     return parser.parse_args()
 
 
-async def async_main(args):
-    """Async entry point."""
+def run_main(args):
+    """Main entry point."""
     judge_model_id = args.model_id
     rubrics_model_id = args.rubrics_model_id or args.model_id
     rubrics_dir = get_rubrics_dir(rubrics_model_id)
@@ -576,7 +505,6 @@ async def async_main(args):
     if args.summary_only:
         if results_dir.exists():
             summary = generate_summary_report(results_dir)
-            print_summary(summary, judge_model_id)
             summary_file = results_dir / "summary.json"
             with open(summary_file, "w") as f:
                 json.dump(summary, f, indent=2)
@@ -601,13 +529,7 @@ async def async_main(args):
         return
 
     if args.max_files:
-        grouped = defaultdict(list)
-        for e in entries:
-            key = (e["dataset"], e["model_name"])
-            grouped[key].append(e)
-        entries = []
-        for key, group in grouped.items():
-            entries.extend(group[: args.max_files])
+        entries = entries[:args.max_files]
 
     counts = Counter((e["dataset"], e["model_name"]) for e in entries)
 
@@ -632,12 +554,12 @@ async def async_main(args):
     print("=" * 70)
 
     start = time.time()
-    results = await evaluate_batch(
+    results = run_evaluation_batch(
         entries,
         rubrics_dir=rubrics_dir,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
-        judge_short_name="",  # Not needed anymore
+        judge_short_name="",
         judge_key=args.model_id,
         provider=args.provider,
         context_tokens=context_tokens,
@@ -650,7 +572,6 @@ async def async_main(args):
 
     if results_dir.exists():
         summary = generate_summary_report(results_dir)
-        print_summary(summary, judge_model_id)
 
         summary_file = results_dir / "summary.json"
         with open(summary_file, "w") as f:
@@ -668,7 +589,7 @@ def main():
             print("  Or .env file: RITS_API_KEY=your-key")
             sys.exit(1)
 
-    asyncio.run(async_main(args))
+    run_main(args)
 
 
 if __name__ == "__main__":
