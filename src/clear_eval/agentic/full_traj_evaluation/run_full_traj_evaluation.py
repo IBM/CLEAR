@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Full Trajectory Evaluation via RITS
-====================================
+Full Trajectory Evaluation
 
 Evaluates full agent trajectories from traj_full_data/ using a RITS-hosted
 judge model.  Produces a CLEAR-style overall score (0-1) and detailed textual
@@ -21,44 +20,13 @@ Four evaluation methods (--method flag):
                                   focuses exclusively on issues, problems,
                                   and weaknesses (no strengths).
 
-Supported judge models (--judge flag):
-    oss20b   - openai/gpt-oss-20b   (default, fast for debugging)
-    oss120b  - openai/gpt-oss-120b
-    deepseek - deepseek-ai/DeepSeek-V3.2
-
-Results are saved to:
     full_traj_evaluation/results_{judge}/{method}/
-
-Example directory layout:
-    results_oss20b/
-        dimensions_prompt/
-            CUGA/full/...
-            FinOps/gpt4o/...
-        full_trace_prompt/
-            CUGA/full/...
-            FinOps/gpt4o/...
-
-Setup:
-    1. Create a `.env` file (or export) with:
-         RITS_API_KEY=<your-rits-api-key>
-    2. Install dependencies:
-         pip install aiohttp python-dotenv tqdm
-    3. Run:
-         python run_full_traj_evaluation.py [OPTIONS]
-
-Usage examples:
-    python run_full_traj_evaluation.py                                      # defaults
-    python run_full_traj_evaluation.py --method full_trace_prompt           # holistic
-    python run_full_traj_evaluation.py --judge oss120b --method dimensions_prompt
-    python run_full_traj_evaluation.py --dataset FinOps --model gpt4o --max-files 3
-    python run_full_traj_evaluation.py --summary-only
 """
 
 import os
 import re
 import sys
 import json
-import asyncio
 import argparse
 import logging
 import time
@@ -66,24 +34,18 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-import aiohttp
 from dotenv import load_dotenv
-from tqdm import tqdm
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import _cap_trajectory, discover_trajectories, \
     get_max_trajectory_chars
+from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
+    get_llm_client_adapter,
+    evaluate_batch_parallel
+)
 # Import centralized modules
 from dataset_base import get_dataset_obj, get_available_datasets, DEFAULT_MODEL_CONTEXT_TOKENS, TRAJ_DATA_DIR, \
     RESULTS_DIR, get_results_dir
-from inference_utils import call_llm_async, get_supported_providers
-
-# ---------------------------------------------------------------------------
-# 1. Configuration
-# ---------------------------------------------------------------------------
-
-load_dotenv()
-
 
 # ---------------------------------------------------------------------------
 # Evaluation dimensions
@@ -338,18 +300,15 @@ def extract_scores_from_evaluation(evaluation: dict) -> dict:
     return scores
 
 # ---------------------------------------------------------------------------
-# 8. Single trajectory evaluation
+#  Single trajectory evaluation
 # ---------------------------------------------------------------------------
 
 
-async def evaluate_single_trajectory(
+def evaluate_single_trajectory(
     entry: dict,
-    session: aiohttp.ClientSession,
     results_dir: Path,
     judge_model_id: str,
-    judge_short_name: str,
-    judge_key: str,
-    provider: str = "rits",
+    llm_client,
     overwrite: bool = False,
     context_tokens: int = 128_000,
 ) -> dict | None:
@@ -388,13 +347,10 @@ async def evaluate_single_trajectory(
     #logger.info("Evaluating [%s]: %s/%s/%s", method, dataset, model_name, traj_name)
     start_time = time.time()
 
-    # Call judge
-    response_text = await call_llm_async(
-        prompt,
-        system_message=system_message,
-        provider=provider,
-        model_id=judge_model_id,
-        session=session,
+    # Call judge using the provided client
+    response_text = llm_client.call(
+        prompt=prompt,
+        system_message=system_message
     )
 
     elapsed = time.time() - start_time
@@ -464,63 +420,53 @@ async def evaluate_single_trajectory(
 
 
 # ---------------------------------------------------------------------------
-# 9. Batch evaluation with concurrency control
+# 9. Batch evaluation using pipeline infrastructure
 # ---------------------------------------------------------------------------
 
 
-async def evaluate_batch(
+def run_evaluation_batch(
     entries: list[dict],
     results_dir: Path,
     judge_model_id: str,
     judge_short_name: str,
     judge_key: str,
-    provider: str = "rits",
-    overwrite: bool = False,
-    concurrency: int = 2,
-    context_tokens: int = 0,
+    provider: str,
+    overwrite: bool,
+    concurrency: int,
+    context_tokens: int,
 ) -> list[dict]:
-    """Evaluate a batch of trajectories with concurrency control."""
-    semaphore = asyncio.Semaphore(concurrency)
-    timeout = aiohttp.ClientTimeout(total=180)
-    connector = aiohttp.TCPConnector(limit=concurrency + 2)
-
-    results = []
-    completed = 0
-    skipped = 0
-
-    pbar = tqdm(total=len(entries), desc=f"Evaluating", unit="traj")
-
-    async def sem_evaluate(entry):
-        async with semaphore:
-            return await evaluate_single_trajectory(
-                entry, session, results_dir,
-                judge_model_id, judge_short_name,
-                judge_key=judge_key,
-                provider=provider,
-                overwrite=overwrite,
-                context_tokens=context_tokens,
-            )
-
-    async with aiohttp.ClientSession(
-        connector=connector, timeout=timeout
-    ) as session:
-        tasks = [sem_evaluate(e) for e in entries]
-        for coro in asyncio.as_completed(tasks):
-            result = await coro
-            if result:
-                results.append(result)
-                score = result.get("overall_score")
-                score_str = f"{score:.2f}" if score is not None else "N/A"
-                completed += 1
-                pbar.set_postfix(
-                    done=completed, skip=skipped, score=score_str
-                )
-            else:
-                skipped += 1
-                pbar.set_postfix(done=completed, skip=skipped)
-            pbar.update(1)
-
-    pbar.close()
+    """Evaluate a batch of trajectories using pipeline's run_parallel."""
+    
+    # Get LLM client once (will be reused for all evaluations)
+    llm_client = get_llm_client_adapter(
+        provider=provider,
+        model_id=judge_model_id,
+        eval_mode=True,
+        use_litellm=True
+    )
+    
+    # Prepare inputs as tuples of all parameters for each entry
+    inputs = [
+        (
+            entry,
+            results_dir,
+            judge_model_id,
+            llm_client,
+            overwrite,
+            context_tokens
+        )
+        for entry in entries
+    ]
+    
+    # Use pipeline's parallel execution with progress bar
+    results = evaluate_batch_parallel(
+        evaluate_func=evaluate_single_trajectory,
+        entries=inputs,
+        max_workers=concurrency,
+        use_async=True,
+        progress_desc="Evaluating trajectories"
+    )
+    
     return results
 
 
@@ -599,40 +545,6 @@ def generate_summary_report(results_dir: Path) -> dict:
     return summary
 
 
-def print_summary(summary: dict, judge_model_id: str):
-    """Pretty-print the summary report."""
-    print("\n" + "=" * 80)
-    print("FULL TRAJECTORY EVALUATION SUMMARY")
-    print(f"Judge Model: {judge_model_id}")
-    print("=" * 80)
-
-    for dataset, models in summary.items():
-        print(f"\n{'#' * 70}")
-        print(f"# Dataset: {dataset}")
-        print(f"{'#' * 70}")
-
-        for model_name, stats in models.items():
-            overall = stats.get("overall_score_average")
-            overall_str = f"{overall:.3f}" if overall is not None else "N/A"
-            print(f"\n  Model: {model_name}")
-            print(f"  Evaluations: {stats['total_evaluations']}")
-            print(f"  Overall Score (avg): {overall_str}")
-
-            sq = stats.get("step_quality_averages", {})
-            if sq:
-                print("  Step-Quality Averages:")
-                for dim, avg in sq.items():
-                    print(f"    {dim:25s}: {avg:.3f}")
-
-            ta = stats.get("trajectory_averages", {})
-            if ta:
-                print("  Trajectory Averages:")
-                for dim, avg in ta.items():
-                    print(f"    {dim:25s}: {avg:.3f}")
-
-    print("\n" + "=" * 80)
-
-
 # ---------------------------------------------------------------------------
 # 11. Main
 # ---------------------------------------------------------------------------
@@ -642,8 +554,8 @@ def parse_args():
     parser = create_base_parser("Full traj Evaluation")
     return parser.parse_args()
 
-async def async_main(args):
-    """Async entry point."""
+def run_main(args):
+    """Main entry point for evaluation."""
     judge_model_id = args.model_id
     judge_short_name = judge_model_id.split("/")[-1].replace("-","_")
     results_dir = get_results_dir("dimensions_prompt", judge_model_id)
@@ -673,7 +585,7 @@ async def async_main(args):
     counts = Counter((e["dataset"], e["model_name"]) for e in entries)
 
     max_traj_chars = get_max_trajectory_chars(args.context_tokens)
-    context_tokens =args.context_tokens
+    context_tokens = args.context_tokens
 
     print("=" * 70)
     print("Full Trajectory Evaluation Plan")
@@ -695,18 +607,18 @@ async def async_main(args):
         print(f"  {ds}/{model}: {cnt} files")
     print("=" * 70)
 
-    # Run evaluation
+    # Run evaluation using pipeline infrastructure
     start = time.time()
-    results = await evaluate_batch(
-        entries,
+    results = run_evaluation_batch(
+        entries=entries,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
         judge_short_name=judge_short_name,
         judge_key=args.model_id,
+        provider=args.provider,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
-        context_tokens=context_tokens,
-        provider=args.provider,
+        context_tokens=context_tokens
     )
     elapsed = time.time() - start
 
@@ -715,7 +627,6 @@ async def async_main(args):
     # Generate and print summary
     if results_dir.exists():
         summary = generate_summary_report(results_dir)
-        print_summary(summary, judge_model_id)
 
         summary_file = results_dir / "summary.json"
         with open(summary_file, "w") as f:
@@ -725,8 +636,7 @@ async def async_main(args):
 
 def main():
     args = parse_args()
-
-    asyncio.run(async_main(args))
+    run_main(args)
 
 
 if __name__ == "__main__":
