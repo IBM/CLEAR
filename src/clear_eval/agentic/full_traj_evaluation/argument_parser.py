@@ -6,7 +6,16 @@ Common argument parsing utilities for evaluation scripts.
 """
 
 import argparse
+import json
 from typing import Optional
+
+
+def parse_dict(arg: str) -> dict:
+    """Parse JSON string to dictionary."""
+    try:
+        return json.loads(arg)
+    except json.JSONDecodeError as e:
+        raise argparse.ArgumentTypeError(f"Invalid JSON format: {e}")
 
 
 def create_base_parser(description: str) -> argparse.ArgumentParser:
@@ -40,6 +49,12 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         type=int,
         default=128_000,
         help="Model context window size in tokens (default: 128000)",
+    )
+    parser.add_argument(
+        "--eval-model-params",
+        type=parse_dict,
+        default=None,
+        help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'",
     )
     
     # Dataset and model filtering

@@ -55,15 +55,9 @@ from dotenv import load_dotenv
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import discover_trajectories, _cap_trajectory, \
     get_max_trajectory_chars
-from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
-    get_llm_client_adapter,
-    evaluate_batch_parallel,
-)
-# Import centralized modules
+from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
 from clear_eval.agentic.full_traj_evaluation.dataset_base import (
-    get_available_datasets,
     TRAJ_DATA_DIR,
-    RESULTS_DIR,
     get_dataset_obj,
     get_results_dir,
 )
@@ -358,11 +352,19 @@ def run_evaluation_batch(
     context_tokens: int = 128_000,
     overwrite: bool = False,
     concurrency: int = 2,
-) -> list[dict]:
-    """Evaluate a batch of trajectories with concurrency control."""
-    llm_client = get_llm_client_adapter(
+    eval_model_params: dict | None = None,
+) -> list:
+    """Evaluate a batch of trajectories with concurrency control.
+    
+    Returns:
+        List of ParallelResult objects containing evaluation results and status.
+    """
+    llm_client = get_llm_client(
         provider=provider,
-        model_id=judge_model_id,
+        model=judge_model_id,
+        use_litellm=True,
+        eval_mode=True,
+        parameters=eval_model_params or {},
     )
 
     inputs = [
@@ -371,15 +373,15 @@ def run_evaluation_batch(
         for entry in entries
     ]
 
-    results = evaluate_batch_parallel(
-        evaluate_func=evaluate_single_trajectory,
-        entries=inputs,
+    parallel_results = run_parallel(
+        func=evaluate_single_trajectory,
+        inputs=inputs,
+        use_async=True,
         max_workers=concurrency,
-        use_async=False,
         progress_desc="Evaluating task success",
     )
 
-    return results
+    return parallel_results
 
 
 # ---------------------------------------------------------------------------
@@ -530,7 +532,7 @@ def run_main(args):
     print("=" * 70)
 
     start = time.time()
-    results = run_evaluation_batch(
+    parallel_results = run_evaluation_batch(
         entries,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
@@ -540,10 +542,15 @@ def run_main(args):
         context_tokens=context_tokens,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
+        eval_model_params=args.eval_model_params,
     )
     elapsed = time.time() - start
 
-    print(f"\nEvaluation complete: {len(results)} trajectories in {elapsed:.1f}s")
+    # Count successful evaluations
+    successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
+    total = len(parallel_results)
+    
+    print(f"\nEvaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
 
     if results_dir.exists():
         summary = generate_summary_report(results_dir)

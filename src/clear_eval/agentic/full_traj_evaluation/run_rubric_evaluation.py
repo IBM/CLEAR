@@ -58,14 +58,10 @@ from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import _cap_trajectory, discover_trajectories, \
     get_max_trajectory_chars
 from clear_eval.agentic.full_traj_evaluation.generate_task_rubrics import get_rubrics_dir
-from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
-    get_llm_client_adapter,
-    evaluate_batch_parallel,
-)
+from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
 # Import centralized modules
 from clear_eval.agentic.full_traj_evaluation.dataset_base import (
     get_dataset_obj,
-    get_available_datasets,
     TRAJ_DATA_DIR,
     RESULTS_DIR,
     get_results_dir,
@@ -386,27 +382,36 @@ def run_evaluation_batch(
     context_tokens: int = 128_000,
     overwrite: bool = False,
     concurrency: int = 2,
-) -> list[dict]:
-    """Evaluate a batch of trajectories with concurrency control."""
-    llm_client = get_llm_client_adapter(
+    eval_model_params: dict | None = None,
+) -> list:
+    """Evaluate a batch of trajectories with concurrency control.
+    
+    Returns:
+        List of ParallelResult objects containing evaluation results and status.
+    """
+    llm_client = get_llm_client(
         provider=provider,
-        model_id=judge_model_id,
+        model=judge_model_id,
+        use_litellm=True,
+        eval_mode=True,
+        parameters=eval_model_params or {},
     )
 
     inputs = [
-        (entry, rubrics_dir, results_dir, judge_model_id, llm_client, overwrite)
+        (entry, rubrics_dir, results_dir, judge_model_id, judge_short_name,
+         judge_key, llm_client, provider, context_tokens, overwrite)
         for entry in entries
     ]
 
-    results = evaluate_batch_parallel(
-        evaluate_func=evaluate_single,
-        entries=inputs,
+    parallel_results = run_parallel(
+        func=evaluate_single,
+        inputs=inputs,
+        use_async=True,
         max_workers=concurrency,
-        use_async=False,
         progress_desc="Evaluating rubrics",
     )
 
-    return results
+    return parallel_results
 
 
 # ---------------------------------------------------------------------------
@@ -565,6 +570,7 @@ def run_main(args):
         context_tokens=context_tokens,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
+        eval_model_params=args.eval_model_params,
     )
     elapsed = time.time() - start
 

@@ -50,15 +50,12 @@ from collections import Counter, defaultdict
 
 from dotenv import load_dotenv
 
+from agentic.full_traj_evaluation.full_traj_utils import discover_trajectories
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
-    get_llm_client_adapter,
-    evaluate_batch_parallel,
-)
+from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
 # Import centralized modules
 from clear_eval.agentic.full_traj_evaluation.dataset_base import (
     get_dataset_obj,
-    get_available_datasets,
     TRAJ_DATA_DIR,
     RESULTS_DIR,
 )
@@ -308,11 +305,19 @@ def run_generation_batch(
     overwrite: bool = False,
     concurrency: int = 4,
     provider: str = "rits",
-) -> list[dict]:
-    """Generate rubrics for a batch of trajectories with concurrency."""
-    llm_client = get_llm_client_adapter(
+    eval_model_params: dict | None = None,
+) -> list:
+    """Generate rubrics for a batch of trajectories with concurrency.
+    
+    Returns:
+        List of ParallelResult objects containing generation results and status.
+    """
+    llm_client = get_llm_client(
         provider=provider,
-        model_id=judge_model_id,
+        model=judge_model_id,
+        use_litellm=True,
+        eval_mode=True,
+        parameters=eval_model_params or {},
     )
 
     inputs = [
@@ -320,15 +325,15 @@ def run_generation_batch(
         for entry in entries
     ]
 
-    results = evaluate_batch_parallel(
-        evaluate_func=generate_rubrics_single,
-        entries=inputs,
+    parallel_results = run_parallel(
+        func=generate_rubrics_single,
+        inputs=inputs,
+        use_async=True,
         max_workers=concurrency,
-        use_async=False,
         progress_desc="Generating rubrics",
     )
 
-    return results
+    return parallel_results
 
 
 # ---------------------------------------------------------------------------
@@ -474,17 +479,22 @@ def run_main(args):
     print("=" * 70)
 
     start = time.time()
-    results = run_generation_batch(
+    parallel_results = run_generation_batch(
         entries,
         rubrics_dir=rubrics_dir,
         judge_model_id=judge_model_id,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
         provider=args.provider,
+        eval_model_params=args.eval_model_params,
     )
     elapsed = time.time() - start
 
-    print(f"\nGeneration complete: {len(results)} tasks in {elapsed:.1f}s")
+    # Count successful generations
+    successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
+    total = len(parallel_results)
+    
+    print(f"\nGeneration complete: {successful}/{total} tasks succeeded in {elapsed:.1f}s")
 
     if rubrics_dir.exists():
         summary = generate_summary(rubrics_dir)

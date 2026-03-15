@@ -33,18 +33,12 @@ from collections import Counter, defaultdict
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import _cap_trajectory, discover_trajectories, \
     get_max_trajectory_chars
-from clear_eval.agentic.full_traj_evaluation.pipeline_inference_adapter import (
-    get_llm_client_adapter,
-    evaluate_batch_parallel
-)
+from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
 
 # Import centralized modules
 from clear_eval.agentic.full_traj_evaluation.dataset_base import (
     get_dataset_obj,
-    get_available_datasets,
-    DEFAULT_MODEL_CONTEXT_TOKENS,
     TRAJ_DATA_DIR,
-    RESULTS_DIR,
     get_results_dir,
 )
 
@@ -415,15 +409,21 @@ def run_evaluation_batch(
     overwrite: bool,
     concurrency: int,
     context_tokens: int,
-) -> list[dict]:
-    """Evaluate a batch of trajectories using pipeline's run_parallel."""
+    eval_model_params: dict | None = None,
+) -> list:
+    """Evaluate a batch of trajectories using pipeline's run_parallel.
+    
+    Returns:
+        List of ParallelResult objects containing evaluation results and status.
+    """
     
     # Get LLM client once (will be reused for all evaluations)
-    llm_client = get_llm_client_adapter( # TODO ADD EVALUATION PARAMS
+    llm_client = get_llm_client(
         provider=provider,
-        model_id=judge_model_id,
+        model=judge_model_id,
+        use_litellm=True,
         eval_mode=True,
-        use_litellm=True
+        parameters=eval_model_params or {},
     )
     
     # Prepare inputs as tuples of all parameters for each entry
@@ -440,15 +440,15 @@ def run_evaluation_batch(
     ]
     
     # Use pipeline's parallel execution with progress bar
-    results = evaluate_batch_parallel(
-        evaluate_func=evaluate_single_trajectory,
-        entries=inputs,
-        max_workers=concurrency,
+    parallel_results = run_parallel(
+        func=evaluate_single_trajectory,
+        inputs=inputs,
         use_async=True,
+        max_workers=concurrency,
         progress_desc="Evaluating trajectories"
     )
-    
-    return results
+
+    return parallel_results
 
 
 # ---------------------------------------------------------------------------
@@ -583,18 +583,23 @@ def run_main(args):
 
     # Run evaluation using pipeline infrastructure
     start = time.time()
-    results = run_evaluation_batch(
+    parallel_results = run_evaluation_batch(
         entries=entries,
         results_dir=results_dir,
         judge_model_id=judge_model_id,
         provider=args.provider,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
-        context_tokens=context_tokens
+        context_tokens=context_tokens,
+        eval_model_params=args.eval_model_params,
     )
     elapsed = time.time() - start
 
-    print(f"\nEvaluation complete: {len(results)} trajectories in {elapsed:.1f}s")
+    # Count successful evaluations
+    successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
+    total = len(parallel_results)
+    
+    print(f"\nEvaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
 
     # Generate and print summary
     if results_dir.exists():
