@@ -13,19 +13,20 @@ Design Pattern:
 """
 
 import json
-import logging
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import logging_config
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import (
     get_max_trajectory_chars,
 )
 from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
+from logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
 
 
 # Trajectory capping utilities
@@ -161,25 +162,25 @@ class TrajectoryEvaluator(ABC):
         """
         max_traj_chars = self.context_tokens * 4 * 0.9  # Approximate
         
-        print("=" * 70)
-        print(self.get_evaluation_type())
-        print("=" * 70)
-        print(f"Provider:     {self.provider}")
-        print(f"Judge Model:  {self.judge_model_id}")
-        print(f"Context Win:  {self.context_tokens:,} tokens → "
-              f"max trajectory ~{int(max_traj_chars):,} chars")
-        print(f"Data Dir:     {data_dir}")
-        print(f"Results Dir:  {self.results_dir}")
+        logger.info("=" * 70)
+        logger.info(self.get_evaluation_type())
+        logger.info("=" * 70)
+        logger.info(f"Provider:     {self.provider}")
+        logger.info(f"Judge Model:  {self.judge_model_id}")
+        logger.info(f"Context Win:  {self.context_tokens:,} tokens → "
+                   f"max trajectory ~{int(max_traj_chars):,} chars")
+        logger.info(f"Data Dir:     {data_dir}")
+        logger.info(f"Results Dir:  {self.results_dir}")
         
-        # Print extra info if provided
+        # Log extra info if provided
         if extra_info:
             for key, value in extra_info.items():
-                print(f"{key}:  {value}")
+                logger.info(f"{key}:  {value}")
         
-        print(f"Overwrite:    {overwrite}")
-        print(f"Concurrency:  {concurrency}")
-        print(f"Total files:  {len(entries)}")
-        print("=" * 70)
+        logger.info(f"Overwrite:    {overwrite}")
+        logger.info(f"Concurrency:  {concurrency}")
+        logger.info(f"Total files:  {len(entries)}")
+        logger.info("=" * 70)
 
 
     # -------------------------------------------------------------------------
@@ -497,7 +498,7 @@ class TrajectoryEvaluator(ABC):
         successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
         total = len(parallel_results)
 
-        print(f"\nEvaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
+        logger.info(f"Evaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
 
     # TODO: Re-enable summary functionality when needed
     # def save_summary(self, print_func=None) -> dict:
@@ -577,7 +578,7 @@ class TrajectoryEvaluator(ABC):
         entries = self.discover_trajectories(self.traj_input_dir)
 
         if not entries:
-            print(f"No trajectory files found in {self.traj_input_dir}")
+            logger.warning(f"No trajectory files found in {self.traj_input_dir}")
             return
 
         # Apply max-files limit
