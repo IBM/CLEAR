@@ -349,7 +349,6 @@ async def evaluate_single_trajectory(
     judge_model_id: str,
     judge_short_name: str,
     judge_key: str,
-    method: str,
     provider: str = "rits",
     overwrite: bool = False,
     context_tokens: int = 128_000,
@@ -475,7 +474,6 @@ async def evaluate_batch(
     judge_model_id: str,
     judge_short_name: str,
     judge_key: str,
-    method: str,
     provider: str = "rits",
     overwrite: bool = False,
     concurrency: int = 2,
@@ -490,7 +488,7 @@ async def evaluate_batch(
     completed = 0
     skipped = 0
 
-    pbar = tqdm(total=len(entries), desc=f"Evaluating [{method}]", unit="traj")
+    pbar = tqdm(total=len(entries), desc=f"Evaluating", unit="traj")
 
     async def sem_evaluate(entry):
         async with semaphore:
@@ -498,7 +496,6 @@ async def evaluate_batch(
                 entry, session, results_dir,
                 judge_model_id, judge_short_name,
                 judge_key=judge_key,
-                method=method,
                 provider=provider,
                 overwrite=overwrite,
                 context_tokens=context_tokens,
@@ -532,7 +529,7 @@ async def evaluate_batch(
 # ---------------------------------------------------------------------------
 
 
-def generate_summary_report(results_dir: Path, method: str) -> dict:
+def generate_summary_report(results_dir: Path) -> dict:
     """Generate a summary report from evaluation results under results_dir."""
     summary = {}
 
@@ -576,7 +573,7 @@ def generate_summary_report(results_dir: Path, method: str) -> dict:
             }
 
             # Dimension averages only for dimensions_prompt
-            if method == METHOD_DIMENSIONS and all_dim_scores:
+            if all_dim_scores:
                 sq = {}
                 ta = {}
                 for dim, scores in all_dim_scores.items():
@@ -602,12 +599,11 @@ def generate_summary_report(results_dir: Path, method: str) -> dict:
     return summary
 
 
-def print_summary(summary: dict, judge_model_id: str, method: str):
+def print_summary(summary: dict, judge_model_id: str):
     """Pretty-print the summary report."""
     print("\n" + "=" * 80)
     print("FULL TRAJECTORY EVALUATION SUMMARY")
     print(f"Judge Model: {judge_model_id}")
-    print(f"Method:      {method}")
     print("=" * 80)
 
     for dataset, models in summary.items():
@@ -650,7 +646,7 @@ async def async_main(args):
     """Async entry point."""
     judge_model_id = args.model_id
     judge_short_name = judge_model_id.split("/")[-1].replace("-","_")
-    results_dir = get_results_dir(args.method, judge_model_id)
+    results_dir = get_results_dir("dimensions_prompt", judge_model_id)
 
     # Discover trajectories
     entries = discover_trajectories(
@@ -685,7 +681,6 @@ async def async_main(args):
     print(f"Judge Model:  {judge_model_id} ({args.model_id})")
     print(f"Context Win:  {context_tokens:,} tokens → "
           f"max trajectory {max_traj_chars:,} chars")
-    print(f"Method:       {args.method}")
     print(f"Data Dir:     {TRAJ_DATA_DIR}")
     print(f"Results Dir:  {results_dir}")
     print(f"Scoring:      0.0–1.0 (CLEAR-style)")
@@ -708,7 +703,6 @@ async def async_main(args):
         judge_model_id=judge_model_id,
         judge_short_name=judge_short_name,
         judge_key=args.model_id,
-        method=args.method,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
         context_tokens=context_tokens,
@@ -720,8 +714,8 @@ async def async_main(args):
 
     # Generate and print summary
     if results_dir.exists():
-        summary = generate_summary_report(results_dir, args.method)
-        print_summary(summary, judge_model_id, args.method)
+        summary = generate_summary_report(results_dir)
+        print_summary(summary, judge_model_id)
 
         summary_file = results_dir / "summary.json"
         with open(summary_file, "w") as f:
