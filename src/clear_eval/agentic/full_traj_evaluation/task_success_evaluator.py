@@ -46,25 +46,25 @@ class TaskSuccessEvaluator(TrajectoryEvaluator):
     """
 
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict, dataset_obj: Any
+        self, entry: dict, traj_data: dict
     ) -> dict:
         """
         Extract task objective from trajectory.
         
         Args:
-            entry: Entry dict with trajectory metadata
+            entry: Entry dict with file_path, traj_name
             traj_data: Loaded trajectory data
-            dataset_obj: Dataset object with extract_user_request method
         
         Returns:
             Dict with task_objective, or None if extraction fails
         """
         try:
-            task_objective = dataset_obj.extract_user_request(traj_data)
+            # Extract intent from trajectory data
+            task_objective = traj_data.get("intent")
             if not task_objective:
                 logger.warning(
-                    "Could not extract task objective for %s/%s/%s",
-                    entry["dataset"], entry["model_name"], entry["traj_name"]
+                    "Could not extract intent for %s",
+                    entry["traj_name"]
                 )
                 return None
             
@@ -242,77 +242,82 @@ Important:
 
     def get_evaluation_type(self) -> str:
         """Return evaluation type name for display."""
-        return "Task Success Evaluation Plan"
+        return "task_success"
+
+    def get_extra_info(self) -> dict:
+        """Return extra information for display in evaluation plan."""
+        return {"Decision": "Binary (0 = failure, 1 = success)"}
 
     def get_output_suffix(self) -> str:
         """Return output filename suffix for task success evaluation."""
         return "_success.json"
 
-    def generate_summary(self) -> dict:
-        """
-        Generate a summary report from task-success evaluation results.
-        
-        Scans the results directory and aggregates statistics:
-        - Total evaluations
-        - Success count (success=1)
-        - Failure count (success=0)
-        - No decision count (success=None)
-        - Success rate
-        
-        Returns:
-            Dict with structure: {dataset: {model: {stats}}}
-        """
-        import json
-        
-        summary = {}
-        results_dir = self.results_dir
-
-        for dataset_dir in sorted(results_dir.iterdir()):
-            if not dataset_dir.is_dir() or dataset_dir.name.startswith("."):
-                continue
-            dataset = dataset_dir.name
-            summary[dataset] = {}
-
-            for model_dir in sorted(dataset_dir.iterdir()):
-                if not model_dir.is_dir() or model_dir.name.startswith("."):
-                    continue
-                model_name = model_dir.name
-
-                success_files = list(model_dir.glob("*_success.json"))
-                if not success_files:
-                    continue
-
-                total_count = 0
-                success_count = 0
-                failure_count = 0
-                no_decision_count = 0
-
-                for sf in success_files:
-                    try:
-                        with open(sf, "r") as f:
-                            data = json.load(f)
-                        total_count += 1
-                        s = data.get("success")
-                        if s == 1:
-                            success_count += 1
-                        elif s == 0:
-                            failure_count += 1
-                        else:
-                            no_decision_count += 1
-                    except Exception:
-                        continue
-
-                summary[dataset][model_name] = {
-                    "total_evaluated": total_count,
-                    "success_count": success_count,
-                    "failure_count": failure_count,
-                    "no_decision_count": no_decision_count,
-                    "success_rate": (
-                        round(success_count / total_count, 3) if total_count else 0
-                    ),
-                }
-
-        return summary
+    # TODO: Re-enable summary functionality when needed
+    # def generate_summary(self) -> dict:
+    #     """
+    #     Generate a summary report from task-success evaluation results.
+    #
+    #     Scans the results directory and aggregates statistics:
+    #     - Total evaluations
+    #     - Success count (success=1)
+    #     - Failure count (success=0)
+    #     - No decision count (success=None)
+    #     - Success rate
+    #
+    #     Returns:
+    #         Dict with structure: {dataset: {model: {stats}}}
+    #     """
+    #     import json
+    #
+    #     summary = {}
+    #     results_dir = self.results_dir
+    #
+    #     for dataset_dir in sorted(results_dir.iterdir()):
+    #         if not dataset_dir.is_dir() or dataset_dir.name.startswith("."):
+    #             continue
+    #         dataset = dataset_dir.name
+    #         summary[dataset] = {}
+    #
+    #         for model_dir in sorted(dataset_dir.iterdir()):
+    #             if not model_dir.is_dir() or model_dir.name.startswith("."):
+    #                 continue
+    #             model_name = model_dir.name
+    #
+    #             success_files = list(model_dir.glob("*_success.json"))
+    #             if not success_files:
+    #                 continue
+    #
+    #             total_count = 0
+    #             success_count = 0
+    #             failure_count = 0
+    #             no_decision_count = 0
+    #
+    #             for sf in success_files:
+    #                 try:
+    #                     with open(sf, "r") as f:
+    #                         data = json.load(f)
+    #                     total_count += 1
+    #                     s = data.get("success")
+    #                     if s == 1:
+    #                         success_count += 1
+    #                     elif s == 0:
+    #                         failure_count += 1
+    #                     else:
+    #                         no_decision_count += 1
+    #                 except Exception:
+    #                     continue
+    #
+    #             summary[dataset][model_name] = {
+    #                 "total_evaluated": total_count,
+    #                 "success_count": success_count,
+    #                 "failure_count": failure_count,
+    #                 "no_decision_count": no_decision_count,
+    #                 "success_rate": (
+    #                     round(success_count / total_count, 3) if total_count else 0
+    #                 ),
+    #             }
+    #
+    #     return summary
 
 
 

@@ -30,6 +30,20 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description=description)
     
+    # Input/Output directories
+    parser.add_argument(
+        "--traj-input-dir",
+        type=str,
+        required=True,
+        help="Directory containing trajectory JSON files",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        required=True,
+        help="Base directory for saving evaluation results",
+    )
+    
     # Provider and model arguments
     parser.add_argument(
         "--provider",

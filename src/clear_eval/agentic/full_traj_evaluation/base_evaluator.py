@@ -20,10 +20,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from clear_eval.agentic.full_traj_evaluation.dataset_base import get_dataset_obj, TRAJ_DATA_DIR
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import (
     get_max_trajectory_chars,
-    discover_trajectories,
 )
 from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
 
@@ -86,14 +84,13 @@ class TrajectoryEvaluator(ABC):
         self,
         judge_model_id: str,
         provider: str,
-        results_dir: Path,
+        traj_input_dir: Path,
+        output_dir: Path,
         context_tokens: int = 128_000,
         overwrite: bool = False,
         concurrency: int = 7,
-        eval_model_params=None,
-        max_files:int = None,
-        dataset: str = None,
-        model: str = None,
+        eval_model_params: dict | None = None,
+        max_files: int | None = None,
     ):
         """
         Initialize evaluator with common configuration.
@@ -101,22 +98,28 @@ class TrajectoryEvaluator(ABC):
         Args:
             judge_model_id: Model identifier for the judge LLM
             provider: LLM provider (e.g., 'rits', 'openai')
-            results_dir: Base directory for saving evaluation results
+            traj_input_dir: Directory containing trajectory JSON files
+            output_dir: Base directory for saving evaluation results
             context_tokens: Context window size for the judge model
             overwrite: Whether to overwrite existing evaluation results
+            concurrency: Number of parallel workers
+            eval_model_params: Additional parameters for LLM client
+            max_files: Maximum number of files to process (for testing)
         """
-        self.dataset = dataset
-        self.model = model
-        if eval_model_params is None:
-            eval_model_params = {}
-        self.eval_model_params = eval_model_params
-        self.concurrency = concurrency
         self.judge_model_id = judge_model_id
         self.provider = provider
-        self.results_dir = Path(results_dir)
+        self.traj_input_dir = Path(traj_input_dir)
+        self.output_dir = Path(output_dir)
         self.context_tokens = context_tokens
         self.overwrite = overwrite
+        self.concurrency = concurrency
+        self.eval_model_params = eval_model_params or {}
         self.max_files = max_files
+        
+        # Create results directory: output_dir/evaluation_type
+        eval_type = self.get_evaluation_type().replace(" ", "_").replace("/", "_")
+        self.results_dir = self.output_dir / eval_type
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def get_evaluation_type(self) -> str:
@@ -125,6 +128,16 @@ class TrajectoryEvaluator(ABC):
         
         Returns:
             Evaluation type string (e.g., "Task Success Evaluation", "Rubric Evaluation")
+        """
+        pass
+
+    @abstractmethod
+    def get_extra_info(self) -> dict:
+        """
+        Return evaluation-specific extra information for display in plan.
+        
+        Returns:
+            Dict with extra info to display (e.g., {"Decision": "Binary (0/1)"})
         """
         pass
 
@@ -146,9 +159,6 @@ class TrajectoryEvaluator(ABC):
             concurrency: Concurrency level
             extra_info: Optional dict with additional info to display
         """
-        from collections import Counter
-        
-        counts = Counter((e["dataset"], e["model_name"]) for e in entries)
         max_traj_chars = self.context_tokens * 4 * 0.9  # Approximate
         
         print("=" * 70)
@@ -169,9 +179,6 @@ class TrajectoryEvaluator(ABC):
         print(f"Overwrite:    {overwrite}")
         print(f"Concurrency:  {concurrency}")
         print(f"Total files:  {len(entries)}")
-        print()
-        for (ds, model), cnt in sorted(counts.items()):
-            print(f"  {ds}/{model}: {cnt} files")
         print("=" * 70)
 
 
@@ -181,7 +188,7 @@ class TrajectoryEvaluator(ABC):
 
     @abstractmethod
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict, dataset_obj: Any
+        self, entry: dict, traj_data: dict
     ) -> dict | None:
         """
         Prepare evaluation-specific data before building prompt.
@@ -192,9 +199,8 @@ class TrajectoryEvaluator(ABC):
         - Perform preprocessing
         
         Args:
-            entry: Entry dict with dataset, model_name, file_path, traj_name
+            entry: Entry dict with file_path, traj_name
             traj_data: Loaded trajectory data (JSON)
-            dataset_obj: Dataset object for formatting
         
         Returns:
             Dict with evaluation-specific data to be used in prepare_context()
@@ -324,15 +330,13 @@ class TrajectoryEvaluator(ABC):
             12. Return result
         
         Args:
-            entry: Entry dict with dataset, model_name, file_path, traj_name
+            entry: Entry dict with file_path, traj_name
             llm_client: LLM client instance
             overwrite: Override instance overwrite setting (optional)
         
         Returns:
             Result dict if successful, None if skipped or failed
         """
-        dataset = entry["dataset"]
-        model_name = entry["model_name"]
         file_path = Path(entry["file_path"])
         traj_name = entry["traj_name"]
 
@@ -340,12 +344,11 @@ class TrajectoryEvaluator(ABC):
         should_overwrite = overwrite if overwrite is not None else self.overwrite
 
         # Determine output path
-        output_dir = self.results_dir / dataset / model_name
-        output_file = output_dir / f"{traj_name}{self.get_output_suffix()}"
+        output_file = self.results_dir / f"{traj_name}{self.get_output_suffix()}"
 
         # Skip if exists and not overwriting
         if output_file.exists() and not should_overwrite:
-            logger.info("Skipping (exists): %s/%s/%s", dataset, model_name, traj_name)
+            logger.info("Skipping (exists): %s", traj_name)
             return None
 
         # Load trajectory file
@@ -356,16 +359,9 @@ class TrajectoryEvaluator(ABC):
             logger.error("Failed to load %s: %s", file_path, e)
             return None
 
-        # Get dataset object for formatting
+        # Format trajectory text (simple JSON string conversion)
         try:
-            dataset_obj = get_dataset_obj(dataset_name=dataset, data_dir="")
-        except Exception as e:
-            logger.error("Failed to get dataset object for %s: %s", dataset, e)
-            return None
-
-        # Format trajectory text
-        try:
-            trajectory_text = dataset_obj.format_trajectory(traj_data)
+            trajectory_text = json.dumps(traj_data, indent=2)
             # Cap trajectory to fit in context window
             max_chars = get_max_trajectory_chars(self.context_tokens)
             trajectory_text = cap_trajectory(trajectory_text, max_chars)
@@ -375,11 +371,10 @@ class TrajectoryEvaluator(ABC):
 
         # Prepare evaluation-specific data
         try:
-            eval_data = self.prepare_evaluation_data(entry, traj_data, dataset_obj)
+            eval_data = self.prepare_evaluation_data(entry, traj_data)
             if eval_data is None:
                 # Subclass returned None to skip this evaluation
-                logger.info("Skipping %s/%s/%s (prepare_evaluation_data returned None)",
-                           dataset, model_name, traj_name)
+                logger.info("Skipping %s (prepare_evaluation_data returned None)", traj_name)
                 return None
         except Exception as e:
             logger.error("Failed to prepare evaluation data for %s: %s", traj_name, e)
@@ -413,7 +408,7 @@ class TrajectoryEvaluator(ABC):
         elapsed = time.time() - start_time
 
         if not response_text:
-            logger.error("Empty response for %s/%s/%s", dataset, model_name, traj_name)
+            logger.error("Empty response for %s", traj_name)
             return None
 
         # Parse response
@@ -434,8 +429,6 @@ class TrajectoryEvaluator(ABC):
         result = {
             # Common fields
             "trajectory_name": traj_name,
-            "dataset": dataset,
-            "model_name": model_name,
             "source_file": str(file_path),
             "judge_model": self.judge_model_id,
             "evaluation_timestamp": datetime.now().isoformat(),
@@ -448,7 +441,7 @@ class TrajectoryEvaluator(ABC):
 
         # Save result to file
         try:
-            output_dir.mkdir(parents=True, exist_ok=True)
+            self.results_dir.mkdir(parents=True, exist_ok=True)
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
         except Exception as e:
@@ -506,109 +499,98 @@ class TrajectoryEvaluator(ABC):
 
         print(f"\nEvaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
 
-    def save_summary(self, print_func=None) -> dict:
-        """
-        Generate, save, and optionally print evaluation summary.
-        
-        This method:
-        1. Calls generate_summary() to aggregate results
-        2. Saves summary to summary.json in results directory
-        3. Optionally prints summary using provided print function
-        
-        Args:
-            print_func: Optional function to print summary (receives summary dict and judge_model_id)
-        
-        Returns:
-            Summary dict with aggregated statistics
-        """
-        if not self.results_dir.exists():
-            logger.warning("Results directory does not exist: %s", self.results_dir)
-            return {}
-        
-        # Generate summary (calls subclass implementation)
-        summary = self.generate_summary()
-        
-        # Save to file
-        summary_file = self.results_dir / "summary.json"
-        with open(summary_file, "w") as f:
-            json.dump(summary, f, indent=2)
-        print(f"\nSummary saved to: {summary_file}")
-        
-        # Print if function provided
-        if print_func:
-            print_func(summary, self.judge_model_id)
-        
-        return summary
+    # TODO: Re-enable summary functionality when needed
+    # def save_summary(self, print_func=None) -> dict:
+    #     """
+    #     Generate, save, and optionally print evaluation summary.
+    #
+    #     This method:
+    #     1. Calls generate_summary() to aggregate results
+    #     2. Saves summary to summary.json in results directory
+    #     3. Optionally prints summary using provided print function
+    #
+    #     Args:
+    #         print_func: Optional function to print summary (receives summary dict and judge_model_id)
+    #
+    #     Returns:
+    #         Summary dict with aggregated statistics
+    #     """
+    #     if not self.results_dir.exists():
+    #         logger.warning("Results directory does not exist: %s", self.results_dir)
+    #         return {}
+    #
+    #     # Generate summary (calls subclass implementation)
+    #     summary = self.generate_summary()
+    #
+    #     # Save to file
+    #     summary_file = self.results_dir / "summary.json"
+    #     with open(summary_file, "w") as f:
+    #         json.dump(summary, f, indent=2)
+    #     print(f"\nSummary saved to: {summary_file}")
+    #
+    #     # Print if function provided
+    #     if print_func:
+    #         print_func(summary, self.judge_model_id)
+    #
+    #     return summary
 
-    @abstractmethod
-    def generate_summary(self) -> dict:
-        """
-        Generate summary statistics from evaluation results.
-        
-        Subclasses should scan the results directory and aggregate statistics
-        specific to their evaluation type.
-        
-        Returns:
-            Dict with summary statistics (structure varies by evaluator type)
-        """
-        pass
+    # @abstractmethod
+    # def generate_summary(self) -> dict:
+    #     """
+    #     Generate summary statistics from evaluation results.
+    #
+    #     Subclasses should scan the results directory and aggregate statistics
+    #     specific to their evaluation type.
+    #
+    #     Returns:
+    #         Dict with summary statistics (structure varies by evaluator type)
+    #     """
+    #     pass
 
 
     @staticmethod
-    def discover_trajectories(
-        base_dir: Path,
-        filter_dataset: str | None = None,
-        filter_model: str | None = None,
-    ) -> list[dict]:
+    def discover_trajectories(traj_input_dir: Path) -> list[dict]:
         """
-        Discover all trajectory JSON files in a directory structure.
-        
-        Expected structure:
-            base_dir/
-                dataset1/
-                    model1/
-                        traces_compact/
-                            traj1.json
-                            traj2.json
-                    model2/
-                        traces_compact/
-                            ...
-                dataset2/
-                    ...
+        Discover all trajectory JSON files in a directory.
         
         Args:
-            base_dir: Base directory containing dataset subdirectories
-            filter_dataset: Only include this dataset (optional)
-            filter_model: Only include this model (optional)
+            traj_input_dir: Directory containing trajectory JSON files
         
         Returns:
-            List of dicts with keys: dataset, model_name, file_path, traj_name
+            List of dicts with keys: file_path, traj_name
         """
-        return discover_trajectories(base_dir, filter_dataset, filter_model)
+        traj_input_dir = Path(traj_input_dir)
+        entries = []
+        
+        for json_file in traj_input_dir.glob("*.json"):
+            entries.append({
+                "file_path": str(json_file),
+                "traj_name": json_file.stem,
+            })
+        
+        logger.info("Discovered %d trajectory files in %s", len(entries), traj_input_dir)
+        return entries
 
     def run_pipeline(self):
+        """Run the full evaluation pipeline."""
         # Discover trajectories
-        entries = self.discover_trajectories(
-            base_dir=TRAJ_DATA_DIR,
-            filter_dataset=self.dataset,
-            filter_model=self.model,
-        )
+        entries = self.discover_trajectories(self.traj_input_dir)
 
         if not entries:
-            print("No trajectory files found. Check paths and filters.")
+            print(f"No trajectory files found in {self.traj_input_dir}")
             return
 
         # Apply max-files limit
         if self.max_files:
             entries = entries[:self.max_files]
 
-        # Print evaluation plan
+        # Print evaluation plan (uses get_extra_info() from subclass)
         self.print_evaluation_plan(
             entries=entries,
-            data_dir=TRAJ_DATA_DIR,
+            data_dir=self.traj_input_dir,
             overwrite=self.overwrite,
             concurrency=self.concurrency,
-            extra_info={"Decision": "Binary (0 = failure, 1 = success)"},
+            extra_info=self.get_extra_info(),
         )
 
         # Run evaluation
@@ -618,4 +600,7 @@ class TrajectoryEvaluator(ABC):
             eval_model_params=self.eval_model_params,
         )
 
-        self.save_summary()
+        # TODO: Uncomment when summary is ready
+        # self.save_summary()
+        
+        return parallel_results
