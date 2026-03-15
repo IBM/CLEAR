@@ -67,7 +67,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--eval-model-params",
         type=parse_dict,
-        default=None,
+        default='{"max_tokens": 8096}',
         help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'",
     )
     # Dataset and model filtering

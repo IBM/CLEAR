@@ -19,15 +19,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import logging_config
+import logging
 from clear_eval.agentic.full_traj_evaluation.full_traj_utils import (
     get_max_trajectory_chars,
 )
-from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
-from logging_config import setup_logging
+from clear_eval.pipeline.llm_client import get_llm_client, run_parallel, ParallelResult
+from clear_eval.logging_config import setup_logging
 
 setup_logging()
-
+logger = logging.getLogger(__name__)
 
 # Trajectory capping utilities
 def middle_out(text: str, limit: int) -> str:
@@ -307,14 +307,14 @@ class TrajectoryEvaluator(ABC):
     # Common logic - implemented in base class
     # -------------------------------------------------------------------------
 
-    def evaluate_single(
+    async def evaluate_single(
         self,
         entry: dict,
         llm_client: Any,
         overwrite: bool | None = None,
     ) -> dict | None:
         """
-        Evaluate a single trajectory - handles all common logic.
+        Evaluate a single trajectory - handles all common logic (async).
         
         Workflow:
             1. Check if output exists (skip if not overwriting)
@@ -323,7 +323,7 @@ class TrajectoryEvaluator(ABC):
             4. Call prepare_evaluation_data() hook
             5. Call prepare_context() hook
             6. Call build_prompt() hook
-            7. Call LLM with get_system_message()
+            7. Call LLM with get_system_message() (async)
             8. Call parse_response() hook
             9. Call extract_results() hook
             10. Build final result dict (common + specific fields)
@@ -396,13 +396,17 @@ class TrajectoryEvaluator(ABC):
             logger.error("Failed to build prompt for %s: %s", traj_name, e)
             return None
 
-        # Call LLM
+        # Call LLM (async)
         start_time = time.time()
         try:
-            response_text = llm_client.call(
-                prompt=prompt,
-                system_message=system_message
-            )
+            # Build messages list for LLM
+            messages = []
+            if system_message:
+                messages.append({"role": "system", "content": system_message})
+            messages.append({"role": "user", "content": prompt})
+            
+            # Use ainvoke (async) - run_parallel handles async execution
+            response_text = await llm_client.ainvoke(messages)
         except Exception as e:
             logger.error("LLM call failed for %s: %s", traj_name, e)
             return None
@@ -456,7 +460,7 @@ class TrajectoryEvaluator(ABC):
         entries: list[dict],
         concurrency: int = 2,
         eval_model_params: dict | None = None,
-    ) -> list:
+    ) -> list[ParallelResult]:
         """
         Run batch evaluation using pipeline's run_parallel.
         
@@ -483,7 +487,7 @@ class TrajectoryEvaluator(ABC):
             for entry in entries
         ]
 
-        # Use pipeline's parallel execution with progress bar
+        # Use pipeline's parallel execution with progress bar (always async)
         start = time.time()
         parallel_results = run_parallel(
             func=self.evaluate_single,
@@ -499,6 +503,8 @@ class TrajectoryEvaluator(ABC):
         total = len(parallel_results)
 
         logger.info(f"Evaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
+        
+        return parallel_results
 
     # TODO: Re-enable summary functionality when needed
     # def save_summary(self, print_func=None) -> dict:
