@@ -116,9 +116,15 @@ class TrajectoryEvaluator(ABC):
         self.eval_model_params = eval_model_params or {}
         self.max_files = max_files
 
-        # Create results directory: output_dir/evaluation_type
+        # Create results directory: output_dir/evaluation_type[/model_subdir]
         eval_type = self.get_evaluation_type().replace(" ", "_").replace("/", "_")
         self.results_dir = output_dir / eval_type
+        
+        # Allow subclasses to add model-specific subdirectory
+        model_subdir = self.get_model_subdirectory()
+        if model_subdir:
+            self.results_dir = self.results_dir / model_subdir
+            
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
@@ -140,6 +146,18 @@ class TrajectoryEvaluator(ABC):
             Dict with extra info to display (e.g., {"Decision": "Binary (0/1)"})
         """
         pass
+
+    def get_model_subdirectory(self) -> str | None:
+        """
+        Return model-specific subdirectory name for organizing results.
+        
+        Override this method in subclasses that need model-specific organization
+        (e.g., rubric generation where rubrics are model-specific).
+        
+        Returns:
+            Subdirectory name (e.g., model ID), or None for no subdirectory
+        """
+        return None
 
     def print_evaluation_plan(
         self,
