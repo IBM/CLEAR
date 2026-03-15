@@ -252,72 +252,56 @@ Important:
         """Return output filename suffix for task success evaluation."""
         return "_success.json"
 
-    # TODO: Re-enable summary functionality when needed
-    # def generate_summary(self) -> dict:
-    #     """
-    #     Generate a summary report from task-success evaluation results.
-    #
-    #     Scans the results directory and aggregates statistics:
-    #     - Total evaluations
-    #     - Success count (success=1)
-    #     - Failure count (success=0)
-    #     - No decision count (success=None)
-    #     - Success rate
-    #
-    #     Returns:
-    #         Dict with structure: {dataset: {model: {stats}}}
-    #     """
-    #     import json
-    #
-    #     summary = {}
-    #     results_dir = self.results_dir
-    #
-    #     for dataset_dir in sorted(results_dir.iterdir()):
-    #         if not dataset_dir.is_dir() or dataset_dir.name.startswith("."):
-    #             continue
-    #         dataset = dataset_dir.name
-    #         summary[dataset] = {}
-    #
-    #         for model_dir in sorted(dataset_dir.iterdir()):
-    #             if not model_dir.is_dir() or model_dir.name.startswith("."):
-    #                 continue
-    #             model_name = model_dir.name
-    #
-    #             success_files = list(model_dir.glob("*_success.json"))
-    #             if not success_files:
-    #                 continue
-    #
-    #             total_count = 0
-    #             success_count = 0
-    #             failure_count = 0
-    #             no_decision_count = 0
-    #
-    #             for sf in success_files:
-    #                 try:
-    #                     with open(sf, "r") as f:
-    #                         data = json.load(f)
-    #                     total_count += 1
-    #                     s = data.get("success")
-    #                     if s == 1:
-    #                         success_count += 1
-    #                     elif s == 0:
-    #                         failure_count += 1
-    #                     else:
-    #                         no_decision_count += 1
-    #                 except Exception:
-    #                     continue
-    #
-    #             summary[dataset][model_name] = {
-    #                 "total_evaluated": total_count,
-    #                 "success_count": success_count,
-    #                 "failure_count": failure_count,
-    #                 "no_decision_count": no_decision_count,
-    #                 "success_rate": (
-    #                     round(success_count / total_count, 3) if total_count else 0
-    #                 ),
-    #             }
-    #
-    #     return summary
+    def generate_summary(self) -> dict:
+        """
+        Generate a summary report from task-success evaluation results.
+
+        Scans the output directory and aggregates statistics:
+        - Total evaluations
+        - Success count (success=1)
+        - Failure count (success=0)
+        - Average score (success rate)
+
+        Returns:
+            Dict with aggregated statistics for the current run
+        """
+        success_files = list(self.results_dir.glob(f"*{self.get_output_suffix()}"))
+        
+        total_evaluations = 0
+        success_count = 0
+        failure_count = 0
+        no_decision_count = 0
+
+        for sf in success_files:
+            try:
+                with open(sf, "r") as f:
+                    data = json.load(f)
+                total_evaluations += 1
+                s = data.get("success")
+                if s == 1:
+                    success_count += 1
+                elif s == 0:
+                    failure_count += 1
+                else:
+                    no_decision_count += 1
+            except Exception as e:
+                logger.warning("Failed to read %s: %s", sf, e)
+                continue
+
+        # Calculate average score (success rate)
+        average_score = (
+            round(success_count / total_evaluations, 3) if total_evaluations > 0 else 0.0
+        )
+
+        summary = {
+            "total_evaluations": total_evaluations,
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "no_decision_count": no_decision_count,
+            "average_score": average_score,
+        }
+
+        return summary
 
 
 
