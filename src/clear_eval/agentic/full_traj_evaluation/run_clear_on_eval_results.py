@@ -36,23 +36,19 @@ Usage examples:
     python run_clear_on_eval_results.py --source issues --overwrite
 """
 
-import os
 import sys
 import json
-import argparse
 import logging
 from pathlib import Path
-from collections import defaultdict
 
 import pandas as pd
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from clear_eval.agentic.full_traj_evaluation.dataset_base import RESULTS_DIR, get_results_dir
+from agentic.full_traj_evaluation.old.dataset_base import RESULTS_DIR, get_results_dir
 from clear_eval.analysis_runner import run_clear_eval_aggregation
 
 # Add project src to path so we can import clear_eval
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from clear_eval.analysis_runner import run_clear_eval_analysis
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -60,41 +56,26 @@ from clear_eval.analysis_runner import run_clear_eval_analysis
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# # Judge models used when *producing* the evaluation results
-# EVAL_JUDGE_MODELS = {
-#     "oss20b": ("openai/gpt-oss-20b", "gpt-oss-20b"),
-#     "oss120b": ("openai/gpt-oss-120b", "gpt-oss-120b"),
-#     "deepseek": ("deepseek-ai/DeepSeek-V3.2", "deepseek-v3-2"),
-# }
-# DEFAULT_EVAL_JUDGE = "oss120b"
-
-# Evaluation methods from run_full_traj_evaluation.py
-METHODS = [
-    "dimensions_prompt",
-    "full_trace_prompt",
-    "full_trace_prompt_with_step",
-    "full_trace_prompt_issue",
-]
 DEFAULT_METHOD = "dimensions_prompt"
 
-# CLEAR model configuration (used for the CLEAR analysis itself)
-CLEAR_CONFIG_DICT = {
-    "openai/gpt-oss-120b": {
-    "gen_model_name": None,#"ibm-granite/granite-3.3-8b-instruct",
-    "eval_model_name": "openai/gpt-oss-120b",
-    "provider": "watsonx",
-    "eval_model_params": {"include_reasoning": True, "reasoning_effort": "medium", "max_tokens":32378}
-    },
-"Azure/gpt-5-2025-08-07": {
-    "gen_model_name": None,#"ibm-granite/granite-3.3-8b-instruct",
-    "eval_model_name": "Azure/gpt-5-2025-08-07",
-    "provider": "openai",
-    "eval_model_params": {"max_tokens":32378}
-}
+# # CLEAR model configuration (used for the CLEAR analysis itself)
+# CLEAR_CONFIG_DICT = {
+#     "openai/gpt-oss-120b": {
+#     "gen_model_name": None,#"ibm-granite/granite-3.3-8b-instruct",
+#     "eval_model_name": "openai/gpt-oss-120b",
+#     "provider": "watsonx",
+#     "eval_model_params": {"include_reasoning": True, "reasoning_effort": "medium", "max_tokens":32378}
+#     },
+# "Azure/gpt-5-2025-08-07": {
+#     "gen_model_name": None,#"ibm-granite/granite-3.3-8b-instruct",
+#     "eval_model_name": "Azure/gpt-5-2025-08-07",
+#     "provider": "openai",
+#     "eval_model_params": {"max_tokens":32378}
+# }
 
 #    "api_key": "11d4b77f45336d366ca592d6ba1edfff",
 #    "base_url": "https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/gpt-oss-120b/v1",
-}
+#}
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -151,7 +132,6 @@ def discover_eval_jsons(base_dir: Path, suffix: str = "_eval.json",
 
 def extract_issues_to_dataframe(
     eval_judge_key: str,
-    method: str,
     filter_dataset: str | None = None,
     filter_model: str | None = None,
 ) -> pd.DataFrame:
@@ -162,7 +142,7 @@ def extract_issues_to_dataframe(
         id, dataset, model_name, trajectory_name, overall_score,
         model_input, response
     """
-    results_dir = get_full_traj_results_dir(eval_judge_key, method)
+    results_dir = get_full_traj_results_dir(eval_judge_key, method=DEFAULT_METHOD)
     json_files = discover_eval_jsons(
         results_dir, suffix="_eval.json",
         filter_dataset=filter_dataset, filter_model=filter_model,
@@ -210,8 +190,8 @@ def extract_issues_to_dataframe(
 
     df = pd.DataFrame(rows)
     logger.info(
-        "Extracted %d issue records from %s (%s)",
-        len(df), results_dir, method,
+        "Extracted %d issue records from %s",
+        len(df), results_dir,
     )
     return df
 
@@ -322,7 +302,9 @@ def run_clear_analysis_on_df(
     eval_judge_key: str,
     method: str | None,
     overwrite: bool = False,
-    clear_config: dict = None):
+    provider: str | None = None,
+    eval_model_params: dict | None = None,
+    ):
     """Save the DataFrame to a temp CSV, then run CLEAR analysis on it.
 
     Groups by (dataset, model_name) so that each group gets its own CLEAR
@@ -412,16 +394,16 @@ def run_clear_analysis_on_df(
 
         try:
             analysis_kwargs = {
-                "provider": clear_config["provider"],
+                "provider": provider,
                 "data_path": str(csv_path),
-                "gen_model_name": clear_config["gen_model_name"],
+                "gen_model_name": None,
                 "eval_model_name": eval_model_name,
                 "output_dir": str(output_dir),
                 "perform_generation": False,
                 "input_columns": input_columns,
                 #"evaluation_criteria": evaluation_criteria_dict,
                 "agent_mode":True,
-                "eval_model_params": clear_config["eval_model_params"],
+                "eval_model_params":eval_model_params,
             }
 
             run_clear_eval_aggregation(**analysis_kwargs)
@@ -478,16 +460,6 @@ def parse_args():
     #         f"(default: openai/gpt-oss-120b)"
     #     ),
     # )
-    parser.add_argument(
-        "--method",
-        type=str,
-        default=DEFAULT_METHOD,
-        choices=METHODS,
-        help=(
-            f"Evaluation method for issues source (default: {DEFAULT_METHOD}). "
-            "Ignored when --source is root_cause."
-        ),
-    )
     # parser.add_argument(
     #     "--overwrite",
     #     action="store_true",
@@ -498,7 +470,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    CLEAR_CONFIG = CLEAR_CONFIG_DICT[args.model_id]
     print("=" * 70)
     print("CLEAR on Evaluation Results")
     print("=" * 70)
@@ -508,13 +479,12 @@ def main():
         print(f"  Method:       {args.method}")
     print(f"  Dataset:      {args.dataset or 'all'}")
     print(f"  Model:        {args.model or 'all'}")
-    print(f"  CLEAR model:  {CLEAR_CONFIG['eval_model_name']}")
+    print(f"  CLEAR model:  {args.model_id}")
     print("=" * 70)
     eval_judge_key = args.model_id.replace("/", "_").replace(":", "_").replace("-", "_")
     if args.source == "issues":
         df = extract_issues_to_dataframe(
             eval_judge_key=eval_judge_key,
-            method=args.method,
             filter_dataset=args.dataset,
             filter_model=args.model,
         )
@@ -525,7 +495,8 @@ def main():
             eval_judge_key=eval_judge_key,
             method=args.method,
             overwrite=args.overwrite,
-            clear_config=CLEAR_CONFIG,
+            provider=args.provider,
+            eval_model_params=args.eval_model_params,
         )
     elif args.source == "root_cause":
         df = extract_root_causes_to_dataframe(
@@ -540,7 +511,8 @@ def main():
             eval_judge_key=eval_judge_key,
             method=None,
             overwrite=args.overwrite,
-            clear_config=CLEAR_CONFIG,
+            provider=args.provider,
+            eval_model_params=args.eval_model_params,
         )
 
 
