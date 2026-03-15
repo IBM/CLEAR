@@ -110,16 +110,15 @@ class TrajectoryEvaluator(ABC):
         self.judge_model_id = judge_model_id
         self.provider = provider
         self.traj_input_dir = Path(traj_input_dir)
-        self.output_dir = Path(output_dir)
         self.context_tokens = context_tokens
         self.overwrite = overwrite
         self.concurrency = concurrency
         self.eval_model_params = eval_model_params or {}
         self.max_files = max_files
-        
+
         # Create results directory: output_dir/evaluation_type
         eval_type = self.get_evaluation_type().replace(" ", "_").replace("/", "_")
-        self.results_dir = self.output_dir / eval_type
+        self.results_dir = output_dir / eval_type
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
@@ -500,59 +499,52 @@ class TrajectoryEvaluator(ABC):
 
         # Count successful evaluations
         successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
-        total = len(parallel_results)
-
-        logger.info(f"Evaluation complete: {successful}/{total} trajectories succeeded in {elapsed:.1f}s")
+        logger.info(f"Evaluation complete: {successful}/{len(parallel_results)} trajectories succeeded in {elapsed:.1f}s")
         
         return parallel_results
 
-    # TODO: Re-enable summary functionality when needed
-    # def save_summary(self, print_func=None) -> dict:
-    #     """
-    #     Generate, save, and optionally print evaluation summary.
-    #
-    #     This method:
-    #     1. Calls generate_summary() to aggregate results
-    #     2. Saves summary to summary.json in results directory
-    #     3. Optionally prints summary using provided print function
-    #
-    #     Args:
-    #         print_func: Optional function to print summary (receives summary dict and judge_model_id)
-    #
-    #     Returns:
-    #         Summary dict with aggregated statistics
-    #     """
-    #     if not self.results_dir.exists():
-    #         logger.warning("Results directory does not exist: %s", self.results_dir)
-    #         return {}
-    #
-    #     # Generate summary (calls subclass implementation)
-    #     summary = self.generate_summary()
-    #
-    #     # Save to file
-    #     summary_file = self.results_dir / "summary.json"
-    #     with open(summary_file, "w") as f:
-    #         json.dump(summary, f, indent=2)
-    #     print(f"\nSummary saved to: {summary_file}")
-    #
-    #     # Print if function provided
-    #     if print_func:
-    #         print_func(summary, self.judge_model_id)
-    #
-    #     return summary
+    def save_summary(self, attempted_evals = None) -> dict:
+        """
+        Generate and save evaluation summary to summary.json.
 
-    # @abstractmethod
-    # def generate_summary(self) -> dict:
-    #     """
-    #     Generate summary statistics from evaluation results.
-    #
-    #     Subclasses should scan the results directory and aggregate statistics
-    #     specific to their evaluation type.
-    #
-    #     Returns:
-    #         Dict with summary statistics (structure varies by evaluator type)
-    #     """
-    #     pass
+        This method:
+        1. Calls generate_summary() to aggregate results from output directory
+        2. Saves summary to summary.json in output directory
+        3. Logs the summary file location
+
+        Returns:
+            Summary dict with aggregated statistics
+        """
+        if not self.results_dir.exists():
+            logger.warning("Output directory does not exist: %s", self.results_dir)
+            return {}
+
+        # Generate summary (calls subclass implementation)
+        summary = self.generate_summary()
+
+        if attempted_evals:
+            summary["attempted_evals"] = attempted_evals
+
+        # Save to file
+        summary_file = self.results_dir / "summary.json"
+        with open(summary_file, "w") as f:
+            json.dump(summary, f, indent=2)
+        logger.info("Summary saved to: %s", summary_file)
+
+        return summary
+
+    @abstractmethod
+    def generate_summary(self) -> dict:
+        """
+        Generate summary statistics from evaluation results.
+
+        Subclasses should scan the output directory and aggregate statistics
+        specific to their evaluation type (e.g., average scores, dimension averages).
+
+        Returns:
+            Dict with summary statistics (structure varies by evaluator type)
+        """
+        pass
 
 
     @staticmethod
@@ -607,7 +599,6 @@ class TrajectoryEvaluator(ABC):
             eval_model_params=self.eval_model_params,
         )
 
-        # TODO: Uncomment when summary is ready
-        # self.save_summary()
+        self.save_summary(len(entries))
         
         return parallel_results
