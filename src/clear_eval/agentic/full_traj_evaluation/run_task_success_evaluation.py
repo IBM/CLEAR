@@ -33,11 +33,6 @@ def main():
         max_files=args.max_files,
     )
 
-    # TODO: Re-enable summary-only mode when summary functionality is ready
-    # if args.summary_only:
-    #     evaluator.save_summary()
-    #     return
-
     # Run evaluation pipeline
     evaluator.run_pipeline()
 
