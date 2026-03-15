@@ -56,7 +56,6 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         default=None,
         help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'",
     )
-    
     # Dataset and model filtering
     parser.add_argument(
         "--dataset",

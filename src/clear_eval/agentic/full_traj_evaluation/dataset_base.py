@@ -71,21 +71,21 @@ class DatasetBase(ABC):
         return json.dumps(traj_data)
 
 
-    def extract_final_response(self, traj_data: dict) -> str:
-        """
-        Extract the agent's final answer/output from the trajectory.
-        
-        Args:
-            traj_data: The trajectory JSON data loaded from file
-            
-        Returns:
-            The agent's final answer/output as a string
-        """
-        steps = traj_data.get("steps", [])
-        if steps:
-            return steps[-1].get("content")
-        return None
-
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     """
+    #     Extract the agent's final answer/output from the trajectory.
+    #
+    #     Args:
+    #         traj_data: The trajectory JSON data loaded from file
+    #
+    #     Returns:
+    #         The agent's final answer/output as a string
+    #     """
+    #     steps = traj_data.get("steps", [])
+    #     if steps:
+    #         return steps[-1].get("content")
+    #     return None
+    #
 
     def extract_user_request(self, traj_data: dict) -> str:
         return traj_data.get("intent")
@@ -129,30 +129,30 @@ class CUGADataset(DatasetBase):
     #         lines.append("")
     #
     #     return "\n".join(lines)
-
-    def extract_final_response(self, traj_data: dict) -> str:
-        """Extract the final agent response from a CUGA trajectory."""
-        trajectory = traj_data.get("steps", [])
-        skip_agents = {"EvaluationResult"}
-        
-        # First pass: look for FinalAnswerAgent
-        final_answer_response = ""
-        for step in trajectory:
-            if step.get("agent") == "FinalAnswerAgent":
-                final_answer_response = step["timeline"][-1].get("text")
-                if final_answer_response:
-                    return final_answer_response
-        
-        # Second pass: last non-empty response from any non-skipped agent
-        for step in reversed(trajectory):
-            agent = step.get("agent", "")
-            if agent in skip_agents:
-                continue
-            final_answer_response = step["timeline"][-1].get("text")
-            if final_answer_response:
-                return final_answer_response
-        
-        return final_answer_response
+    #
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     """Extract the final agent response from a CUGA trajectory."""
+    #     trajectory = traj_data.get("steps", [])
+    #     skip_agents = {"EvaluationResult"}
+    #
+    #     # First pass: look for FinalAnswerAgent
+    #     final_answer_response = ""
+    #     for step in trajectory:
+    #         if step.get("agent") == "FinalAnswerAgent":
+    #             final_answer_response = step["timeline"][-1].get("text")
+    #             if final_answer_response:
+    #                 return final_answer_response
+    #
+    #     # Second pass: last non-empty response from any non-skipped agent
+    #     for step in reversed(trajectory):
+    #         agent = step.get("agent", "")
+    #         if agent in skip_agents:
+    #             continue
+    #         final_answer_response = step["timeline"][-1].get("text")
+    #         if final_answer_response:
+    #             return final_answer_response
+    #
+    #     return final_answer_response
 
     def extract_user_request(self, traj_data: dict) -> str:
         """Return the task objective for a CUGA trajectory.
@@ -248,18 +248,18 @@ class FinOpsDataset(DatasetBase):
         
         return ""
     
-    def extract_final_response(self, traj_data: dict) -> str:
-        """Extract the final agent response from a FinOps trajectory."""
-        trajectory = traj_data.get("trajectory", [])
-        
-        for step in reversed(trajectory):
-            elements = step.get("elements", [])
-            for elem in reversed(elements):
-                msg = elem.get("message", "").strip()
-                if msg:
-                    return msg
-        
-        return ""
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     """Extract the final agent response from a FinOps trajectory."""
+    #     trajectory = traj_data.get("trajectory", [])
+    #
+    #     for step in reversed(trajectory):
+    #         elements = step.get("elements", [])
+    #         for elem in reversed(elements):
+    #             msg = elem.get("message", "").strip()
+    #             if msg:
+    #                 return msg
+    #
+    #     return ""
 
 
 
@@ -308,15 +308,15 @@ class WXODataset(DatasetBase):
                     return content
         return ""
     
-    def extract_final_response(self, traj_data: dict) -> str:
-        """Extract the final agent response from a WXO trajectory."""
-        trajectory = traj_data.get("trajectory", [])
-        for step in reversed(trajectory):
-            if step.get("role", "").lower() == "assistant":
-                content = step.get("content", "").strip()
-                if content:
-                    return content
-        return ""
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     """Extract the final agent response from a WXO trajectory."""
+    #     trajectory = traj_data.get("trajectory", [])
+    #     for step in reversed(trajectory):
+    #         if step.get("role", "").lower() == "assistant":
+    #             content = step.get("content", "").strip()
+    #             if content:
+    #                 return content
+    #     return ""
 
 
 # =============================================================================
@@ -324,18 +324,19 @@ class WXODataset(DatasetBase):
 # =============================================================================
 
 class HALGenAgentDataset(DatasetBase):
-    def extract_final_response(self, traj_data: dict) -> str:
-        steps = traj_data.get("steps", [])
-        if steps:
-            final_response = steps[-1].get("output", {}).get("content", "")
-            if final_response:
-                return final_response
-        return None
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     steps = traj_data.get("steps", [])
+    #     if steps:
+    #         final_response = steps[-1].get("output", {}).get("content", "")
+    #         if final_response:
+    #             return final_response
+    #     return None
+    pass
 
 class TrailDataset(DatasetBase):
-    def extract_final_response(self, traj_data: dict) -> str:
-        return traj_data.get("final_answer")
-
+    # def extract_final_response(self, traj_data: dict) -> str:
+    #     return traj_data.get("final_answer")
+    pass
 
 
 
