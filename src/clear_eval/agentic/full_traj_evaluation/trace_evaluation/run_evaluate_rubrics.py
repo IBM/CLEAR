@@ -24,7 +24,7 @@ Example:
 from pathlib import Path
 
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from clear_eval.agentic.full_traj_evaluation.rubric_evaluator import RubricEvaluator
+from agentic.full_traj_evaluation.trace_evaluation.rubric_evaluator import RubricEvaluator
 
 
 def main():
@@ -64,4 +64,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-# Made with Bob

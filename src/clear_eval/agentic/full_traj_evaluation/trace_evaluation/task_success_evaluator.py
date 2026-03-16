@@ -15,9 +15,8 @@ Evaluates whether an agent successfully completed its assigned task by:
 import json
 import logging
 import re
-from typing import Any
 
-from clear_eval.agentic.full_traj_evaluation.base_evaluator import TrajectoryEvaluator
+from agentic.full_traj_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
 

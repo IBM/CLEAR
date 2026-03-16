@@ -17,11 +17,10 @@ the agent's execution trace.
 import json
 import re
 import logging
-from pathlib import Path
 from typing import Any
 from collections import defaultdict
 
-from clear_eval.agentic.full_traj_evaluation.base_evaluator import TrajectoryEvaluator
+from agentic.full_traj_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -310,4 +309,3 @@ parameter Y" or "The agent's final output contains Z").
             "complexity_distribution": dict(complexity_counts),
         }
 
-# Made with Bob
