@@ -20,14 +20,17 @@ from pathlib import Path
 from typing import Any
 
 import logging
-from clear_eval.agentic.full_traj_evaluation.full_traj_utils import (
-    get_max_trajectory_chars,
-)
 from clear_eval.pipeline.llm_client import get_llm_client, run_parallel, ParallelResult
 from clear_eval.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+# Constants for trajectory length calculation
+CHARS_PER_TOKEN = 4
+RESPONSE_RESERVED_TOKENS = 4_096
+PROMPT_OVERHEAD_TOKENS = 2_500
+CONTEXT_SAFETY_MARGIN = 0.90
 
 # Trajectory capping utilities
 def middle_out(text: str, limit: int) -> str:
@@ -159,6 +162,24 @@ class TrajectoryEvaluator(ABC):
         """
         return None
 
+    def get_max_trajectory_chars(self) -> int:
+        """
+        Compute the maximum trajectory text length (in characters) based on context window.
+        
+        Uses a simple heuristic:
+        - Reserve tokens for response (4096) and prompt overhead (2500)
+        - Apply safety margin (90%) to avoid edge cases
+        - Convert tokens to characters (4 chars per token)
+        
+        Returns:
+            Maximum allowed trajectory length in characters
+        """
+        available_tokens = (
+            self.context_tokens - RESPONSE_RESERVED_TOKENS - PROMPT_OVERHEAD_TOKENS
+        )
+        max_chars = int(available_tokens * CHARS_PER_TOKEN * CONTEXT_SAFETY_MARGIN)
+        return max_chars
+
     def print_evaluation_plan(
         self,
         entries: list[dict],
@@ -247,7 +268,7 @@ class TrajectoryEvaluator(ABC):
             {
                 "trajectory_text": trajectory_text,
                 "task_objective": eval_data["task_objective"],
-                "max_len": get_max_trajectory_chars(self.context_tokens)
+                "max_len": self.get_max_trajectory_chars()
             }
         """
         pass
@@ -381,7 +402,7 @@ class TrajectoryEvaluator(ABC):
         try:
             trajectory_text = json.dumps(traj_data, indent=2)
             # Cap trajectory to fit in context window
-            max_chars = get_max_trajectory_chars(self.context_tokens)
+            max_chars = self.get_max_trajectory_chars()
             trajectory_text = cap_trajectory(trajectory_text, max_chars)
         except Exception as e:
             logger.error("Failed to format trajectory %s: %s", traj_name, e)
