@@ -1,0 +1,1412 @@
+{
+  "trace_id": "tr-c17802eea1fc9baf1ba0017862047a49",
+  "experiment_id": "1",
+  "state": "OK",
+  "timestamp_ms": 1773326835705,
+  "execution_time_ms": 4229,
+  "request_preview": "[REQ-log_monitor__30] ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+  "response_preview": "{\"log_message\": \"ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\", \"classification\": \"error\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "tags": {
+    "request_id": "REQ-log_monitor__30",
+    "mlflow.traceName": "process_log_message",
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-c17802eea1fc9baf1ba0017862047a49/artifacts"
+  },
+  "assessments": [],
+  "spans": [
+    {
+      "span_id": "c3e6726cba4f5ea5",
+      "parent_span_id": null,
+      "name": "process_log_message",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835705579000,
+      "end_time_unix_nano": 1773326839934714000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "AGENT",
+        "mlflow.spanFunctionName": "process_log_message",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+        },
+        "mlflow.spanOutputs": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+      },
+      "outputs": {
+        "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+        "classification": "error",
+        "diagnosis": "",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "a95abf3f4299bf28",
+      "parent_span_id": "c3e6726cba4f5ea5",
+      "name": "initialize_state",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835705749000,
+      "end_time_unix_nano": 1773326835705790000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+        },
+        "mlflow.spanOutputs": {
+          "state_keys": [
+            "log_message",
+            "classification",
+            "diagnosis",
+            "severity",
+            "action_taken"
+          ]
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+      },
+      "outputs": {
+        "state_keys": [
+          "log_message",
+          "classification",
+          "diagnosis",
+          "severity",
+          "action_taken"
+        ]
+      }
+    },
+    {
+      "span_id": "7c3b4f3a33b85ce2",
+      "parent_span_id": "c3e6726cba4f5ea5",
+      "name": "workflow_execution",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835712428000,
+      "end_time_unix_nano": 1773326839929207000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "CHAIN",
+        "mlflow.spanInputs": {
+          "log_message_preview": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message_preview": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events"
+      },
+      "outputs": {
+        "classification": "error",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "310bc6a1778f33ff",
+      "parent_span_id": "7c3b4f3a33b85ce2",
+      "name": "classify_log",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835712889000,
+      "end_time_unix_nano": 1773326837036919000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "classify_log",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+            "classification": "",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+          "classification": "",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "classification": "error"
+      }
+    },
+    {
+      "span_id": "048b7edf41380741",
+      "parent_span_id": "310bc6a1778f33ff",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835712985000,
+      "end_time_unix_nano": 1773326835713418000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "30a3546151714a16",
+      "parent_span_id": "310bc6a1778f33ff",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326835719531000,
+      "end_time_unix_nano": 1773326837028337000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+          "messages": [
+            {
+              "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 258,
+          "output_tokens": 22,
+          "total_tokens": 280
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbg6VPrLJIXsH55PGn4U98VpyvP",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Failed to deserialize\"]}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "classification": "error",
+                  "confidence": 0.95,
+                  "indicators": [
+                    "ERROR",
+                    "Failed to deserialize"
+                  ]
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326836,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 22,
+            "prompt_tokens": 258,
+            "total_tokens": 280,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "messages": [
+          {
+            "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbg6VPrLJIXsH55PGn4U98VpyvP",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Failed to deserialize\"]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "classification": "error",
+                "confidence": 0.95,
+                "indicators": [
+                  "ERROR",
+                  "Failed to deserialize"
+                ]
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326836,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 22,
+          "prompt_tokens": 258,
+          "total_tokens": 280,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "fbf5fe2828df4293",
+      "parent_span_id": "7c3b4f3a33b85ce2",
+      "name": "diagnose_problem",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326837041543000,
+      "end_time_unix_nano": 1773326838046552000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "diagnose_problem",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "diagnosis": "",
+          "proposed_tool_calls": [
+            {
+              "name": "summarize_log",
+              "arguments": "{\"log_message\": \"ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\"}"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "diagnosis": "",
+        "proposed_tool_calls": [
+          {
+            "name": "summarize_log",
+            "arguments": "{\"log_message\": \"ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\"}"
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "c0d97ba1c79d97c4",
+      "parent_span_id": "fbf5fe2828df4293",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326837041634000,
+      "end_time_unix_nano": 1773326837041976000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "cc2486accc6005f8",
+      "parent_span_id": "fbf5fe2828df4293",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326837049242000,
+      "end_time_unix_nano": 1773326838023742000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "stream": false,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "summarize_log",
+                "description": "Summarize a log line so the LLM can reference it.",
+                "parameters": {
+                  "properties": {
+                    "log_message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "log_message"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "messages": [
+            {
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+              "role": "system"
+            },
+            {
+              "content": "Diagnose the following log: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "log_message"
+                ]
+              }
+            }
+          }
+        ],
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 93,
+          "output_tokens": 29,
+          "total_tokens": 122
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbhQpbaJAQRxpOtLcKX7zgTqOFj",
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [
+                  {
+                    "id": "call_hrvMeEUmucT0QoKeZ12o0ZMd",
+                    "function": {
+                      "arguments": "{\"log_message\":\"ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\"}",
+                      "name": "summarize_log"
+                    },
+                    "type": "function"
+                  }
+                ],
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {}
+              }
+            }
+          ],
+          "created": 1773326837,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 29,
+            "prompt_tokens": 93,
+            "total_tokens": 122,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "messages": [
+          {
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+            "role": "system"
+          },
+          {
+            "content": "Diagnose the following log: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbhQpbaJAQRxpOtLcKX7zgTqOFj",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": null,
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "call_hrvMeEUmucT0QoKeZ12o0ZMd",
+                  "function": {
+                    "arguments": "{\"log_message\":\"ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\"}",
+                    "name": "summarize_log"
+                  },
+                  "type": "function"
+                }
+              ],
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {}
+            }
+          }
+        ],
+        "created": 1773326837,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 29,
+          "prompt_tokens": 93,
+          "total_tokens": 122,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "0861da53e9c518ff",
+      "parent_span_id": "7c3b4f3a33b85ce2",
+      "name": "assess_severity",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326838062014000,
+      "end_time_unix_nano": 1773326839906947000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "assess_severity",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "severity": "high"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "severity": "high"
+      }
+    },
+    {
+      "span_id": "739e75411346bd49",
+      "parent_span_id": "0861da53e9c518ff",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326838062280000,
+      "end_time_unix_nano": 1773326838063735000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "09067f4791c1555d",
+      "parent_span_id": "0861da53e9c518ff",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326838077091000,
+      "end_time_unix_nano": 1773326839888073000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+          "messages": [
+            {
+              "content": "Assess the severity of this problem.\n\nLog message: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 236,
+          "output_tokens": 51,
+          "total_tokens": 287
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbiUMjI3YoBkaFO5YbvW5KXjMfE",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"severity\":\"high\",\"reasoning\":\"Failure to deserialize JSON payload from a critical Kafka topic (billing-events) likely prevents processing of billing data, posing immediate data loss risk and service degradation impacting user billing accuracy or delays.\",\"confidence\":0.9}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "severity": "high",
+                  "reasoning": "Failure to deserialize JSON payload from a critical Kafka topic (billing-events) likely prevents processing of billing data, posing immediate data loss risk and service degradation impacting user billing accuracy or delays.",
+                  "confidence": 0.9
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326838,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 236,
+            "total_tokens": 287,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "messages": [
+          {
+            "content": "Assess the severity of this problem.\n\nLog message: ERROR: Failed to deserialize JSON payload from Kafka topic billing-events\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbiUMjI3YoBkaFO5YbvW5KXjMfE",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"severity\":\"high\",\"reasoning\":\"Failure to deserialize JSON payload from a critical Kafka topic (billing-events) likely prevents processing of billing data, posing immediate data loss risk and service degradation impacting user billing accuracy or delays.\",\"confidence\":0.9}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "severity": "high",
+                "reasoning": "Failure to deserialize JSON payload from a critical Kafka topic (billing-events) likely prevents processing of billing data, posing immediate data loss risk and service degradation impacting user billing accuracy or delays.",
+                "confidence": 0.9
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326838,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 51,
+          "prompt_tokens": 236,
+          "total_tokens": 287,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "2dd44704cdf5ec10",
+      "parent_span_id": "7c3b4f3a33b85ce2",
+      "name": "alert_sre",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839915742000,
+      "end_time_unix_nano": 1773326839923130000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "alert_sre",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "high",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Failed to deserialize JSON payload from Kafka topic billing-events",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "773150e28aa2061a",
+      "parent_span_id": "2dd44704cdf5ec10",
+      "name": "send_slack_alert",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839915893000,
+      "end_time_unix_nano": 1773326839916024000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c17802eea1fc9baf1ba0017862047a49",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "send_slack_alert",
+        "mlflow.spanInputs": {
+          "message": "High severity issue detected - ",
+          "severity": "high",
+          "diagnosis": ""
+        },
+        "mlflow.spanOutputs": null
+      },
+      "inputs": {
+        "message": "High severity issue detected - ",
+        "severity": "high",
+        "diagnosis": ""
+      },
+      "outputs": null
+    }
+  ]
+}

@@ -1,40 +1,40 @@
 {
-  "trace_id": "tr-e08208946684c866332b7416670bad41",
+  "trace_id": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
   "experiment_id": "1",
   "state": "OK",
-  "timestamp_ms": 1773073677651,
-  "execution_time_ms": 4170,
-  "request_preview": "[REQ-log_monitor__tools_fixed] ERROR: Database connection failed for user admin",
-  "response_preview": "{\"log_message\": \"ERROR: Database connection failed for user admin\", \"classification\": \"error\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "timestamp_ms": 1773326839951,
+  "execution_time_ms": 3362,
+  "request_preview": "[REQ-log_monitor__30] ERROR: Timeout waiting for response from authentication provider",
+  "response_preview": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\", \"classification\": \"error\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
   "tags": {
-    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "request_id": "REQ-log_monitor__30",
     "mlflow.traceName": "process_log_message",
-    "request_id": "REQ-log_monitor__tools_fixed",
-    "mlflow.artifactLocation": "mlflow-artifacts:/1/traces/tr-e08208946684c866332b7416670bad41/artifacts",
-    "app": "log-monitor"
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-f3226c2c6d7738bf2393e2fe26c7711a/artifacts"
   },
   "assessments": [],
   "spans": [
     {
-      "span_id": "834a9a5c1d18938c",
+      "span_id": "3ec09813f2102f80",
       "parent_span_id": null,
       "name": "process_log_message",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677651136000,
-      "end_time_unix_nano": 1773073681821538000,
+      "start_time_unix_nano": 1773326839951100000,
+      "end_time_unix_nano": 1773326843313795000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "AGENT",
         "mlflow.spanFunctionName": "process_log_message",
         "mlflow.spanInputs": {
-          "log_message": "ERROR: Database connection failed for user admin"
+          "log_message": "ERROR: Timeout waiting for response from authentication provider"
         },
         "mlflow.spanOutputs": {
-          "log_message": "ERROR: Database connection failed for user admin",
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
           "classification": "error",
           "diagnosis": "",
           "severity": "high",
@@ -42,10 +42,10 @@
         }
       },
       "inputs": {
-        "log_message": "ERROR: Database connection failed for user admin"
+        "log_message": "ERROR: Timeout waiting for response from authentication provider"
       },
       "outputs": {
-        "log_message": "ERROR: Database connection failed for user admin",
+        "log_message": "ERROR: Timeout waiting for response from authentication provider",
         "classification": "error",
         "diagnosis": "",
         "severity": "high",
@@ -53,21 +53,21 @@
       }
     },
     {
-      "span_id": "bee43ccc8351fcb7",
-      "parent_span_id": "834a9a5c1d18938c",
+      "span_id": "3d306eb05a7b0069",
+      "parent_span_id": "3ec09813f2102f80",
       "name": "initialize_state",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677673473000,
-      "end_time_unix_nano": 1773073677673553000,
+      "start_time_unix_nano": 1773326839951259000,
+      "end_time_unix_nano": 1773326839951301000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "TOOL",
         "mlflow.spanInputs": {
-          "log_message": "ERROR: Database connection failed for user admin"
+          "log_message": "ERROR: Timeout waiting for response from authentication provider"
         },
         "mlflow.spanOutputs": {
           "state_keys": [
@@ -80,7 +80,7 @@
         }
       },
       "inputs": {
-        "log_message": "ERROR: Database connection failed for user admin"
+        "log_message": "ERROR: Timeout waiting for response from authentication provider"
       },
       "outputs": {
         "state_keys": [
@@ -93,21 +93,21 @@
       }
     },
     {
-      "span_id": "7e2081afb9328e7a",
-      "parent_span_id": "834a9a5c1d18938c",
+      "span_id": "c20c983bba2ef3e4",
+      "parent_span_id": "3ec09813f2102f80",
       "name": "workflow_execution",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677688082000,
-      "end_time_unix_nano": 1773073681815930000,
+      "start_time_unix_nano": 1773326839959571000,
+      "end_time_unix_nano": 1773326843306508000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "CHAIN",
         "mlflow.spanInputs": {
-          "log_message_preview": "ERROR: Database connection failed for user admin"
+          "log_message_preview": "ERROR: Timeout waiting for response from authentication provider"
         },
         "mlflow.spanOutputs": {
           "classification": "error",
@@ -116,7 +116,7 @@
         }
       },
       "inputs": {
-        "log_message_preview": "ERROR: Database connection failed for user admin"
+        "log_message_preview": "ERROR: Timeout waiting for response from authentication provider"
       },
       "outputs": {
         "classification": "error",
@@ -125,23 +125,23 @@
       }
     },
     {
-      "span_id": "fadafe3f2f9800ba",
-      "parent_span_id": "7e2081afb9328e7a",
+      "span_id": "e4807aca8a880bfd",
+      "parent_span_id": "c20c983bba2ef3e4",
       "name": "classify_log",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677692978000,
-      "end_time_unix_nano": 1773073678872589000,
+      "start_time_unix_nano": 1773326839960006000,
+      "end_time_unix_nano": 1773326840860541000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "classify_log",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "ERROR: Database connection failed for user admin",
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
             "classification": "",
             "diagnosis": "",
             "severity": "",
@@ -154,7 +154,7 @@
       },
       "inputs": {
         "state": {
-          "log_message": "ERROR: Database connection failed for user admin",
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
           "classification": "",
           "diagnosis": "",
           "severity": "",
@@ -166,18 +166,18 @@
       }
     },
     {
-      "span_id": "03690be7ad801825",
-      "parent_span_id": "fadafe3f2f9800ba",
+      "span_id": "d5c9aef953ce3eb9",
+      "parent_span_id": "e4807aca8a880bfd",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677693099000,
-      "end_time_unix_nano": 1773073677714000000,
+      "start_time_unix_nano": 1773326839960097000,
+      "end_time_unix_nano": 1773326839960504000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -185,7 +185,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -229,7 +229,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -269,25 +269,25 @@
       }
     },
     {
-      "span_id": "6d8c87016cadbf14",
-      "parent_span_id": "fadafe3f2f9800ba",
+      "span_id": "e3d82fa179c2eba4",
+      "parent_span_id": "e4807aca8a880bfd",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073677729069000,
-      "end_time_unix_nano": 1773073678863706000,
+      "start_time_unix_nano": 1773326839966361000,
+      "end_time_unix_nano": 1773326840839564000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
           "messages": [
             {
-              "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Database connection failed for user admin\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
               "role": "user"
             }
           ],
@@ -295,26 +295,26 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
         "extra_headers": {
           "X-Stainless-Raw-Response": "true"
         },
         "mlflow.message.format": "openai",
         "mlflow.chat.tokenUsage": {
-          "input_tokens": 254,
-          "output_tokens": 20,
-          "total_tokens": 274
+          "input_tokens": 255,
+          "output_tokens": 26,
+          "total_tokens": 281
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkUppudCETbVOUZBHI3Dl41pXV7",
+          "id": "chatcmpl-DIbbkenYJrT4zsP8vQbTaTjIYoE1D",
           "choices": [
             {
               "finish_reason": "stop",
               "index": 0,
               "logprobs": null,
               "message": {
-                "content": "{\"classification\":\"error\",\"confidence\":1.0,\"indicators\":[\"ERROR\",\"failed\"]}",
+                "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Timeout waiting for response\",\"authentication provider\"]}",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": [],
@@ -323,10 +323,11 @@
                 "tool_calls": null,
                 "parsed": {
                   "classification": "error",
-                  "confidence": 1.0,
+                  "confidence": 0.95,
                   "indicators": [
                     "ERROR",
-                    "failed"
+                    "Timeout waiting for response",
+                    "authentication provider"
                   ]
                 },
                 "provider_specific_fields": {
@@ -355,15 +356,15 @@
               }
             }
           ],
-          "created": 1773073678,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326840,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_7a7fd0eb44",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
-            "completion_tokens": 20,
-            "prompt_tokens": 254,
-            "total_tokens": 274,
+            "completion_tokens": 26,
+            "prompt_tokens": 255,
+            "total_tokens": 281,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -401,11 +402,11 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
         "messages": [
           {
-            "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Database connection failed for user admin\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
             "role": "user"
           }
         ],
@@ -414,14 +415,14 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkUppudCETbVOUZBHI3Dl41pXV7",
+        "id": "chatcmpl-DIbbkenYJrT4zsP8vQbTaTjIYoE1D",
         "choices": [
           {
             "finish_reason": "stop",
             "index": 0,
             "logprobs": null,
             "message": {
-              "content": "{\"classification\":\"error\",\"confidence\":1.0,\"indicators\":[\"ERROR\",\"failed\"]}",
+              "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Timeout waiting for response\",\"authentication provider\"]}",
               "refusal": null,
               "role": "assistant",
               "annotations": [],
@@ -430,10 +431,11 @@
               "tool_calls": null,
               "parsed": {
                 "classification": "error",
-                "confidence": 1.0,
+                "confidence": 0.95,
                 "indicators": [
                   "ERROR",
-                  "failed"
+                  "Timeout waiting for response",
+                  "authentication provider"
                 ]
               },
               "provider_specific_fields": {
@@ -462,15 +464,15 @@
             }
           }
         ],
-        "created": 1773073678,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326840,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_7a7fd0eb44",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
-          "completion_tokens": 20,
-          "prompt_tokens": 254,
-          "total_tokens": 274,
+          "completion_tokens": 26,
+          "prompt_tokens": 255,
+          "total_tokens": 281,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -508,23 +510,23 @@
       }
     },
     {
-      "span_id": "933a01b8c8f10121",
-      "parent_span_id": "7e2081afb9328e7a",
+      "span_id": "576ca3e50679d30d",
+      "parent_span_id": "c20c983bba2ef3e4",
       "name": "diagnose_problem",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073678879484000,
-      "end_time_unix_nano": 1773073680017124000,
+      "start_time_unix_nano": 1773326840871179000,
+      "end_time_unix_nano": 1773326841975981000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "diagnose_problem",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "ERROR: Database connection failed for user admin",
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
             "classification": "error",
             "diagnosis": "",
             "severity": "",
@@ -536,14 +538,14 @@
           "proposed_tool_calls": [
             {
               "name": "summarize_log",
-              "arguments": "{\"log_message\": \"ERROR: Database connection failed for user admin\"}"
+              "arguments": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\"}"
             }
           ]
         }
       },
       "inputs": {
         "state": {
-          "log_message": "ERROR: Database connection failed for user admin",
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
           "classification": "error",
           "diagnosis": "",
           "severity": "",
@@ -555,24 +557,24 @@
         "proposed_tool_calls": [
           {
             "name": "summarize_log",
-            "arguments": "{\"log_message\": \"ERROR: Database connection failed for user admin\"}"
+            "arguments": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\"}"
           }
         ]
       }
     },
     {
-      "span_id": "c9f20aab379db71e",
-      "parent_span_id": "933a01b8c8f10121",
+      "span_id": "1e96cf9feabbd748",
+      "parent_span_id": "576ca3e50679d30d",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073678879650000,
-      "end_time_unix_nano": 1773073678880242000,
+      "start_time_unix_nano": 1773326840871378000,
+      "end_time_unix_nano": 1773326840872163000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -580,7 +582,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -624,7 +626,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -664,21 +666,21 @@
       }
     },
     {
-      "span_id": "615451afb8e093bb",
-      "parent_span_id": "933a01b8c8f10121",
+      "span_id": "8fc8c2364b95136a",
+      "parent_span_id": "576ca3e50679d30d",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073678889079000,
-      "end_time_unix_nano": 1773073680007910000,
+      "start_time_unix_nano": 1773326840883957000,
+      "end_time_unix_nano": 1773326841957395000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "stream": false,
           "tools": [
             {
@@ -703,11 +705,11 @@
           "tool_choice": "required",
           "messages": [
             {
-              "content": "In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.",
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
               "role": "system"
             },
             {
-              "content": "Diagnose the following log: ERROR: Database connection failed for user admin",
+              "content": "Diagnose the following log: ERROR: Timeout waiting for response from authentication provider",
               "role": "user"
             }
           ],
@@ -715,7 +717,7 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "stream": false,
         "tools": [
           {
@@ -764,11 +766,11 @@
         ],
         "mlflow.chat.tokenUsage": {
           "input_tokens": 90,
-          "output_tokens": 25,
-          "total_tokens": 115
+          "output_tokens": 26,
+          "total_tokens": 116
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkVj7ZtWxts7mAW2jtK56QgWBbo",
+          "id": "chatcmpl-DIbblM9ZNuw5Au036SG39xiBjVJcj",
           "choices": [
             {
               "finish_reason": "tool_calls",
@@ -783,9 +785,9 @@
                 "function_call": null,
                 "tool_calls": [
                   {
-                    "id": "call_MUaJctpOaxzPYnICozpY01Mb",
+                    "id": "call_xn4IeZJUgqj1c0oIDM21pb4Z",
                     "function": {
-                      "arguments": "{\"log_message\":\"ERROR: Database connection failed for user admin\"}",
+                      "arguments": "{\"log_message\":\"ERROR: Timeout waiting for response from authentication provider\"}",
                       "name": "summarize_log"
                     },
                     "type": "function"
@@ -800,15 +802,15 @@
               }
             }
           ],
-          "created": 1773073679,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326841,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_e05894342c",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
-            "completion_tokens": 25,
+            "completion_tokens": 26,
             "prompt_tokens": 90,
-            "total_tokens": 115,
+            "total_tokens": 116,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -846,7 +848,7 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "stream": false,
         "tools": [
           {
@@ -871,11 +873,11 @@
         "tool_choice": "required",
         "messages": [
           {
-            "content": "In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.",
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
             "role": "system"
           },
           {
-            "content": "Diagnose the following log: ERROR: Database connection failed for user admin",
+            "content": "Diagnose the following log: ERROR: Timeout waiting for response from authentication provider",
             "role": "user"
           }
         ],
@@ -884,7 +886,7 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkVj7ZtWxts7mAW2jtK56QgWBbo",
+        "id": "chatcmpl-DIbblM9ZNuw5Au036SG39xiBjVJcj",
         "choices": [
           {
             "finish_reason": "tool_calls",
@@ -899,9 +901,9 @@
               "function_call": null,
               "tool_calls": [
                 {
-                  "id": "call_MUaJctpOaxzPYnICozpY01Mb",
+                  "id": "call_xn4IeZJUgqj1c0oIDM21pb4Z",
                   "function": {
-                    "arguments": "{\"log_message\":\"ERROR: Database connection failed for user admin\"}",
+                    "arguments": "{\"log_message\":\"ERROR: Timeout waiting for response from authentication provider\"}",
                     "name": "summarize_log"
                   },
                   "type": "function"
@@ -916,15 +918,15 @@
             }
           }
         ],
-        "created": 1773073679,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326841,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_e05894342c",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
-          "completion_tokens": 25,
+          "completion_tokens": 26,
           "prompt_tokens": 90,
-          "total_tokens": 115,
+          "total_tokens": 116,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -962,23 +964,23 @@
       }
     },
     {
-      "span_id": "5084ca592e004e05",
-      "parent_span_id": "7e2081afb9328e7a",
+      "span_id": "01084814c5b5d659",
+      "parent_span_id": "c20c983bba2ef3e4",
       "name": "assess_severity",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073680023531000,
-      "end_time_unix_nano": 1773073681618419000,
+      "start_time_unix_nano": 1773326841984997000,
+      "end_time_unix_nano": 1773326843288811000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "assess_severity",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "ERROR: Database connection failed for user admin",
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
             "classification": "error",
             "diagnosis": "",
             "severity": "",
@@ -991,7 +993,7 @@
       },
       "inputs": {
         "state": {
-          "log_message": "ERROR: Database connection failed for user admin",
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
           "classification": "error",
           "diagnosis": "",
           "severity": "",
@@ -1003,18 +1005,18 @@
       }
     },
     {
-      "span_id": "f6a1b62f1a33efae",
-      "parent_span_id": "5084ca592e004e05",
+      "span_id": "716493ba922f08fb",
+      "parent_span_id": "01084814c5b5d659",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073680023643000,
-      "end_time_unix_nano": 1773073680024036000,
+      "start_time_unix_nano": 1773326841985189000,
+      "end_time_unix_nano": 1773326841985852000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -1022,7 +1024,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -1066,7 +1068,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -1106,25 +1108,25 @@
       }
     },
     {
-      "span_id": "80a19c2824ee7a0b",
-      "parent_span_id": "5084ca592e004e05",
+      "span_id": "a7ef50d605852ff1",
+      "parent_span_id": "01084814c5b5d659",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073680031075000,
-      "end_time_unix_nano": 1773073681609678000,
+      "start_time_unix_nano": 1773326841995163000,
+      "end_time_unix_nano": 1773326843279395000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
           "messages": [
             {
-              "content": "Assess the severity of this problem.\n\nLog message: ERROR: Database connection failed for user admin\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "content": "Assess the severity of this problem.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
               "role": "user"
             }
           ],
@@ -1132,26 +1134,26 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
         "extra_headers": {
           "X-Stainless-Raw-Response": "true"
         },
         "mlflow.message.format": "openai",
         "mlflow.chat.tokenUsage": {
-          "input_tokens": 232,
-          "output_tokens": 66,
-          "total_tokens": 298
+          "input_tokens": 233,
+          "output_tokens": 44,
+          "total_tokens": 277
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkWNlNFAiTphXm3NfPyA5vhlEpf",
+          "id": "chatcmpl-DIbbmeAOkVFzd1uuivosXg9HVQEva",
           "choices": [
             {
               "finish_reason": "stop",
               "index": 0,
               "logprobs": null,
               "message": {
-                "content": "{\"severity\":\"high\",\"reasoning\":\"A database connection failure for an admin user can lead to immediate service degradation, loss of functionality, and potentially security risks if critical processes are unable to connect to the database. This type of error commonly affects overall application health and could impact multiple users or operations.\",\"confidence\":0.9}",
+                "content": "{\"severity\":\"high\",\"reasoning\":\"The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.\",\"confidence\":0.95}",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": [],
@@ -1160,8 +1162,8 @@
                 "tool_calls": null,
                 "parsed": {
                   "severity": "high",
-                  "reasoning": "A database connection failure for an admin user can lead to immediate service degradation, loss of functionality, and potentially security risks if critical processes are unable to connect to the database. This type of error commonly affects overall application health and could impact multiple users or operations.",
-                  "confidence": 0.9
+                  "reasoning": "The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.",
+                  "confidence": 0.95
                 },
                 "provider_specific_fields": {
                   "refusal": null
@@ -1189,15 +1191,15 @@
               }
             }
           ],
-          "created": 1773073680,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326842,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_e05894342c",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
-            "completion_tokens": 66,
-            "prompt_tokens": 232,
-            "total_tokens": 298,
+            "completion_tokens": 44,
+            "prompt_tokens": 233,
+            "total_tokens": 277,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -1235,11 +1237,11 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
         "messages": [
           {
-            "content": "Assess the severity of this problem.\n\nLog message: ERROR: Database connection failed for user admin\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "content": "Assess the severity of this problem.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
             "role": "user"
           }
         ],
@@ -1248,14 +1250,14 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkWNlNFAiTphXm3NfPyA5vhlEpf",
+        "id": "chatcmpl-DIbbmeAOkVFzd1uuivosXg9HVQEva",
         "choices": [
           {
             "finish_reason": "stop",
             "index": 0,
             "logprobs": null,
             "message": {
-              "content": "{\"severity\":\"high\",\"reasoning\":\"A database connection failure for an admin user can lead to immediate service degradation, loss of functionality, and potentially security risks if critical processes are unable to connect to the database. This type of error commonly affects overall application health and could impact multiple users or operations.\",\"confidence\":0.9}",
+              "content": "{\"severity\":\"high\",\"reasoning\":\"The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.\",\"confidence\":0.95}",
               "refusal": null,
               "role": "assistant",
               "annotations": [],
@@ -1264,8 +1266,8 @@
               "tool_calls": null,
               "parsed": {
                 "severity": "high",
-                "reasoning": "A database connection failure for an admin user can lead to immediate service degradation, loss of functionality, and potentially security risks if critical processes are unable to connect to the database. This type of error commonly affects overall application health and could impact multiple users or operations.",
-                "confidence": 0.9
+                "reasoning": "The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.",
+                "confidence": 0.95
               },
               "provider_specific_fields": {
                 "refusal": null
@@ -1293,15 +1295,15 @@
             }
           }
         ],
-        "created": 1773073680,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326842,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_e05894342c",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
-          "completion_tokens": 66,
-          "prompt_tokens": 232,
-          "total_tokens": 298,
+          "completion_tokens": 44,
+          "prompt_tokens": 233,
+          "total_tokens": 277,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -1339,23 +1341,23 @@
       }
     },
     {
-      "span_id": "607144a315e9dc0c",
-      "parent_span_id": "7e2081afb9328e7a",
+      "span_id": "eb8e710332d3727b",
+      "parent_span_id": "c20c983bba2ef3e4",
       "name": "alert_sre",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681624820000,
-      "end_time_unix_nano": 1773073681810228000,
+      "start_time_unix_nano": 1773326843293869000,
+      "end_time_unix_nano": 1773326843299523000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "TOOL",
         "mlflow.spanFunctionName": "alert_sre",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "ERROR: Database connection failed for user admin",
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
             "classification": "error",
             "diagnosis": "",
             "severity": "high",
@@ -1368,7 +1370,7 @@
       },
       "inputs": {
         "state": {
-          "log_message": "ERROR: Database connection failed for user admin",
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
           "classification": "error",
           "diagnosis": "",
           "severity": "high",
@@ -1380,18 +1382,18 @@
       }
     },
     {
-      "span_id": "45122760fbab01e7",
-      "parent_span_id": "607144a315e9dc0c",
+      "span_id": "25f4e918608ca313",
+      "parent_span_id": "eb8e710332d3727b",
       "name": "send_slack_alert",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681804143000,
-      "end_time_unix_nano": 1773073681804284000,
+      "start_time_unix_nano": 1773326843293977000,
+      "end_time_unix_nano": 1773326843294059000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-e08208946684c866332b7416670bad41",
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
         "mlflow.spanType": "TOOL",
         "mlflow.spanFunctionName": "send_slack_alert",
         "mlflow.spanInputs": {

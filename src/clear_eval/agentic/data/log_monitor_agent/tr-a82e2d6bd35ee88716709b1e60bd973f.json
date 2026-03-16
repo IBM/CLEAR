@@ -1,0 +1,1414 @@
+{
+  "trace_id": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+  "experiment_id": "1",
+  "state": "OK",
+  "timestamp_ms": 1773326828981,
+  "execution_time_ms": 3484,
+  "request_preview": "[REQ-log_monitor__30] WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely",
+  "response_preview": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\", \"classification\": \"warning\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "tags": {
+    "request_id": "REQ-log_monitor__30",
+    "mlflow.traceName": "process_log_message",
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-a82e2d6bd35ee88716709b1e60bd973f/artifacts"
+  },
+  "assessments": [],
+  "spans": [
+    {
+      "span_id": "58d838b463b451b9",
+      "parent_span_id": null,
+      "name": "process_log_message",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828981822000,
+      "end_time_unix_nano": 1773326832466554000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "AGENT",
+        "mlflow.spanFunctionName": "process_log_message",
+        "mlflow.spanInputs": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+        },
+        "mlflow.spanOutputs": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+      },
+      "outputs": {
+        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+        "classification": "warning",
+        "diagnosis": "",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "5692e8821a7892f0",
+      "parent_span_id": "58d838b463b451b9",
+      "name": "initialize_state",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828981990000,
+      "end_time_unix_nano": 1773326828982033000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanInputs": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+        },
+        "mlflow.spanOutputs": {
+          "state_keys": [
+            "log_message",
+            "classification",
+            "diagnosis",
+            "severity",
+            "action_taken"
+          ]
+        }
+      },
+      "inputs": {
+        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+      },
+      "outputs": {
+        "state_keys": [
+          "log_message",
+          "classification",
+          "diagnosis",
+          "severity",
+          "action_taken"
+        ]
+      }
+    },
+    {
+      "span_id": "36afd8102acd8f7a",
+      "parent_span_id": "58d838b463b451b9",
+      "name": "workflow_execution",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828988971000,
+      "end_time_unix_nano": 1773326832460948000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "CHAIN",
+        "mlflow.spanInputs": {
+          "log_message_preview": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+        },
+        "mlflow.spanOutputs": {
+          "classification": "warning",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message_preview": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent"
+      },
+      "outputs": {
+        "classification": "warning",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "26bbf324520cf71f",
+      "parent_span_id": "36afd8102acd8f7a",
+      "name": "classify_log",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828989428000,
+      "end_time_unix_nano": 1773326830098382000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "classify_log",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+            "classification": "",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "classification": "warning"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+          "classification": "",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "classification": "warning"
+      }
+    },
+    {
+      "span_id": "294cc1341cb26230",
+      "parent_span_id": "26bbf324520cf71f",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828989507000,
+      "end_time_unix_nano": 1773326828989901000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "da97409fd7233aa2",
+      "parent_span_id": "26bbf324520cf71f",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326828995079000,
+      "end_time_unix_nano": 1773326830079480000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+          "messages": [
+            {
+              "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 272,
+          "output_tokens": 30,
+          "total_tokens": 302
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbZGWhgBpBuvp6HNK2XwVQ9TRFA",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Memory usage at 94%\",\"OOMKilled likely imminent\"]}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "classification": "warning",
+                  "confidence": 0.95,
+                  "indicators": [
+                    "WARNING",
+                    "Memory usage at 94%",
+                    "OOMKilled likely imminent"
+                  ]
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326829,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 30,
+            "prompt_tokens": 272,
+            "total_tokens": 302,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "messages": [
+          {
+            "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbZGWhgBpBuvp6HNK2XwVQ9TRFA",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Memory usage at 94%\",\"OOMKilled likely imminent\"]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "classification": "warning",
+                "confidence": 0.95,
+                "indicators": [
+                  "WARNING",
+                  "Memory usage at 94%",
+                  "OOMKilled likely imminent"
+                ]
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326829,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 30,
+          "prompt_tokens": 272,
+          "total_tokens": 302,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "9d80a709f8248b32",
+      "parent_span_id": "36afd8102acd8f7a",
+      "name": "diagnose_problem",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326830108084000,
+      "end_time_unix_nano": 1773326831040453000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "diagnose_problem",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "diagnosis": "",
+          "proposed_tool_calls": [
+            {
+              "name": "summarize_log",
+              "arguments": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 \\u2013 OOMKilled likely imminent\"}"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "diagnosis": "",
+        "proposed_tool_calls": [
+          {
+            "name": "summarize_log",
+            "arguments": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 \\u2013 OOMKilled likely imminent\"}"
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "dd858cfe43b555f3",
+      "parent_span_id": "9d80a709f8248b32",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326830108230000,
+      "end_time_unix_nano": 1773326830108701000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "79f2d372e0e55a84",
+      "parent_span_id": "9d80a709f8248b32",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326830118186000,
+      "end_time_unix_nano": 1773326831029762000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "stream": false,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "summarize_log",
+                "description": "Summarize a log line so the LLM can reference it.",
+                "parameters": {
+                  "properties": {
+                    "log_message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "log_message"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "messages": [
+            {
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+              "role": "system"
+            },
+            {
+              "content": "Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "log_message"
+                ]
+              }
+            }
+          }
+        ],
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 107,
+          "output_tokens": 43,
+          "total_tokens": 150
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbaEVdyuBZyEETcv9u5zBKl0Okh",
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [
+                  {
+                    "id": "call_9vHwcCfZMHlD8A75TaLwoqPG",
+                    "function": {
+                      "arguments": "{\"log_message\":\"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\"}",
+                      "name": "summarize_log"
+                    },
+                    "type": "function"
+                  }
+                ],
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {}
+              }
+            }
+          ],
+          "created": 1773326830,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 43,
+            "prompt_tokens": 107,
+            "total_tokens": 150,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "messages": [
+          {
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+            "role": "system"
+          },
+          {
+            "content": "Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbaEVdyuBZyEETcv9u5zBKl0Okh",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": null,
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "call_9vHwcCfZMHlD8A75TaLwoqPG",
+                  "function": {
+                    "arguments": "{\"log_message\":\"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\"}",
+                    "name": "summarize_log"
+                  },
+                  "type": "function"
+                }
+              ],
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {}
+            }
+          }
+        ],
+        "created": 1773326830,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 43,
+          "prompt_tokens": 107,
+          "total_tokens": 150,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "9bfc32af872f96dc",
+      "parent_span_id": "36afd8102acd8f7a",
+      "name": "assess_severity",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326831048313000,
+      "end_time_unix_nano": 1773326832446388000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "assess_severity",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "severity": "high"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "severity": "high"
+      }
+    },
+    {
+      "span_id": "ba729e1f6e6c021b",
+      "parent_span_id": "9bfc32af872f96dc",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326831048471000,
+      "end_time_unix_nano": 1773326831049042000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "473528a3b38f8900",
+      "parent_span_id": "9bfc32af872f96dc",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326831058125000,
+      "end_time_unix_nano": 1773326832434002000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+          "messages": [
+            {
+              "content": "Assess the severity of this problem.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 250,
+          "output_tokens": 48,
+          "total_tokens": 298
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbbgcnGywQk2nT6MQrJjAAHRfz8",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"severity\":\"high\",\"reasoning\":\"Memory usage at 94% with OOMKill likely imminent indicates imminent pod termination causing service disruption and possible data loss, constituting immediate user impact and service degradation.\",\"confidence\":0.95}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "severity": "high",
+                  "reasoning": "Memory usage at 94% with OOMKill likely imminent indicates imminent pod termination causing service disruption and possible data loss, constituting immediate user impact and service degradation.",
+                  "confidence": 0.95
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326831,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 48,
+            "prompt_tokens": 250,
+            "total_tokens": 298,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "messages": [
+          {
+            "content": "Assess the severity of this problem.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbbgcnGywQk2nT6MQrJjAAHRfz8",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"severity\":\"high\",\"reasoning\":\"Memory usage at 94% with OOMKill likely imminent indicates imminent pod termination causing service disruption and possible data loss, constituting immediate user impact and service degradation.\",\"confidence\":0.95}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "severity": "high",
+                "reasoning": "Memory usage at 94% with OOMKill likely imminent indicates imminent pod termination causing service disruption and possible data loss, constituting immediate user impact and service degradation.",
+                "confidence": 0.95
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326831,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 48,
+          "prompt_tokens": 250,
+          "total_tokens": 298,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "6a0d365746663c9d",
+      "parent_span_id": "36afd8102acd8f7a",
+      "name": "alert_sre",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326832451567000,
+      "end_time_unix_nano": 1773326832455864000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "alert_sre",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "high",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 – OOMKilled likely imminent",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "629a86d443552194",
+      "parent_span_id": "6a0d365746663c9d",
+      "name": "send_slack_alert",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326832451662000,
+      "end_time_unix_nano": 1773326832451748000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-a82e2d6bd35ee88716709b1e60bd973f",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "send_slack_alert",
+        "mlflow.spanInputs": {
+          "message": "High severity issue detected - ",
+          "severity": "high",
+          "diagnosis": ""
+        },
+        "mlflow.spanOutputs": null
+      },
+      "inputs": {
+        "message": "High severity issue detected - ",
+        "severity": "high",
+        "diagnosis": ""
+      },
+      "outputs": null
+    }
+  ]
+}

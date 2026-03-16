@@ -1,73 +1,73 @@
 {
-  "trace_id": "tr-236907d3019ea2a5f8e81baeb258753b",
+  "trace_id": "tr-cf35b6d215413a7d335e55a4da967e8b",
   "experiment_id": "1",
   "state": "OK",
-  "timestamp_ms": 1773073681840,
-  "execution_time_ms": 4589,
-  "request_preview": "[REQ-log_monitor__tools_fixed] WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely",
-  "response_preview": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\", \"classification\": \"warning\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "timestamp_ms": 1773326858184,
+  "execution_time_ms": 4179,
+  "request_preview": "[REQ-log_monitor__30] WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
+  "response_preview": "{\"log_message\": \"WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\", \"classification\": \"warning\", \"diagnosis\": \"\", \"severity\": \"low\", \"action_taken\": \"github_ticket\"}",
   "tags": {
-    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "request_id": "REQ-log_monitor__30",
     "mlflow.traceName": "process_log_message",
-    "request_id": "REQ-log_monitor__tools_fixed",
-    "mlflow.artifactLocation": "mlflow-artifacts:/1/traces/tr-236907d3019ea2a5f8e81baeb258753b/artifacts",
-    "app": "log-monitor"
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-cf35b6d215413a7d335e55a4da967e8b/artifacts"
   },
   "assessments": [],
   "spans": [
     {
-      "span_id": "2b233d97e23ade0c",
+      "span_id": "66a98baf51bbc6cf",
       "parent_span_id": null,
       "name": "process_log_message",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681840330000,
-      "end_time_unix_nano": 1773073686430152000,
+      "start_time_unix_nano": 1773326858184063000,
+      "end_time_unix_nano": 1773326862363995000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "AGENT",
         "mlflow.spanFunctionName": "process_log_message",
         "mlflow.spanInputs": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
         },
         "mlflow.spanOutputs": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
           "classification": "warning",
           "diagnosis": "",
-          "severity": "high",
-          "action_taken": "slack_alert"
+          "severity": "low",
+          "action_taken": "github_ticket"
         }
       },
       "inputs": {
-        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+        "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
       },
       "outputs": {
-        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+        "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
         "classification": "warning",
         "diagnosis": "",
-        "severity": "high",
-        "action_taken": "slack_alert"
+        "severity": "low",
+        "action_taken": "github_ticket"
       }
     },
     {
-      "span_id": "b3233d7db7f6b7db",
-      "parent_span_id": "2b233d97e23ade0c",
+      "span_id": "3d1dd62005e0b42d",
+      "parent_span_id": "66a98baf51bbc6cf",
       "name": "initialize_state",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681840490000,
-      "end_time_unix_nano": 1773073681840532000,
+      "start_time_unix_nano": 1773326858184211000,
+      "end_time_unix_nano": 1773326858184252000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "TOOL",
         "mlflow.spanInputs": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
         },
         "mlflow.spanOutputs": {
           "state_keys": [
@@ -80,7 +80,7 @@
         }
       },
       "inputs": {
-        "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+        "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
       },
       "outputs": {
         "state_keys": [
@@ -93,55 +93,55 @@
       }
     },
     {
-      "span_id": "4ca4df188ee2e243",
-      "parent_span_id": "2b233d97e23ade0c",
+      "span_id": "741649739964eef2",
+      "parent_span_id": "66a98baf51bbc6cf",
       "name": "workflow_execution",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681847885000,
-      "end_time_unix_nano": 1773073686424930000,
+      "start_time_unix_nano": 1773326858190931000,
+      "end_time_unix_nano": 1773326862358674000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "CHAIN",
         "mlflow.spanInputs": {
-          "log_message_preview": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+          "log_message_preview": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
         },
         "mlflow.spanOutputs": {
           "classification": "warning",
-          "severity": "high",
-          "action_taken": "slack_alert"
+          "severity": "low",
+          "action_taken": "github_ticket"
         }
       },
       "inputs": {
-        "log_message_preview": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent"
+        "log_message_preview": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)"
       },
       "outputs": {
         "classification": "warning",
-        "severity": "high",
-        "action_taken": "slack_alert"
+        "severity": "low",
+        "action_taken": "github_ticket"
       }
     },
     {
-      "span_id": "593bc1fcdd889cb5",
-      "parent_span_id": "4ca4df188ee2e243",
+      "span_id": "4fcc34e8ff7e2997",
+      "parent_span_id": "741649739964eef2",
       "name": "classify_log",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681848431000,
-      "end_time_unix_nano": 1773073683354000000,
+      "start_time_unix_nano": 1773326858191344000,
+      "end_time_unix_nano": 1773326859633564000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "classify_log",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+            "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
             "classification": "",
             "diagnosis": "",
             "severity": "",
@@ -154,7 +154,7 @@
       },
       "inputs": {
         "state": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
           "classification": "",
           "diagnosis": "",
           "severity": "",
@@ -166,18 +166,18 @@
       }
     },
     {
-      "span_id": "22e14280c494f001",
-      "parent_span_id": "593bc1fcdd889cb5",
+      "span_id": "e86120ed461282a1",
+      "parent_span_id": "4fcc34e8ff7e2997",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681848605000,
-      "end_time_unix_nano": 1773073681848978000,
+      "start_time_unix_nano": 1773326858191428000,
+      "end_time_unix_nano": 1773326858191871000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -185,7 +185,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -229,7 +229,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -269,25 +269,25 @@
       }
     },
     {
-      "span_id": "04ef971534b08bbf",
-      "parent_span_id": "593bc1fcdd889cb5",
+      "span_id": "a740d84da45012ea",
+      "parent_span_id": "4fcc34e8ff7e2997",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073681855595000,
-      "end_time_unix_nano": 1773073683344866000,
+      "start_time_unix_nano": 1773326858197171000,
+      "end_time_unix_nano": 1773326859614832000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
           "messages": [
             {
-              "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
               "role": "user"
             }
           ],
@@ -295,26 +295,26 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
         "extra_headers": {
           "X-Stainless-Raw-Response": "true"
         },
         "mlflow.message.format": "openai",
         "mlflow.chat.tokenUsage": {
-          "input_tokens": 272,
+          "input_tokens": 266,
           "output_tokens": 30,
-          "total_tokens": 302
+          "total_tokens": 296
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkYYyBAM0P5lR1OTq7em7C7LN3F",
+          "id": "chatcmpl-DIbc2HRyiND01KzkVLDxN5fxFqM5h",
           "choices": [
             {
               "finish_reason": "stop",
               "index": 0,
               "logprobs": null,
               "message": {
-                "content": "{\"classification\":\"warning\",\"confidence\":0.99,\"indicators\":[\"WARNING\",\"Memory usage at 94%\",\"OOMKilled likely imminent\"]}",
+                "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Latency spike\",\"p95 = 1.8s\"]}",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": [],
@@ -323,11 +323,11 @@
                 "tool_calls": null,
                 "parsed": {
                   "classification": "warning",
-                  "confidence": 0.99,
+                  "confidence": 0.95,
                   "indicators": [
                     "WARNING",
-                    "Memory usage at 94%",
-                    "OOMKilled likely imminent"
+                    "Latency spike",
+                    "p95 = 1.8s"
                   ]
                 },
                 "provider_specific_fields": {
@@ -356,15 +356,15 @@
               }
             }
           ],
-          "created": 1773073682,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326858,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_e05894342c",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
             "completion_tokens": 30,
-            "prompt_tokens": 272,
-            "total_tokens": 302,
+            "prompt_tokens": 266,
+            "total_tokens": 296,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -402,11 +402,11 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
         "messages": [
           {
-            "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
             "role": "user"
           }
         ],
@@ -415,14 +415,14 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkYYyBAM0P5lR1OTq7em7C7LN3F",
+        "id": "chatcmpl-DIbc2HRyiND01KzkVLDxN5fxFqM5h",
         "choices": [
           {
             "finish_reason": "stop",
             "index": 0,
             "logprobs": null,
             "message": {
-              "content": "{\"classification\":\"warning\",\"confidence\":0.99,\"indicators\":[\"WARNING\",\"Memory usage at 94%\",\"OOMKilled likely imminent\"]}",
+              "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Latency spike\",\"p95 = 1.8s\"]}",
               "refusal": null,
               "role": "assistant",
               "annotations": [],
@@ -431,11 +431,11 @@
               "tool_calls": null,
               "parsed": {
                 "classification": "warning",
-                "confidence": 0.99,
+                "confidence": 0.95,
                 "indicators": [
                   "WARNING",
-                  "Memory usage at 94%",
-                  "OOMKilled likely imminent"
+                  "Latency spike",
+                  "p95 = 1.8s"
                 ]
               },
               "provider_specific_fields": {
@@ -464,15 +464,15 @@
             }
           }
         ],
-        "created": 1773073682,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326858,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_e05894342c",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
           "completion_tokens": 30,
-          "prompt_tokens": 272,
-          "total_tokens": 302,
+          "prompt_tokens": 266,
+          "total_tokens": 296,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -510,23 +510,23 @@
       }
     },
     {
-      "span_id": "de8b9a3142cddf78",
-      "parent_span_id": "4ca4df188ee2e243",
+      "span_id": "cd05416ea4f5feb9",
+      "parent_span_id": "741649739964eef2",
       "name": "diagnose_problem",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073683360634000,
-      "end_time_unix_nano": 1773073684930069000,
+      "start_time_unix_nano": 1773326859644180000,
+      "end_time_unix_nano": 1773326860574140000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "diagnose_problem",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+            "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
             "classification": "warning",
             "diagnosis": "",
             "severity": "",
@@ -538,14 +538,14 @@
           "proposed_tool_calls": [
             {
               "name": "summarize_log",
-              "arguments": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\"}"
+              "arguments": "{\"log_message\": \"WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\"}"
             }
           ]
         }
       },
       "inputs": {
         "state": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
           "classification": "warning",
           "diagnosis": "",
           "severity": "",
@@ -557,24 +557,24 @@
         "proposed_tool_calls": [
           {
             "name": "summarize_log",
-            "arguments": "{\"log_message\": \"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\"}"
+            "arguments": "{\"log_message\": \"WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\"}"
           }
         ]
       }
     },
     {
-      "span_id": "6c0410f6ac4e7231",
-      "parent_span_id": "de8b9a3142cddf78",
+      "span_id": "1a42ed5037d655f2",
+      "parent_span_id": "cd05416ea4f5feb9",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073683360739000,
-      "end_time_unix_nano": 1773073683361103000,
+      "start_time_unix_nano": 1773326859644376000,
+      "end_time_unix_nano": 1773326859645035000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -582,7 +582,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -626,7 +626,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -666,21 +666,21 @@
       }
     },
     {
-      "span_id": "797488b6567ff67e",
-      "parent_span_id": "de8b9a3142cddf78",
+      "span_id": "97889d93b8a509dc",
+      "parent_span_id": "cd05416ea4f5feb9",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073683368963000,
-      "end_time_unix_nano": 1773073684921559000,
+      "start_time_unix_nano": 1773326859656498000,
+      "end_time_unix_nano": 1773326860555693000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "stream": false,
           "tools": [
             {
@@ -705,11 +705,11 @@
           "tool_choice": "required",
           "messages": [
             {
-              "content": "In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.",
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
               "role": "system"
             },
             {
-              "content": "Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+              "content": "Diagnose the following log: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
               "role": "user"
             }
           ],
@@ -717,7 +717,7 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "stream": false,
         "tools": [
           {
@@ -765,12 +765,12 @@
           }
         ],
         "mlflow.chat.tokenUsage": {
-          "input_tokens": 108,
-          "output_tokens": 43,
-          "total_tokens": 151
+          "input_tokens": 102,
+          "output_tokens": 38,
+          "total_tokens": 140
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkZVGlEuHBBObZ5V7H7DwWt5guE",
+          "id": "chatcmpl-DIbc4WEvQOWRGyNJPUuMb2SHebcYH",
           "choices": [
             {
               "finish_reason": "tool_calls",
@@ -785,9 +785,9 @@
                 "function_call": null,
                 "tool_calls": [
                   {
-                    "id": "call_BjHswKMaIWfEqIvGkucwcsmu",
+                    "id": "call_1avRFemaz5JdrofuFTA7fWmN",
                     "function": {
-                      "arguments": "{\"log_message\":\"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\"}",
+                      "arguments": "{\"log_message\":\"WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\"}",
                       "name": "summarize_log"
                     },
                     "type": "function"
@@ -802,15 +802,15 @@
               }
             }
           ],
-          "created": 1773073683,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326860,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_e05894342c",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
-            "completion_tokens": 43,
-            "prompt_tokens": 108,
-            "total_tokens": 151,
+            "completion_tokens": 38,
+            "prompt_tokens": 102,
+            "total_tokens": 140,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -848,7 +848,7 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "stream": false,
         "tools": [
           {
@@ -873,11 +873,11 @@
         "tool_choice": "required",
         "messages": [
           {
-            "content": "In ONE response: first give a short sentence of reasoning, THEN propose EXACTLY ONE tool call. Return BOTH together.",
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
             "role": "system"
           },
           {
-            "content": "Diagnose the following log: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+            "content": "Diagnose the following log: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
             "role": "user"
           }
         ],
@@ -886,7 +886,7 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkZVGlEuHBBObZ5V7H7DwWt5guE",
+        "id": "chatcmpl-DIbc4WEvQOWRGyNJPUuMb2SHebcYH",
         "choices": [
           {
             "finish_reason": "tool_calls",
@@ -901,9 +901,9 @@
               "function_call": null,
               "tool_calls": [
                 {
-                  "id": "call_BjHswKMaIWfEqIvGkucwcsmu",
+                  "id": "call_1avRFemaz5JdrofuFTA7fWmN",
                   "function": {
-                    "arguments": "{\"log_message\":\"WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\"}",
+                    "arguments": "{\"log_message\":\"WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\"}",
                     "name": "summarize_log"
                   },
                   "type": "function"
@@ -918,15 +918,15 @@
             }
           }
         ],
-        "created": 1773073683,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326860,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_e05894342c",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
-          "completion_tokens": 43,
-          "prompt_tokens": 108,
-          "total_tokens": 151,
+          "completion_tokens": 38,
+          "prompt_tokens": 102,
+          "total_tokens": 140,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -964,23 +964,23 @@
       }
     },
     {
-      "span_id": "f2dba62ce6746aa4",
-      "parent_span_id": "4ca4df188ee2e243",
+      "span_id": "f0828e80436c4595",
+      "parent_span_id": "741649739964eef2",
       "name": "assess_severity",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073684935588000,
-      "end_time_unix_nano": 1773073686407248000,
+      "start_time_unix_nano": 1773326860583211000,
+      "end_time_unix_nano": 1773326862331945000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "assess_severity",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+            "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
             "classification": "warning",
             "diagnosis": "",
             "severity": "",
@@ -988,12 +988,12 @@
           }
         },
         "mlflow.spanOutputs": {
-          "severity": "high"
+          "severity": "low"
         }
       },
       "inputs": {
         "state": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
           "classification": "warning",
           "diagnosis": "",
           "severity": "",
@@ -1001,22 +1001,22 @@
         }
       },
       "outputs": {
-        "severity": "high"
+        "severity": "low"
       }
     },
     {
-      "span_id": "723afa05cd83af89",
-      "parent_span_id": "f2dba62ce6746aa4",
+      "span_id": "e418c8ef36925264",
+      "parent_span_id": "f0828e80436c4595",
       "name": "get_llm",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073684935713000,
-      "end_time_unix_nano": 1773073684936091000,
+      "start_time_unix_nano": 1773326860583398000,
+      "end_time_unix_nano": 1773326860584094000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "LLM",
         "mlflow.spanFunctionName": "get_llm",
         "mlflow.spanInputs": {},
@@ -1024,7 +1024,7 @@
           "name": null,
           "disable_streaming": false,
           "output_version": null,
-          "model_name": "Azure/gpt-4.1",
+          "model_name": "Azure/gpt-4.1-mini",
           "temperature": null,
           "model_kwargs": {},
           "openai_api_key": "**********",
@@ -1068,7 +1068,7 @@
         "name": null,
         "disable_streaming": false,
         "output_version": null,
-        "model_name": "Azure/gpt-4.1",
+        "model_name": "Azure/gpt-4.1-mini",
         "temperature": null,
         "model_kwargs": {},
         "openai_api_key": "**********",
@@ -1108,25 +1108,25 @@
       }
     },
     {
-      "span_id": "825a2ae4913f5da8",
-      "parent_span_id": "f2dba62ce6746aa4",
+      "span_id": "9b49de6c39a783cc",
+      "parent_span_id": "f0828e80436c4595",
       "name": "Completions",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073684942368000,
-      "end_time_unix_nano": 1773073686396026000,
+      "start_time_unix_nano": 1773326860592565000,
+      "end_time_unix_nano": 1773326862318272000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "CHAT_MODEL",
         "mlflow.spanInputs": {
-          "model": "Azure/gpt-4.1",
+          "model": "Azure/gpt-4.1-mini",
           "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
           "messages": [
             {
-              "content": "Assess the severity of this problem.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "content": "Assess the severity of this problem.\n\nLog message: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
               "role": "user"
             }
           ],
@@ -1134,26 +1134,26 @@
             "X-Stainless-Raw-Response": "true"
           }
         },
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
         "extra_headers": {
           "X-Stainless-Raw-Response": "true"
         },
         "mlflow.message.format": "openai",
         "mlflow.chat.tokenUsage": {
-          "input_tokens": 250,
-          "output_tokens": 75,
-          "total_tokens": 325
+          "input_tokens": 244,
+          "output_tokens": 60,
+          "total_tokens": 304
         },
         "mlflow.spanOutputs": {
-          "id": "chatcmpl-DHXkbupopJuqjGQS5AghsR2e0t7pr",
+          "id": "chatcmpl-DIbc58V2bfjXlZCIXQmzyxfCoAx5Y",
           "choices": [
             {
               "finish_reason": "stop",
               "index": 0,
               "logprobs": null,
               "message": {
-                "content": "{\"severity\":\"high\",\"reasoning\":\"The log message indicates memory usage at 94% with a warning that the pod is likely to be OOMKilled soon. Impending OOMKill can cause immediate service disruption, potential data loss, and degraded availability for services relying on this pod, making it a high severity issue requiring prompt attention.\",\"confidence\":0.95}",
+                "content": "{\"severity\":\"low\",\"reasoning\":\"The latency spike to 1.8s on the /recommendations endpoint is above typical thresholds but does not indicate immediate user impact or service degradation severe enough to warrant urgent action. It can be addressed during normal business hours.\",\"confidence\":0.85}",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": [],
@@ -1161,9 +1161,9 @@
                 "function_call": null,
                 "tool_calls": null,
                 "parsed": {
-                  "severity": "high",
-                  "reasoning": "The log message indicates memory usage at 94% with a warning that the pod is likely to be OOMKilled soon. Impending OOMKill can cause immediate service disruption, potential data loss, and degraded availability for services relying on this pod, making it a high severity issue requiring prompt attention.",
-                  "confidence": 0.95
+                  "severity": "low",
+                  "reasoning": "The latency spike to 1.8s on the /recommendations endpoint is above typical thresholds but does not indicate immediate user impact or service degradation severe enough to warrant urgent action. It can be addressed during normal business hours.",
+                  "confidence": 0.85
                 },
                 "provider_specific_fields": {
                   "refusal": null
@@ -1191,15 +1191,15 @@
               }
             }
           ],
-          "created": 1773073685,
-          "model": "Azure/gpt-4.1",
+          "created": 1773326861,
+          "model": "Azure/gpt-4.1-mini",
           "object": "chat.completion",
           "service_tier": null,
-          "system_fingerprint": "fp_63d8723934",
+          "system_fingerprint": "fp_b6f445fc1c",
           "usage": {
-            "completion_tokens": 75,
-            "prompt_tokens": 250,
-            "total_tokens": 325,
+            "completion_tokens": 60,
+            "prompt_tokens": 244,
+            "total_tokens": 304,
             "completion_tokens_details": {
               "accepted_prediction_tokens": 0,
               "audio_tokens": 0,
@@ -1237,11 +1237,11 @@
         }
       },
       "inputs": {
-        "model": "Azure/gpt-4.1",
+        "model": "Azure/gpt-4.1-mini",
         "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
         "messages": [
           {
-            "content": "Assess the severity of this problem.\n\nLog message: WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "content": "Assess the severity of this problem.\n\nLog message: WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
             "role": "user"
           }
         ],
@@ -1250,14 +1250,14 @@
         }
       },
       "outputs": {
-        "id": "chatcmpl-DHXkbupopJuqjGQS5AghsR2e0t7pr",
+        "id": "chatcmpl-DIbc58V2bfjXlZCIXQmzyxfCoAx5Y",
         "choices": [
           {
             "finish_reason": "stop",
             "index": 0,
             "logprobs": null,
             "message": {
-              "content": "{\"severity\":\"high\",\"reasoning\":\"The log message indicates memory usage at 94% with a warning that the pod is likely to be OOMKilled soon. Impending OOMKill can cause immediate service disruption, potential data loss, and degraded availability for services relying on this pod, making it a high severity issue requiring prompt attention.\",\"confidence\":0.95}",
+              "content": "{\"severity\":\"low\",\"reasoning\":\"The latency spike to 1.8s on the /recommendations endpoint is above typical thresholds but does not indicate immediate user impact or service degradation severe enough to warrant urgent action. It can be addressed during normal business hours.\",\"confidence\":0.85}",
               "refusal": null,
               "role": "assistant",
               "annotations": [],
@@ -1265,9 +1265,9 @@
               "function_call": null,
               "tool_calls": null,
               "parsed": {
-                "severity": "high",
-                "reasoning": "The log message indicates memory usage at 94% with a warning that the pod is likely to be OOMKilled soon. Impending OOMKill can cause immediate service disruption, potential data loss, and degraded availability for services relying on this pod, making it a high severity issue requiring prompt attention.",
-                "confidence": 0.95
+                "severity": "low",
+                "reasoning": "The latency spike to 1.8s on the /recommendations endpoint is above typical thresholds but does not indicate immediate user impact or service degradation severe enough to warrant urgent action. It can be addressed during normal business hours.",
+                "confidence": 0.85
               },
               "provider_specific_fields": {
                 "refusal": null
@@ -1295,15 +1295,15 @@
             }
           }
         ],
-        "created": 1773073685,
-        "model": "Azure/gpt-4.1",
+        "created": 1773326861,
+        "model": "Azure/gpt-4.1-mini",
         "object": "chat.completion",
         "service_tier": null,
-        "system_fingerprint": "fp_63d8723934",
+        "system_fingerprint": "fp_b6f445fc1c",
         "usage": {
-          "completion_tokens": 75,
-          "prompt_tokens": 250,
-          "total_tokens": 325,
+          "completion_tokens": 60,
+          "prompt_tokens": 244,
+          "total_tokens": 304,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
@@ -1341,72 +1341,95 @@
       }
     },
     {
-      "span_id": "497e86f6c0753e5c",
-      "parent_span_id": "4ca4df188ee2e243",
-      "name": "alert_sre",
+      "span_id": "d602c47ff9e660ef",
+      "parent_span_id": "741649739964eef2",
+      "name": "manage_github_ticket",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073686413014000,
-      "end_time_unix_nano": 1773073686419059000,
+      "start_time_unix_nano": 1773326862339129000,
+      "end_time_unix_nano": 1773326862352912000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "TOOL",
-        "mlflow.spanFunctionName": "alert_sre",
+        "mlflow.spanFunctionName": "manage_github_ticket",
         "mlflow.spanInputs": {
           "state": {
-            "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+            "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
             "classification": "warning",
             "diagnosis": "",
-            "severity": "high",
+            "severity": "low",
             "action_taken": ""
           }
         },
         "mlflow.spanOutputs": {
-          "action_taken": "slack_alert"
+          "action_taken": "github_ticket"
         }
       },
       "inputs": {
         "state": {
-          "log_message": "WARNING: Memory usage at 94% on pod ml-inference-worker-7b9c4 - OOMKilled likely imminent",
+          "log_message": "WARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)",
           "classification": "warning",
           "diagnosis": "",
-          "severity": "high",
+          "severity": "low",
           "action_taken": ""
         }
       },
       "outputs": {
-        "action_taken": "slack_alert"
+        "action_taken": "github_ticket"
       }
     },
     {
-      "span_id": "c7403b856c40dc4f",
-      "parent_span_id": "497e86f6c0753e5c",
-      "name": "send_slack_alert",
+      "span_id": "07d62cad4e614783",
+      "parent_span_id": "d602c47ff9e660ef",
+      "name": "check_existing_github_issue",
       "status": {
         "status_code": "OK",
         "description": ""
       },
-      "start_time_unix_nano": 1773073686413117000,
-      "end_time_unix_nano": 1773073686413206000,
+      "start_time_unix_nano": 1773326862339281000,
+      "end_time_unix_nano": 1773326862339401000,
       "duration_ms": null,
       "attributes": {
-        "mlflow.traceRequestId": "tr-236907d3019ea2a5f8e81baeb258753b",
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
         "mlflow.spanType": "TOOL",
-        "mlflow.spanFunctionName": "send_slack_alert",
+        "mlflow.spanFunctionName": "check_existing_github_issue",
         "mlflow.spanInputs": {
-          "message": "High severity issue detected - ",
-          "severity": "high",
-          "diagnosis": ""
+          "query": ""
+        },
+        "mlflow.spanOutputs": false
+      },
+      "inputs": {
+        "query": ""
+      },
+      "outputs": false
+    },
+    {
+      "span_id": "fa9f413cbba087a9",
+      "parent_span_id": "d602c47ff9e660ef",
+      "name": "create_github_issue",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326862346496000,
+      "end_time_unix_nano": 1773326862346658000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-cf35b6d215413a7d335e55a4da967e8b",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "create_github_issue",
+        "mlflow.spanInputs": {
+          "title": "[Auto] WARNING: Latency spike detected on /recommendation...",
+          "body": "## Log Message\nWARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\n\n## Diagnosis\n"
         },
         "mlflow.spanOutputs": null
       },
       "inputs": {
-        "message": "High severity issue detected - ",
-        "severity": "high",
-        "diagnosis": ""
+        "title": "[Auto] WARNING: Latency spike detected on /recommendation...",
+        "body": "## Log Message\nWARNING: Latency spike detected on /recommendations endpoint (p95 = 1.8s)\n\n## Diagnosis\n"
       },
       "outputs": null
     }
