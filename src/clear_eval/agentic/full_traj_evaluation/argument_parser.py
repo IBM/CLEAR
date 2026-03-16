@@ -70,20 +70,6 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         default='{"max_tokens": 8096}',
         help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'",
     )
-    # # Dataset and model filtering
-    # parser.add_argument(
-    #     "--dataset",
-    #     type=str,
-    #     default="HAL",
-    #     choices=["CUGA","gaia","swebench", "HAL","TRAIL"], #["CUGA", "FinOps", "WXO"],
-    #     help="Filter by dataset name (default: CUGA)",
-    # )
-    # parser.add_argument(
-    #     "--model",
-    #     type=str,
-    #     default="orig_results",
-    #     help="Filter by model name (e.g., gpt4o, full, granit)",
-    # )
     
     # Execution control
     parser.add_argument(
