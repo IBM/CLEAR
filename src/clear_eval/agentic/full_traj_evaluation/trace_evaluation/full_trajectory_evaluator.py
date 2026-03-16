@@ -406,7 +406,7 @@ chain-of-thought reasoning about strengths, weaknesses, and suggestions.
         """
         from collections import defaultdict
         
-        eval_files = list(self.output_dir.glob(f"*{self.get_output_suffix()}"))
+        eval_files = list(self.results_dir.glob(f"*{self.get_output_suffix()}"))
         
         total_evaluations = 0
         overall_scores = []
