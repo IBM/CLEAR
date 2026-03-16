@@ -382,7 +382,7 @@ class TrajectoryEvaluator(ABC):
 
         # Skip if exists and not overwriting
         if output_file.exists() and not should_overwrite:
-            logger.info("Skipping (exists): %s", traj_name)
+            logger.debug("Skipping (exists): %s", traj_name)
             return None
 
         # Load trajectory file
