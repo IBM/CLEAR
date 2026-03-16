@@ -1,0 +1,1437 @@
+{
+  "trace_id": "tr-832c8917508a4c093e8be6e22a6b812d",
+  "experiment_id": "1",
+  "state": "OK",
+  "timestamp_ms": 1773326854847,
+  "execution_time_ms": 3317,
+  "request_preview": "[REQ-log_monitor__30] WARNING: Disk usage on node gpu-runner-03 reached 92%",
+  "response_preview": "{\"log_message\": \"WARNING: Disk usage on node gpu-runner-03 reached 92%\", \"classification\": \"warning\", \"diagnosis\": \"\", \"severity\": \"low\", \"action_taken\": \"github_ticket\"}",
+  "tags": {
+    "request_id": "REQ-log_monitor__30",
+    "mlflow.traceName": "process_log_message",
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-832c8917508a4c093e8be6e22a6b812d/artifacts"
+  },
+  "assessments": [],
+  "spans": [
+    {
+      "span_id": "9cb5e351ebe4ce1f",
+      "parent_span_id": null,
+      "name": "process_log_message",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854847662000,
+      "end_time_unix_nano": 1773326858165469000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "AGENT",
+        "mlflow.spanFunctionName": "process_log_message",
+        "mlflow.spanInputs": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+        },
+        "mlflow.spanOutputs": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "low",
+          "action_taken": "github_ticket"
+        }
+      },
+      "inputs": {
+        "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+      },
+      "outputs": {
+        "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+        "classification": "warning",
+        "diagnosis": "",
+        "severity": "low",
+        "action_taken": "github_ticket"
+      }
+    },
+    {
+      "span_id": "1a7116d5151a4a2e",
+      "parent_span_id": "9cb5e351ebe4ce1f",
+      "name": "initialize_state",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854847808000,
+      "end_time_unix_nano": 1773326854847850000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanInputs": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+        },
+        "mlflow.spanOutputs": {
+          "state_keys": [
+            "log_message",
+            "classification",
+            "diagnosis",
+            "severity",
+            "action_taken"
+          ]
+        }
+      },
+      "inputs": {
+        "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+      },
+      "outputs": {
+        "state_keys": [
+          "log_message",
+          "classification",
+          "diagnosis",
+          "severity",
+          "action_taken"
+        ]
+      }
+    },
+    {
+      "span_id": "c076eda86ab608de",
+      "parent_span_id": "9cb5e351ebe4ce1f",
+      "name": "workflow_execution",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854854327000,
+      "end_time_unix_nano": 1773326858160846000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "CHAIN",
+        "mlflow.spanInputs": {
+          "log_message_preview": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+        },
+        "mlflow.spanOutputs": {
+          "classification": "warning",
+          "severity": "low",
+          "action_taken": "github_ticket"
+        }
+      },
+      "inputs": {
+        "log_message_preview": "WARNING: Disk usage on node gpu-runner-03 reached 92%"
+      },
+      "outputs": {
+        "classification": "warning",
+        "severity": "low",
+        "action_taken": "github_ticket"
+      }
+    },
+    {
+      "span_id": "899883cadb030b7b",
+      "parent_span_id": "c076eda86ab608de",
+      "name": "classify_log",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854854717000,
+      "end_time_unix_nano": 1773326855667732000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "classify_log",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+            "classification": "",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "classification": "warning"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+          "classification": "",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "classification": "warning"
+      }
+    },
+    {
+      "span_id": "27045257934fffc8",
+      "parent_span_id": "899883cadb030b7b",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854854804000,
+      "end_time_unix_nano": 1773326854855183000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "c76c85c76c856668",
+      "parent_span_id": "899883cadb030b7b",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854860394000,
+      "end_time_unix_nano": 1773326855652790000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+          "messages": [
+            {
+              "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Disk usage on node gpu-runner-03 reached 92%\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 260,
+          "output_tokens": 29,
+          "total_tokens": 289
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbzmcPLVmSowGLLRBzD5Kce5Ktn",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Disk usage reached 92%\",\"approaching limit\"]}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "classification": "warning",
+                  "confidence": 0.95,
+                  "indicators": [
+                    "WARNING",
+                    "Disk usage reached 92%",
+                    "approaching limit"
+                  ]
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326855,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 29,
+            "prompt_tokens": 260,
+            "total_tokens": 289,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "messages": [
+          {
+            "content": "Analyze this server log message and classify it.\n\nLog message: WARNING: Disk usage on node gpu-runner-03 reached 92%\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbzmcPLVmSowGLLRBzD5Kce5Ktn",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"classification\":\"warning\",\"confidence\":0.95,\"indicators\":[\"WARNING\",\"Disk usage reached 92%\",\"approaching limit\"]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "classification": "warning",
+                "confidence": 0.95,
+                "indicators": [
+                  "WARNING",
+                  "Disk usage reached 92%",
+                  "approaching limit"
+                ]
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326855,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 29,
+          "prompt_tokens": 260,
+          "total_tokens": 289,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "44c05a056fe7c1cb",
+      "parent_span_id": "c076eda86ab608de",
+      "name": "diagnose_problem",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326855676651000,
+      "end_time_unix_nano": 1773326856632169000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "diagnose_problem",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "diagnosis": "",
+          "proposed_tool_calls": [
+            {
+              "name": "summarize_log",
+              "arguments": "{\"log_message\": \"WARNING: Disk usage on node gpu-runner-03 reached 92%\"}"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "diagnosis": "",
+        "proposed_tool_calls": [
+          {
+            "name": "summarize_log",
+            "arguments": "{\"log_message\": \"WARNING: Disk usage on node gpu-runner-03 reached 92%\"}"
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "d68707bbe8c7094a",
+      "parent_span_id": "44c05a056fe7c1cb",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326855676831000,
+      "end_time_unix_nano": 1773326855677435000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "a3e087198a27f850",
+      "parent_span_id": "44c05a056fe7c1cb",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326855689959000,
+      "end_time_unix_nano": 1773326856616952000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "stream": false,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "summarize_log",
+                "description": "Summarize a log line so the LLM can reference it.",
+                "parameters": {
+                  "properties": {
+                    "log_message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "log_message"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "messages": [
+            {
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+              "role": "system"
+            },
+            {
+              "content": "Diagnose the following log: WARNING: Disk usage on node gpu-runner-03 reached 92%",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "log_message"
+                ]
+              }
+            }
+          }
+        ],
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 96,
+          "output_tokens": 32,
+          "total_tokens": 128
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbc0Qxk5JSvgMe3aEMqI5hMyXU0t",
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [
+                  {
+                    "id": "call_6oKwnIHwcxxMfkHKfUvVh0ED",
+                    "function": {
+                      "arguments": "{\"log_message\":\"WARNING: Disk usage on node gpu-runner-03 reached 92%\"}",
+                      "name": "summarize_log"
+                    },
+                    "type": "function"
+                  }
+                ],
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {}
+              }
+            }
+          ],
+          "created": 1773326856,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 32,
+            "prompt_tokens": 96,
+            "total_tokens": 128,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "messages": [
+          {
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+            "role": "system"
+          },
+          {
+            "content": "Diagnose the following log: WARNING: Disk usage on node gpu-runner-03 reached 92%",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbc0Qxk5JSvgMe3aEMqI5hMyXU0t",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": null,
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "call_6oKwnIHwcxxMfkHKfUvVh0ED",
+                  "function": {
+                    "arguments": "{\"log_message\":\"WARNING: Disk usage on node gpu-runner-03 reached 92%\"}",
+                    "name": "summarize_log"
+                  },
+                  "type": "function"
+                }
+              ],
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {}
+            }
+          }
+        ],
+        "created": 1773326856,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 32,
+          "prompt_tokens": 96,
+          "total_tokens": 128,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "916041b17b3ea96b",
+      "parent_span_id": "c076eda86ab608de",
+      "name": "assess_severity",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326856637831000,
+      "end_time_unix_nano": 1773326858137548000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "assess_severity",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "severity": "low"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "severity": "low"
+      }
+    },
+    {
+      "span_id": "75b1a2357bc3c81f",
+      "parent_span_id": "916041b17b3ea96b",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326856637987000,
+      "end_time_unix_nano": 1773326856638533000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "17eebb878f5e95be",
+      "parent_span_id": "916041b17b3ea96b",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326856644881000,
+      "end_time_unix_nano": 1773326858122133000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+          "messages": [
+            {
+              "content": "Assess the severity of this problem.\n\nLog message: WARNING: Disk usage on node gpu-runner-03 reached 92%\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 238,
+          "output_tokens": 52,
+          "total_tokens": 290
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbc1yGxrtmDLEikHy1eHTsXbUTGS",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"severity\":\"low\",\"reasoning\":\"Although disk usage is high at 92%, it has not yet reached critical levels that would cause immediate user impact or data loss. Monitoring and cleanup during normal business hours can mitigate risks.\",\"confidence\":0.9}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "severity": "low",
+                  "reasoning": "Although disk usage is high at 92%, it has not yet reached critical levels that would cause immediate user impact or data loss. Monitoring and cleanup during normal business hours can mitigate risks.",
+                  "confidence": 0.9
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326857,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 52,
+            "prompt_tokens": 238,
+            "total_tokens": 290,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "messages": [
+          {
+            "content": "Assess the severity of this problem.\n\nLog message: WARNING: Disk usage on node gpu-runner-03 reached 92%\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbc1yGxrtmDLEikHy1eHTsXbUTGS",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"severity\":\"low\",\"reasoning\":\"Although disk usage is high at 92%, it has not yet reached critical levels that would cause immediate user impact or data loss. Monitoring and cleanup during normal business hours can mitigate risks.\",\"confidence\":0.9}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "severity": "low",
+                "reasoning": "Although disk usage is high at 92%, it has not yet reached critical levels that would cause immediate user impact or data loss. Monitoring and cleanup during normal business hours can mitigate risks.",
+                "confidence": 0.9
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326857,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 52,
+          "prompt_tokens": 238,
+          "total_tokens": 290,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "9d30305e5dfaf059",
+      "parent_span_id": "c076eda86ab608de",
+      "name": "manage_github_ticket",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326858145394000,
+      "end_time_unix_nano": 1773326858155973000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "manage_github_ticket",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+            "classification": "warning",
+            "diagnosis": "",
+            "severity": "low",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "action_taken": "github_ticket"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "WARNING: Disk usage on node gpu-runner-03 reached 92%",
+          "classification": "warning",
+          "diagnosis": "",
+          "severity": "low",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "action_taken": "github_ticket"
+      }
+    },
+    {
+      "span_id": "e25ea15aa8e17afd",
+      "parent_span_id": "9d30305e5dfaf059",
+      "name": "check_existing_github_issue",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326858145548000,
+      "end_time_unix_nano": 1773326858145670000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "check_existing_github_issue",
+        "mlflow.spanInputs": {
+          "query": ""
+        },
+        "mlflow.spanOutputs": false
+      },
+      "inputs": {
+        "query": ""
+      },
+      "outputs": false
+    },
+    {
+      "span_id": "facf27b10067dd14",
+      "parent_span_id": "9d30305e5dfaf059",
+      "name": "create_github_issue",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326858151199000,
+      "end_time_unix_nano": 1773326858151312000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-832c8917508a4c093e8be6e22a6b812d",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "create_github_issue",
+        "mlflow.spanInputs": {
+          "title": "[Auto] WARNING: Disk usage on node gpu-runner-03 reached ...",
+          "body": "## Log Message\nWARNING: Disk usage on node gpu-runner-03 reached 92%\n\n## Diagnosis\n"
+        },
+        "mlflow.spanOutputs": null
+      },
+      "inputs": {
+        "title": "[Auto] WARNING: Disk usage on node gpu-runner-03 reached ...",
+        "body": "## Log Message\nWARNING: Disk usage on node gpu-runner-03 reached 92%\n\n## Diagnosis\n"
+      },
+      "outputs": null
+    }
+  ]
+}

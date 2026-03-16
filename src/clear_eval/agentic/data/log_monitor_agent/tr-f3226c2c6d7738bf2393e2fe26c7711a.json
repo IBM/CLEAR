@@ -1,0 +1,1414 @@
+{
+  "trace_id": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+  "experiment_id": "1",
+  "state": "OK",
+  "timestamp_ms": 1773326839951,
+  "execution_time_ms": 3362,
+  "request_preview": "[REQ-log_monitor__30] ERROR: Timeout waiting for response from authentication provider",
+  "response_preview": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\", \"classification\": \"error\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "tags": {
+    "request_id": "REQ-log_monitor__30",
+    "mlflow.traceName": "process_log_message",
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-f3226c2c6d7738bf2393e2fe26c7711a/artifacts"
+  },
+  "assessments": [],
+  "spans": [
+    {
+      "span_id": "3ec09813f2102f80",
+      "parent_span_id": null,
+      "name": "process_log_message",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839951100000,
+      "end_time_unix_nano": 1773326843313795000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "AGENT",
+        "mlflow.spanFunctionName": "process_log_message",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider"
+        },
+        "mlflow.spanOutputs": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Timeout waiting for response from authentication provider"
+      },
+      "outputs": {
+        "log_message": "ERROR: Timeout waiting for response from authentication provider",
+        "classification": "error",
+        "diagnosis": "",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "3d306eb05a7b0069",
+      "parent_span_id": "3ec09813f2102f80",
+      "name": "initialize_state",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839951259000,
+      "end_time_unix_nano": 1773326839951301000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider"
+        },
+        "mlflow.spanOutputs": {
+          "state_keys": [
+            "log_message",
+            "classification",
+            "diagnosis",
+            "severity",
+            "action_taken"
+          ]
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Timeout waiting for response from authentication provider"
+      },
+      "outputs": {
+        "state_keys": [
+          "log_message",
+          "classification",
+          "diagnosis",
+          "severity",
+          "action_taken"
+        ]
+      }
+    },
+    {
+      "span_id": "c20c983bba2ef3e4",
+      "parent_span_id": "3ec09813f2102f80",
+      "name": "workflow_execution",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839959571000,
+      "end_time_unix_nano": 1773326843306508000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "CHAIN",
+        "mlflow.spanInputs": {
+          "log_message_preview": "ERROR: Timeout waiting for response from authentication provider"
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message_preview": "ERROR: Timeout waiting for response from authentication provider"
+      },
+      "outputs": {
+        "classification": "error",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "e4807aca8a880bfd",
+      "parent_span_id": "c20c983bba2ef3e4",
+      "name": "classify_log",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839960006000,
+      "end_time_unix_nano": 1773326840860541000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "classify_log",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
+            "classification": "",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
+          "classification": "",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "classification": "error"
+      }
+    },
+    {
+      "span_id": "d5c9aef953ce3eb9",
+      "parent_span_id": "e4807aca8a880bfd",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839960097000,
+      "end_time_unix_nano": 1773326839960504000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "e3d82fa179c2eba4",
+      "parent_span_id": "e4807aca8a880bfd",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326839966361000,
+      "end_time_unix_nano": 1773326840839564000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+          "messages": [
+            {
+              "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 255,
+          "output_tokens": 26,
+          "total_tokens": 281
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbkenYJrT4zsP8vQbTaTjIYoE1D",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Timeout waiting for response\",\"authentication provider\"]}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "classification": "error",
+                  "confidence": 0.95,
+                  "indicators": [
+                    "ERROR",
+                    "Timeout waiting for response",
+                    "authentication provider"
+                  ]
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326840,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 26,
+            "prompt_tokens": 255,
+            "total_tokens": 281,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "messages": [
+          {
+            "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbkenYJrT4zsP8vQbTaTjIYoE1D",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Timeout waiting for response\",\"authentication provider\"]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "classification": "error",
+                "confidence": 0.95,
+                "indicators": [
+                  "ERROR",
+                  "Timeout waiting for response",
+                  "authentication provider"
+                ]
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326840,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 26,
+          "prompt_tokens": 255,
+          "total_tokens": 281,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "576ca3e50679d30d",
+      "parent_span_id": "c20c983bba2ef3e4",
+      "name": "diagnose_problem",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326840871179000,
+      "end_time_unix_nano": 1773326841975981000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "diagnose_problem",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "diagnosis": "",
+          "proposed_tool_calls": [
+            {
+              "name": "summarize_log",
+              "arguments": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\"}"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "diagnosis": "",
+        "proposed_tool_calls": [
+          {
+            "name": "summarize_log",
+            "arguments": "{\"log_message\": \"ERROR: Timeout waiting for response from authentication provider\"}"
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "1e96cf9feabbd748",
+      "parent_span_id": "576ca3e50679d30d",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326840871378000,
+      "end_time_unix_nano": 1773326840872163000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "8fc8c2364b95136a",
+      "parent_span_id": "576ca3e50679d30d",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326840883957000,
+      "end_time_unix_nano": 1773326841957395000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "stream": false,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "summarize_log",
+                "description": "Summarize a log line so the LLM can reference it.",
+                "parameters": {
+                  "properties": {
+                    "log_message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "log_message"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "messages": [
+            {
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+              "role": "system"
+            },
+            {
+              "content": "Diagnose the following log: ERROR: Timeout waiting for response from authentication provider",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "log_message"
+                ]
+              }
+            }
+          }
+        ],
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 90,
+          "output_tokens": 26,
+          "total_tokens": 116
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbblM9ZNuw5Au036SG39xiBjVJcj",
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [
+                  {
+                    "id": "call_xn4IeZJUgqj1c0oIDM21pb4Z",
+                    "function": {
+                      "arguments": "{\"log_message\":\"ERROR: Timeout waiting for response from authentication provider\"}",
+                      "name": "summarize_log"
+                    },
+                    "type": "function"
+                  }
+                ],
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {}
+              }
+            }
+          ],
+          "created": 1773326841,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 26,
+            "prompt_tokens": 90,
+            "total_tokens": 116,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "messages": [
+          {
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+            "role": "system"
+          },
+          {
+            "content": "Diagnose the following log: ERROR: Timeout waiting for response from authentication provider",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbblM9ZNuw5Au036SG39xiBjVJcj",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": null,
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "call_xn4IeZJUgqj1c0oIDM21pb4Z",
+                  "function": {
+                    "arguments": "{\"log_message\":\"ERROR: Timeout waiting for response from authentication provider\"}",
+                    "name": "summarize_log"
+                  },
+                  "type": "function"
+                }
+              ],
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {}
+            }
+          }
+        ],
+        "created": 1773326841,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 26,
+          "prompt_tokens": 90,
+          "total_tokens": 116,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "01084814c5b5d659",
+      "parent_span_id": "c20c983bba2ef3e4",
+      "name": "assess_severity",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326841984997000,
+      "end_time_unix_nano": 1773326843288811000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "assess_severity",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "severity": "high"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "severity": "high"
+      }
+    },
+    {
+      "span_id": "716493ba922f08fb",
+      "parent_span_id": "01084814c5b5d659",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326841985189000,
+      "end_time_unix_nano": 1773326841985852000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "a7ef50d605852ff1",
+      "parent_span_id": "01084814c5b5d659",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326841995163000,
+      "end_time_unix_nano": 1773326843279395000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+          "messages": [
+            {
+              "content": "Assess the severity of this problem.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 233,
+          "output_tokens": 44,
+          "total_tokens": 277
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbmeAOkVFzd1uuivosXg9HVQEva",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"severity\":\"high\",\"reasoning\":\"The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.\",\"confidence\":0.95}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "severity": "high",
+                  "reasoning": "The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.",
+                  "confidence": 0.95
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326842,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 44,
+            "prompt_tokens": 233,
+            "total_tokens": 277,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "messages": [
+          {
+            "content": "Assess the severity of this problem.\n\nLog message: ERROR: Timeout waiting for response from authentication provider\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbmeAOkVFzd1uuivosXg9HVQEva",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"severity\":\"high\",\"reasoning\":\"The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.\",\"confidence\":0.95}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "severity": "high",
+                "reasoning": "The error indicates a timeout when communicating with the authentication provider, which likely prevents users from logging in, causing immediate user impact and potential service disruption.",
+                "confidence": 0.95
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326842,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 44,
+          "prompt_tokens": 233,
+          "total_tokens": 277,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "eb8e710332d3727b",
+      "parent_span_id": "c20c983bba2ef3e4",
+      "name": "alert_sre",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326843293869000,
+      "end_time_unix_nano": 1773326843299523000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "alert_sre",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Timeout waiting for response from authentication provider",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "high",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Timeout waiting for response from authentication provider",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "25f4e918608ca313",
+      "parent_span_id": "eb8e710332d3727b",
+      "name": "send_slack_alert",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326843293977000,
+      "end_time_unix_nano": 1773326843294059000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-f3226c2c6d7738bf2393e2fe26c7711a",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "send_slack_alert",
+        "mlflow.spanInputs": {
+          "message": "High severity issue detected - ",
+          "severity": "high",
+          "diagnosis": ""
+        },
+        "mlflow.spanOutputs": null
+      },
+      "inputs": {
+        "message": "High severity issue detected - ",
+        "severity": "high",
+        "diagnosis": ""
+      },
+      "outputs": null
+    }
+  ]
+}

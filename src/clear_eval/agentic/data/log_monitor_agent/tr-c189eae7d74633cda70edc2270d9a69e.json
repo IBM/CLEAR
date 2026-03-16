@@ -1,0 +1,1412 @@
+{
+  "trace_id": "tr-c189eae7d74633cda70edc2270d9a69e",
+  "experiment_id": "1",
+  "state": "OK",
+  "timestamp_ms": 1773326849879,
+  "execution_time_ms": 4949,
+  "request_preview": "[REQ-log_monitor__30] ERROR: Internal server error while processing request /api/v1/user/profile",
+  "response_preview": "{\"log_message\": \"ERROR: Internal server error while processing request /api/v1/user/profile\", \"classification\": \"error\", \"diagnosis\": \"\", \"severity\": \"high\", \"action_taken\": \"slack_alert\"}",
+  "tags": {
+    "request_id": "REQ-log_monitor__30",
+    "mlflow.traceName": "process_log_message",
+    "app": "log-monitor",
+    "mlflow.trace.spansLocation": "TRACKING_STORE",
+    "mlflow.artifactLocation": "/Users/lilache/PycharmProjects/fork/test_personal_fork/agents/examples/agents_tracing-eval_mlflow/log_monitor/mlruns/1/traces/tr-c189eae7d74633cda70edc2270d9a69e/artifacts"
+  },
+  "assessments": [],
+  "spans": [
+    {
+      "span_id": "a65cf12cad622dec",
+      "parent_span_id": null,
+      "name": "process_log_message",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849879697000,
+      "end_time_unix_nano": 1773326854829367000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "AGENT",
+        "mlflow.spanFunctionName": "process_log_message",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile"
+        },
+        "mlflow.spanOutputs": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile"
+      },
+      "outputs": {
+        "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+        "classification": "error",
+        "diagnosis": "",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "76272894809949d3",
+      "parent_span_id": "a65cf12cad622dec",
+      "name": "initialize_state",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849879864000,
+      "end_time_unix_nano": 1773326849879904000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanInputs": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile"
+        },
+        "mlflow.spanOutputs": {
+          "state_keys": [
+            "log_message",
+            "classification",
+            "diagnosis",
+            "severity",
+            "action_taken"
+          ]
+        }
+      },
+      "inputs": {
+        "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile"
+      },
+      "outputs": {
+        "state_keys": [
+          "log_message",
+          "classification",
+          "diagnosis",
+          "severity",
+          "action_taken"
+        ]
+      }
+    },
+    {
+      "span_id": "2fdc0147a78d9e3a",
+      "parent_span_id": "a65cf12cad622dec",
+      "name": "workflow_execution",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849885737000,
+      "end_time_unix_nano": 1773326854824107000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "CHAIN",
+        "mlflow.spanInputs": {
+          "log_message_preview": "ERROR: Internal server error while processing request /api/v1/user/profile"
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error",
+          "severity": "high",
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "log_message_preview": "ERROR: Internal server error while processing request /api/v1/user/profile"
+      },
+      "outputs": {
+        "classification": "error",
+        "severity": "high",
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "a5769fb7d1234e01",
+      "parent_span_id": "2fdc0147a78d9e3a",
+      "name": "classify_log",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849886174000,
+      "end_time_unix_nano": 1773326851587680000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "classify_log",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+            "classification": "",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "classification": "error"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+          "classification": "",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "classification": "error"
+      }
+    },
+    {
+      "span_id": "1cc619ae8a5f814a",
+      "parent_span_id": "a5769fb7d1234e01",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849886264000,
+      "end_time_unix_nano": 1773326849886670000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "b2aa2c3acb2ca5f3",
+      "parent_span_id": "a5769fb7d1234e01",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326849892451000,
+      "end_time_unix_nano": 1773326851577575000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+          "messages": [
+            {
+              "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Internal server error while processing request /api/v1/user/profile\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 260,
+          "output_tokens": 22,
+          "total_tokens": 282
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbuCok5ibjz0TW3gAiaALn3KX3U",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Internal server error\"]}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "classification": "error",
+                  "confidence": 0.95,
+                  "indicators": [
+                    "ERROR",
+                    "Internal server error"
+                  ]
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326850,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 22,
+            "prompt_tokens": 260,
+            "total_tokens": 282,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.LogClassificationSchema'>",
+        "messages": [
+          {
+            "content": "Analyze this server log message and classify it.\n\nLog message: ERROR: Internal server error while processing request /api/v1/user/profile\n\nDetermine if this is an error, warning, or normal informational message.\nLook for indicators like:\n- ERROR, FAIL, Exception, stack traces → error\n- WARNING, WARN, threshold, approaching limit → warning\n- INFO, DEBUG, success, started, completed → normal\n\nProvide your classification with confidence score and the indicators you found.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbuCok5ibjz0TW3gAiaALn3KX3U",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"classification\":\"error\",\"confidence\":0.95,\"indicators\":[\"ERROR\",\"Internal server error\"]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "classification": "error",
+                "confidence": 0.95,
+                "indicators": [
+                  "ERROR",
+                  "Internal server error"
+                ]
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326850,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 22,
+          "prompt_tokens": 260,
+          "total_tokens": 282,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "25124d35057115e6",
+      "parent_span_id": "2fdc0147a78d9e3a",
+      "name": "diagnose_problem",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326851592766000,
+      "end_time_unix_nano": 1773326852614905000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "diagnose_problem",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "diagnosis": "",
+          "proposed_tool_calls": [
+            {
+              "name": "summarize_log",
+              "arguments": "{\"log_message\": \"ERROR: Internal server error while processing request /api/v1/user/profile\"}"
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "diagnosis": "",
+        "proposed_tool_calls": [
+          {
+            "name": "summarize_log",
+            "arguments": "{\"log_message\": \"ERROR: Internal server error while processing request /api/v1/user/profile\"}"
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "eb2913ca4a69557a",
+      "parent_span_id": "25124d35057115e6",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326851592859000,
+      "end_time_unix_nano": 1773326851593243000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "76ba38efbdfcdb52",
+      "parent_span_id": "25124d35057115e6",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326851599701000,
+      "end_time_unix_nano": 1773326852596334000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "stream": false,
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "summarize_log",
+                "description": "Summarize a log line so the LLM can reference it.",
+                "parameters": {
+                  "properties": {
+                    "log_message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "log_message"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "tool_choice": "required",
+          "messages": [
+            {
+              "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+              "role": "system"
+            },
+            {
+              "content": "Diagnose the following log: ERROR: Internal server error while processing request /api/v1/user/profile",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "log_message"
+                ]
+              }
+            }
+          }
+        ],
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 95,
+          "output_tokens": 31,
+          "total_tokens": 126
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbw1Np2SkD08ZgxK58taEUrt7j3",
+          "choices": [
+            {
+              "finish_reason": "tool_calls",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": null,
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": [
+                  {
+                    "id": "call_wl36q7wT7Av1pghd7yWWaCLo",
+                    "function": {
+                      "arguments": "{\"log_message\":\"ERROR: Internal server error while processing request /api/v1/user/profile\"}",
+                      "name": "summarize_log"
+                    },
+                    "type": "function"
+                  }
+                ],
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {}
+              }
+            }
+          ],
+          "created": 1773326852,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 31,
+            "prompt_tokens": 95,
+            "total_tokens": 126,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "stream": false,
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "summarize_log",
+              "description": "Summarize a log line so the LLM can reference it.",
+              "parameters": {
+                "properties": {
+                  "log_message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "log_message"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "tool_choice": "required",
+        "messages": [
+          {
+            "content": "In ONE response: give a short sentence of reasoning, AND propose EXACTLY ONE tool call. Return BOTH together.",
+            "role": "system"
+          },
+          {
+            "content": "Diagnose the following log: ERROR: Internal server error while processing request /api/v1/user/profile",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbw1Np2SkD08ZgxK58taEUrt7j3",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": null,
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "call_wl36q7wT7Av1pghd7yWWaCLo",
+                  "function": {
+                    "arguments": "{\"log_message\":\"ERROR: Internal server error while processing request /api/v1/user/profile\"}",
+                    "name": "summarize_log"
+                  },
+                  "type": "function"
+                }
+              ],
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {}
+            }
+          }
+        ],
+        "created": 1773326852,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 31,
+          "prompt_tokens": 95,
+          "total_tokens": 126,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "e165a7bbb6ff7046",
+      "parent_span_id": "2fdc0147a78d9e3a",
+      "name": "assess_severity",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326852625651000,
+      "end_time_unix_nano": 1773326854800075000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "assess_severity",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "severity": "high"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "severity": "high"
+      }
+    },
+    {
+      "span_id": "ec83d0e2cd1c1758",
+      "parent_span_id": "e165a7bbb6ff7046",
+      "name": "get_llm",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326852625841000,
+      "end_time_unix_nano": 1773326852626744000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "LLM",
+        "mlflow.spanFunctionName": "get_llm",
+        "mlflow.spanInputs": {},
+        "mlflow.spanOutputs": {
+          "name": null,
+          "disable_streaming": false,
+          "output_version": null,
+          "model_name": "Azure/gpt-4.1-mini",
+          "temperature": null,
+          "model_kwargs": {},
+          "openai_api_key": "**********",
+          "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+          "openai_organization": null,
+          "openai_proxy": null,
+          "request_timeout": null,
+          "stream_usage": null,
+          "max_retries": null,
+          "presence_penalty": null,
+          "frequency_penalty": null,
+          "seed": null,
+          "logprobs": null,
+          "top_logprobs": null,
+          "logit_bias": null,
+          "streaming": false,
+          "n": null,
+          "top_p": null,
+          "max_tokens": null,
+          "reasoning_effort": null,
+          "reasoning": null,
+          "verbosity": null,
+          "tiktoken_model_name": null,
+          "default_headers": null,
+          "default_query": null,
+          "stop": null,
+          "extra_body": null,
+          "include_response_headers": false,
+          "disabled_params": null,
+          "context_management": null,
+          "include": null,
+          "service_tier": null,
+          "store": null,
+          "truncation": null,
+          "use_previous_response_id": false,
+          "use_responses_api": null
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "name": null,
+        "disable_streaming": false,
+        "output_version": null,
+        "model_name": "Azure/gpt-4.1-mini",
+        "temperature": null,
+        "model_kwargs": {},
+        "openai_api_key": "**********",
+        "openai_api_base": "https://ete-litellm.bx.cloud9.ibm.com",
+        "openai_organization": null,
+        "openai_proxy": null,
+        "request_timeout": null,
+        "stream_usage": null,
+        "max_retries": null,
+        "presence_penalty": null,
+        "frequency_penalty": null,
+        "seed": null,
+        "logprobs": null,
+        "top_logprobs": null,
+        "logit_bias": null,
+        "streaming": false,
+        "n": null,
+        "top_p": null,
+        "max_tokens": null,
+        "reasoning_effort": null,
+        "reasoning": null,
+        "verbosity": null,
+        "tiktoken_model_name": null,
+        "default_headers": null,
+        "default_query": null,
+        "stop": null,
+        "extra_body": null,
+        "include_response_headers": false,
+        "disabled_params": null,
+        "context_management": null,
+        "include": null,
+        "service_tier": null,
+        "store": null,
+        "truncation": null,
+        "use_previous_response_id": false,
+        "use_responses_api": null
+      }
+    },
+    {
+      "span_id": "0c3c3542a42ff1f3",
+      "parent_span_id": "e165a7bbb6ff7046",
+      "name": "Completions",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326852639199000,
+      "end_time_unix_nano": 1773326854780072000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "CHAT_MODEL",
+        "mlflow.spanInputs": {
+          "model": "Azure/gpt-4.1-mini",
+          "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+          "messages": [
+            {
+              "content": "Assess the severity of this problem.\n\nLog message: ERROR: Internal server error while processing request /api/v1/user/profile\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+              "role": "user"
+            }
+          ],
+          "extra_headers": {
+            "X-Stainless-Raw-Response": "true"
+          }
+        },
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        },
+        "mlflow.message.format": "openai",
+        "mlflow.chat.tokenUsage": {
+          "input_tokens": 238,
+          "output_tokens": 50,
+          "total_tokens": 288
+        },
+        "mlflow.spanOutputs": {
+          "id": "chatcmpl-DIbbyNvRujewoWhh9VaeqvHdtq1nT",
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "logprobs": null,
+              "message": {
+                "content": "{\"severity\":\"high\",\"reasoning\":\"The internal server error indicates a failure in processing user profile requests, which directly impacts users' ability to access or update their profiles, causing immediate user impact and potential service degradation.\",\"confidence\":0.9}",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": [],
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "parsed": {
+                  "severity": "high",
+                  "reasoning": "The internal server error indicates a failure in processing user profile requests, which directly impacts users' ability to access or update their profiles, causing immediate user impact and potential service degradation.",
+                  "confidence": 0.9
+                },
+                "provider_specific_fields": {
+                  "refusal": null
+                }
+              },
+              "provider_specific_fields": {
+                "content_filter_results": {
+                  "hate": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "self_harm": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "sexual": {
+                    "filtered": false,
+                    "severity": "safe"
+                  },
+                  "violence": {
+                    "filtered": false,
+                    "severity": "safe"
+                  }
+                }
+              }
+            }
+          ],
+          "created": 1773326854,
+          "model": "Azure/gpt-4.1-mini",
+          "object": "chat.completion",
+          "service_tier": null,
+          "system_fingerprint": "fp_b6f445fc1c",
+          "usage": {
+            "completion_tokens": 50,
+            "prompt_tokens": 238,
+            "total_tokens": 288,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": 0,
+              "audio_tokens": 0,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": 0
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": 0,
+              "cached_tokens": 0
+            }
+          },
+          "prompt_filter_results": [
+            {
+              "prompt_index": 0,
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "inputs": {
+        "model": "Azure/gpt-4.1-mini",
+        "response_format": "<class 'log_monitor_agent.schemas.SeverityAssessmentSchema'>",
+        "messages": [
+          {
+            "content": "Assess the severity of this problem.\n\nLog message: ERROR: Internal server error while processing request /api/v1/user/profile\nDiagnosis: \n\nDetermine if this is HIGH or LOW severity:\n- HIGH: Immediate user impact, service degradation, data loss risk, security issue\n- LOW: Can wait for normal business hours, minor inconvenience, cosmetic issue\n\nIf uncertain, default to LOW severity.",
+            "role": "user"
+          }
+        ],
+        "extra_headers": {
+          "X-Stainless-Raw-Response": "true"
+        }
+      },
+      "outputs": {
+        "id": "chatcmpl-DIbbyNvRujewoWhh9VaeqvHdtq1nT",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"severity\":\"high\",\"reasoning\":\"The internal server error indicates a failure in processing user profile requests, which directly impacts users' ability to access or update their profiles, causing immediate user impact and potential service degradation.\",\"confidence\":0.9}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null,
+              "parsed": {
+                "severity": "high",
+                "reasoning": "The internal server error indicates a failure in processing user profile requests, which directly impacts users' ability to access or update their profiles, causing immediate user impact and potential service degradation.",
+                "confidence": 0.9
+              },
+              "provider_specific_fields": {
+                "refusal": null
+              }
+            },
+            "provider_specific_fields": {
+              "content_filter_results": {
+                "hate": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "self_harm": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "sexual": {
+                  "filtered": false,
+                  "severity": "safe"
+                },
+                "violence": {
+                  "filtered": false,
+                  "severity": "safe"
+                }
+              }
+            }
+          }
+        ],
+        "created": 1773326854,
+        "model": "Azure/gpt-4.1-mini",
+        "object": "chat.completion",
+        "service_tier": null,
+        "system_fingerprint": "fp_b6f445fc1c",
+        "usage": {
+          "completion_tokens": 50,
+          "prompt_tokens": 238,
+          "total_tokens": 288,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cached_tokens": 0
+          }
+        },
+        "prompt_filter_results": [
+          {
+            "prompt_index": 0,
+            "content_filter_results": {
+              "hate": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "self_harm": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "sexual": {
+                "filtered": false,
+                "severity": "safe"
+              },
+              "violence": {
+                "filtered": false,
+                "severity": "safe"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "span_id": "a072cd6480d838d8",
+      "parent_span_id": "2fdc0147a78d9e3a",
+      "name": "alert_sre",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854810379000,
+      "end_time_unix_nano": 1773326854817830000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "alert_sre",
+        "mlflow.spanInputs": {
+          "state": {
+            "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+            "classification": "error",
+            "diagnosis": "",
+            "severity": "high",
+            "action_taken": ""
+          }
+        },
+        "mlflow.spanOutputs": {
+          "action_taken": "slack_alert"
+        }
+      },
+      "inputs": {
+        "state": {
+          "log_message": "ERROR: Internal server error while processing request /api/v1/user/profile",
+          "classification": "error",
+          "diagnosis": "",
+          "severity": "high",
+          "action_taken": ""
+        }
+      },
+      "outputs": {
+        "action_taken": "slack_alert"
+      }
+    },
+    {
+      "span_id": "b92211043c560505",
+      "parent_span_id": "a072cd6480d838d8",
+      "name": "send_slack_alert",
+      "status": {
+        "status_code": "OK",
+        "description": ""
+      },
+      "start_time_unix_nano": 1773326854810575000,
+      "end_time_unix_nano": 1773326854810721000,
+      "duration_ms": null,
+      "attributes": {
+        "mlflow.traceRequestId": "tr-c189eae7d74633cda70edc2270d9a69e",
+        "mlflow.spanType": "TOOL",
+        "mlflow.spanFunctionName": "send_slack_alert",
+        "mlflow.spanInputs": {
+          "message": "High severity issue detected - ",
+          "severity": "high",
+          "diagnosis": ""
+        },
+        "mlflow.spanOutputs": null
+      },
+      "inputs": {
+        "message": "High severity issue detected - ",
+        "severity": "high",
+        "diagnosis": ""
+      },
+      "outputs": null
+    }
+  ]
+}
