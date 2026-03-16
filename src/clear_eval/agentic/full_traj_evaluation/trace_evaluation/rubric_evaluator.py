@@ -77,7 +77,7 @@ class RubricEvaluator(TrajectoryEvaluator):
 
     def get_output_suffix(self) -> str:
         """Return the suffix for output files."""
-        return "_rubric_eval"
+        return "_rubric_eval.json"
 
     def get_system_message(self) -> str:
         """Return the system message for rubric evaluation."""
