@@ -34,13 +34,15 @@ Example workflow:
            --eval-results-dir results/evals --output-dir results/clear \\
            --model-id gpt-4 --provider openai
 """
-
+import logging
 from pathlib import Path
-
 from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
 from agentic.full_traj_evaluation.clear_analysis.issues_clear_runner import IssuesClearRunner
 from agentic.full_traj_evaluation.clear_analysis.root_cause_clear_runner import RootCauseClearRunner
+from logging_config import setup_logging
 
+setup_logging()
+logger = logging.getLogger(__name__)
 
 def main():
     """Main entry point for CLEAR analysis on evaluation results."""
@@ -94,16 +96,16 @@ def main():
         raise ValueError(f"Unknown source: {args.source}")
     
     # Print configuration
-    print("=" * 70)
-    print("CLEAR Analysis on Evaluation Results")
-    print("=" * 70)
-    print(f"  Source:             {args.source}")
-    print(f"  Eval Results Dir:   {args.eval_results_dir}")
-    print(f"  Output Dir:         {args.output_dir}")
-    print(f"  CLEAR Model:        {args.model_id}")
-    print(f"  Provider:           {args.provider}")
-    print(f"  Overwrite:          {args.overwrite}")
-    print("=" * 70)
+    logging.info("=" * 70)
+    logging.info("CLEAR Analysis on Evaluation Results")
+    logging.info("=" * 70)
+    logging.info(f"  Source:             {args.source}")
+    logging.info(f"  Eval Results Dir:   {args.eval_results_dir}")
+    logging.info(f"  Output Dir:         {args.output_dir}")
+    logging.info(f"  CLEAR Model:        {args.model_id}")
+    logging.info(f"  Provider:           {args.provider}")
+    logging.info(f"  Overwrite:          {args.overwrite}")
+    logging.info("=" * 70)
     
     # Run analysis
     summary = runner.run_analysis()
