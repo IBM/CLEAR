@@ -5,11 +5,6 @@ Base Evaluator for Trajectory Evaluation
 
 Provides centralized common logic for trajectory evaluation with pluggable
 evaluation-specific components via abstract methods.
-
-Design Pattern:
-    - Common logic (file I/O, LLM calls, parallel execution) in base class
-    - Evaluation-specific logic (prompts, parsing, results) in subclasses
-    - Hook methods for customization at key points
 """
 
 import json
