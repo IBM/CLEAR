@@ -180,8 +180,8 @@ def build_comprehensive_json_results(
             continue
 
         # Load shortcoming list from dedup.json files
-        shortcoming_files = list(agent_dir.glob("*_dedup.json"))
         agent_shortcomings = []
+        shortcoming_files = list(agent_dir.glob("*_dedup.json"))
         if shortcoming_files:
             try:
                 with open(shortcoming_files[0], 'r', encoding='utf-8') as f:
@@ -189,6 +189,10 @@ def build_comprehensive_json_results(
                 logger.info(f"Loaded {len(agent_shortcomings)} shortcomings for {agent_name}")
             except Exception as e:
                 logger.warning(f"Could not load shortcomings for {agent_name}: {e}")
+        else:
+            agent_shortcomings = config_dict.get("predefined_issues", [])
+            if agent_shortcomings:
+                logger.info(f"Used {len(agent_shortcomings)} predefined shortcomings for {agent_name}")
 
         # Load results from CSV
         results_df = None

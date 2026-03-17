@@ -11,8 +11,8 @@
     "max_tokens": 8096
   },
   "resume_enabled": false,
-  "evaluation_criteria": null,
   "run_name": null,
   "success_threshold": 0.7,
-  "pass_criteria": "avg"
+  "evaluation_criteria": null,
+  "predefined_issues": null
 }
