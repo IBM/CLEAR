@@ -1,11 +1,11 @@
 """
 Unified LLM client interface for CLEAR eval.
 
-Abstracts both the LLM backend (LangChain vs LiteLLM) and execution model
+Abstracts both the LLM backend (LangChain vs LiteLLM vs Endpoint) and execution model
 (threaded vs async), allowing eval_utils to use a single interface.
 
 Usage:
-    from clear_eval.pipeline.llm_client import get_llm_client, run_parallel
+    from clear_eval.pipeline.inference_utils.llm_client import get_llm_client, run_parallel
 
     # Get client based on config
     client = get_llm_client(config)
@@ -33,20 +33,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
 
-from clear_eval.pipeline.llm_chat_utils import get_rits_base
-
-logger = logging.getLogger(__name__)
-
-# Suppress LiteLLM logging and prints
-import litellm
-litellm.suppress_debug_info = True
-litellm.set_verbose = False
-litellm._logging._disable_debugging()  # Disables print statements
-logging.getLogger("LiteLLM").setLevel(logging.WARNING)
-logging.getLogger("litellm").setLevel(logging.WARNING)
-
 # Module-level event loop to avoid LiteLLM queue binding issues
-# when asyncio.run() creates new loops
+# MUST be created BEFORE importing litellm
 _event_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
@@ -59,15 +47,18 @@ def _get_or_create_event_loop() -> asyncio.AbstractEventLoop:
     return _event_loop
 
 
-def run_async(coro):
-    """
-    Run an async coroutine using a shared event loop.
+# Initialize event loop BEFORE importing litellm
+_get_or_create_event_loop()
 
-    This avoids issues with LiteLLM's internal logging queue binding
-    to different event loops when asyncio.run() is called multiple times.
-    """
-    loop = _get_or_create_event_loop()
-    return loop.run_until_complete(coro)
+# NOW import and configure LiteLLM - it will bind to the event loop we just created
+import litellm
+litellm.suppress_debug_info = True
+litellm.set_verbose = False
+litellm._logging._disable_debugging()  # Disables print statements
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -176,6 +167,7 @@ class LiteLLMClient(LLMClient):
     def _configure_provider(self):
         """Configure litellm for the provider."""
         import litellm
+        from clear_eval.pipeline.inference_utils.langchain_chat_models import get_rits_base
 
         # Reset custom config
         litellm.api_base = None
@@ -196,7 +188,7 @@ class LiteLLMClient(LLMClient):
             if not watsonx_key:
                 raise KeyError("WATSONX_APIKEY or WATSONX_API_KEY env var required.")
             if os.getenv("WATSONX_APIKEY") and not os.getenv("WATSONX_API_KEY"):
-                os.environ["WATSONX_API_KEY"] = os.getenv("WATSONX_APIKEY")
+                os.environ["WATSONX_API_KEY"] = watsonx_key
             if not os.getenv("WATSONX_PROJECT_ID") and not os.getenv("WATSONX_SPACE_ID"):
                 raise KeyError("WATSONX_PROJECT_ID or WATSONX_SPACE_ID env var required.")
 
@@ -252,6 +244,36 @@ class LiteLLMClient(LLMClient):
         )
         content = response.choices[0].message.content
         return content.strip() if content else ""
+
+
+class EndpointClient(LLMClient):
+    """LLM client using direct HTTP endpoints via custom backends."""
+
+    def __init__(self, backend):
+        """
+        Args:
+            backend: LLMBackend instance (WatsonXBackend, etc.)
+        """
+        self.backend = backend
+
+    def invoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
+        """
+        Invoke the backend's chat method.
+        
+        Args:
+            messages: String prompt or list of message dicts
+            **kwargs: Additional parameters passed to backend
+            
+        Returns:
+            Response content as string
+        """
+        normalized = normalize_messages(messages)
+        response = self.backend.chat(normalized, stream=False, **kwargs)
+        return response.strip() if response else ""
+
+    async def ainvoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
+        """Async invoke by wrapping sync call in thread."""
+        return await asyncio.to_thread(self.invoke, messages, **kwargs)
 
 
 # =============================================================================
@@ -335,10 +357,21 @@ async def _run_async(
     return await tqdm_asyncio.gather(*tasks, desc=progress_desc)
 
 
+def run_async(coro):
+    """
+    Run an async coroutine using a shared event loop.
+
+    This avoids issues with LiteLLM's internal logging queue binding
+    to different event loops when asyncio.run() is called multiple times.
+    """
+    loop = _get_or_create_event_loop()
+    return loop.run_until_complete(coro)
+
+
 def run_parallel(
     func: Callable,
     inputs: List[Any],
-    use_async: bool = False,
+    use_async: bool = True,
     max_workers: int = 10,
     task_timeout: float = 300,
     error_prefix: str = "Error: ",
@@ -378,34 +411,91 @@ def run_parallel(
 def get_llm_client(
     provider: str,
     model: str,
-    use_litellm: bool = False,
+    inference_backend: str = "langchain",
     eval_mode: bool = True,
-    parameters: Optional[Dict] = None
+    parameters: Optional[Dict] = None,
+    endpoint_url: Optional[str] = None,
 ) -> LLMClient:
     """
     Get an LLM client based on configuration.
 
     Args:
-        provider: Provider name (openai, azure, watsonx, rits, anthropic, etc.)
+        provider: Provider name (watsonx, anthropic, openai, azure, rits, etc.)
         model: Model identifier
-        use_litellm: If True, use LiteLLM. If False, use LangChain.
+        inference_backend: Backend type: "langchain" (default), "litellm", or "endpoint"
         eval_mode: If True, use temperature=0 for deterministic output
         parameters: Additional model parameters
+        endpoint_url: Base URL for the API endpoint (required when inference_backend="endpoint")
 
     Returns:
-        LLMClient instance (LangChainClient or LiteLLMClient)
-    """
-    parameters = parameters or {}
+        LLMClient instance (LangChainClient, LiteLLMClient, or EndpointClient)
 
-    if use_litellm:
-        return LiteLLMClient(
-            provider=provider,
-            model=model,
-            eval_mode=eval_mode,
-            **parameters
+    Examples:
+        # LangChain (default)
+        client = get_llm_client(provider="watsonx", model="ibm/granite-13b-instruct-v2")
+
+        # LiteLLM
+        client = get_llm_client(
+            provider="anthropic",
+            model="claude-3-5-sonnet-20241022",
+            inference_backend="litellm"
         )
-    else:
-        # Use existing LangChain factory
-        from clear_eval.pipeline.llm_chat_utils import get_chat_llm
-        llm = get_chat_llm(provider, model, parameters=parameters, eval_mode=eval_mode)
-        return LangChainClient(llm)
+
+        # Endpoint
+        client = get_llm_client(
+            provider="watsonx",
+            model="ibm/granite-13b-instruct-v2",
+            inference_backend="endpoint",
+            endpoint_url="https://us-south.ml.cloud.ibm.com/ml/v1"
+        )
+    """
+    # Validate inference_backend
+    valid_backends = ["langchain", "litellm", "endpoint"]
+    if inference_backend not in valid_backends:
+        raise ValueError(
+            f"Invalid inference_backend '{inference_backend}'. "
+            f"Must be one of: {', '.join(valid_backends)}"
+        )
+    
+    try:
+        logger.info(
+            f"Getting llm for model: {model}, provider {provider}, "
+            f"inference_backend {inference_backend}, eval_mode {eval_mode}, parameters= {parameters}")
+        parameters = parameters or {}
+
+        if inference_backend == "endpoint":
+            # Use direct HTTP endpoint backend
+            from clear_eval.pipeline.inference_utils.endpoint_backends import create_backend
+
+            if not endpoint_url:
+                raise ValueError("When inference_backend='endpoint', must specify endpoint_url")
+
+            # Create backend - it will handle auth from environment
+            backend = create_backend(
+                provider=provider,
+                base_url=endpoint_url,
+                model_name=model,
+                eval_mode=eval_mode,
+                **parameters,
+            )
+
+            llm_client = EndpointClient(backend)
+
+        elif inference_backend == "litellm":
+            llm_client = LiteLLMClient(
+                provider=provider,
+                model=model,
+                eval_mode=eval_mode,
+                **parameters
+            )
+        else:  # langchain
+            from clear_eval.pipeline.inference_utils.langchain_chat_models import get_chat_llm
+            llm = get_chat_llm(provider, model, parameters=parameters, eval_mode=eval_mode)
+            llm_client = LangChainClient(llm)
+    except Exception as e:
+        raise Exception(f"Error initializing LLM ({provider}, {model}). Details: {e}")
+    
+    if llm_client is None:
+        raise ValueError(f"Error initializing LLM ({provider}, {model}).")
+
+    return llm_client

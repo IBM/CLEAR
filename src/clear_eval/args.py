@@ -86,8 +86,12 @@ def add_clear_args_to_parser(parser: argparse.ArgumentParser | None = None, grou
                         help="JSON dictionary of additional configuration for the external judge")
     target.add_argument("--eval-model-params", type=parse_dict, default=None,
                         help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'")
+    target.add_argument("--inference-backend", choices=["langchain", "litellm", "endpoint"], default=None,
+                        help="Inference backend to use: 'langchain' (default, built-in providers), 'litellm' (100+ providers), or 'endpoint' (direct HTTP)")
     target.add_argument("--use-litellm", type=str2bool, default=None,
-                        help="Whether to use litellm for inference")
+                        help="(Deprecated: use --inference-backend litellm) Whether to use litellm for inference")
+    target.add_argument("--endpoint-url", default=None,
+                        help="Direct HTTP endpoint URL (required when inference_backend is 'endpoint')")
 
     return parser
 

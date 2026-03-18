@@ -8,7 +8,7 @@ from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION
 from clear_eval.pipeline.propmts import get_summarization_prompt, \
      get_shortcomings_clustering_prompt, get_issues_mapping_system_prompt, get_issues_mapping_human_prompt, get_synthesis_prompt, get_synthesis_prompt_cont
 import re
-from clear_eval.pipeline.llm_client import run_parallel, run_async
+from clear_eval.pipeline.inference_utils.llm_client import run_parallel, run_async, get_llm_client
 logger = logging.getLogger(__name__)
 
 def is_missing_or_error(eval_text):
@@ -485,7 +485,7 @@ def load_inputs(config, data_path, load_predictions, task_data):
 
 def run_predictions_generation_save_results(data_df, config, output_path):
     provider = config["provider"]
-    gen_llm = get_llm(provider=provider, model_name=config["gen_model_name"], eval_mode=False)
+    gen_llm = get_llm_client(provider=provider, model=config["gen_model_name"], eval_mode=False)
     gen_df = generate_model_predictions(data_df, gen_llm, config)
     save_dataframe_to_cache(gen_df, output_path)
     return gen_df
@@ -621,31 +621,6 @@ def convert_results_to_ui_input(df, config, task_data):
     except Exception as e:
         logger.error(f"Warning: Error converting custom analysis results to CSV: {e}")
         return None
-
-def get_llm(provider, model_name, parameters=None, eval_mode=True, use_litellm=False):
-    """
-    Get an LLM client for inference.
-
-    Args:
-        provider: Provider name (openai, azure, watsonx, rits, or any litellm provider)
-        model_name: Model identifier
-        parameters: Additional model parameters
-        eval_mode: If True, use temperature=0 for deterministic output
-        use_litellm: If True, use LiteLLM backend. If False, use LangChain.
-
-    Returns:
-        LLMClient instance (always returns LLMClient for unified interface)
-    """
-    from clear_eval.pipeline.llm_client import get_llm_client
-
-    try:
-        logger.info(f"Getting llm for model: {model_name}, provider {provider}, eval_mode {eval_mode}, use_litellm {use_litellm}")
-        llm = get_llm_client(provider, model_name, use_litellm=use_litellm, eval_mode=eval_mode, parameters=parameters)
-    except Exception as e:
-        raise Exception(f"Error initializing LLM {provider}, {model_name}). Details: {e}")
-    if llm is None:
-        raise ValueError(f"Error initializing LLM ({provider}, {model_name}).")
-    return llm
 
 def create_aggregations_from_df(df, eval_llm, use_full_text, max_shortcomings, high_score_threshold, max_workers,
                                 score_col = SCORE_COL, qid_col="id", max_eval_text_for_synthesis=None, synthesis_template=None, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
