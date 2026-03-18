@@ -19,6 +19,7 @@ Arguments are split into two groups:
 import argparse
 import logging
 import os
+import tempfile
 
 from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, \
     save_comprehensive_json_results
@@ -92,8 +93,13 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         choices=['avg', 'min'],
         help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
     )
+    group.add_argument(
+        "--memory-only",
+        type=str2bool,
+        help="If true, use temporary directories and return only JSON results (no files saved) (default: false)"
+    )
 
-def run_full_pipeline(config_dict: dict) -> str:
+def run_full_pipeline(config_dict: dict) -> dict:
     """
     Complete pipeline: traces -> trajectory data -> CLEAR results.
 
@@ -101,7 +107,8 @@ def run_full_pipeline(config_dict: dict) -> str:
         config_dict: Configuration dictionary with agentic and CLEAR params (all top-level)
 
     Returns:
-        Path to the ui_results.zip file
+        Dictionary with final JSON results (always returns dict)
+        If memory_only=True in config_doct, results are only returned (not saved)
     """
     # Extract agentic-specific parameters
     traces_input_dir = config_dict.get('traces_input_dir')
@@ -110,67 +117,100 @@ def run_full_pipeline(config_dict: dict) -> str:
     observability_framework = config_dict.get('observability_framework', 'mlflow')
     separate_tools = config_dict.get('separate_tools', False)
     overwrite = config_dict.get('overwrite', True)
-
+    memory_only = config_dict.get('memory_only', False)
     if not traces_input_dir:
         raise ValueError("traces_input_dir is required")
-    if not agentic_output_dir:
-        raise ValueError("agentic_output_dir is required")
+    if not memory_only and not agentic_output_dir:
+        raise ValueError("agentic_output_dir is required when memory_only=False")
 
-    traces_data_dir = os.path.join(agentic_output_dir, 'traces_data')
-    clear_data_dir = os.path.join(agentic_output_dir, 'clear_data')
-    clear_results_dir = os.path.join(agentic_output_dir, 'clear_results')
+    # Use temporary directory if memory_only mode
+    if memory_only:
+        temp_dir_context = tempfile.TemporaryDirectory()
+        temp_dir = temp_dir_context.__enter__()
+        effective_output_dir = temp_dir
+        logger.info("=" * 80)
+        logger.info("CLEAR FULL PIPELINE: MEMORY-ONLY MODE")
+        logger.info("=" * 80)
+        logger.info("Using temporary directory for intermediate files")
+        logger.info("Only final JSON results will be returned (no files saved)")
+    else:
+        temp_dir_context = None
+        effective_output_dir = agentic_output_dir
+        logger.info("=" * 80)
+        logger.info("CLEAR FULL PIPELINE: FROM RAW TRACES")
+        logger.info("=" * 80)
 
-    logger.info("=" * 80)
-    logger.info("CLEAR FULL PIPELINE: FROM RAW TRACES")
-    logger.info("=" * 80)
-    logger.info(f"Input traces: {traces_input_dir}")
-    logger.info(f"Agent framework: {agent_framework}")
-    logger.info(f"Observability: {observability_framework}")
-    logger.info(f"Separate tools: {separate_tools}")
-    logger.info(f"Output: {agentic_output_dir}")
-    logger.info("  ├── traces_data/    (Trajectory CSVs)")
-    logger.info("  ├── clear_data/     (CLEAR format by agent)")
-    logger.info("  └── clear_results/  (CLEAR analysis results)")
-    logger.info("=" * 80)
+    try:
+        traces_data_dir = os.path.join(effective_output_dir, 'traces_data')
+        clear_data_dir = os.path.join(effective_output_dir, 'clear_data')
+        clear_results_dir = os.path.join(effective_output_dir, 'clear_results')
 
-    logger.info("STEP 1: Processing traces to trajectory data")
-    process_traces_to_traj_data(
-        traces_input_dir,
-        traces_data_dir,
-        agent_framework=agent_framework,
-        observability_framework=observability_framework,
-        separate_tools=separate_tools
-    )
+        logger.info(f"Input traces: {traces_input_dir}")
+        logger.info(f"Agent framework: {agent_framework}")
+        logger.info(f"Observability: {observability_framework}")
+        logger.info(f"Separate tools: {separate_tools}")
+        if not memory_only:
+            logger.info(f"Output: {agentic_output_dir}")
+            logger.info("  ├── traces_data/    (Trajectory CSVs)")
+            logger.info("  ├── clear_data/     (CLEAR format by agent)")
+            logger.info("  └── clear_results/  (CLEAR analysis results)")
+        logger.info("=" * 80)
 
-    logger.info("STEP 2: Converting trajectory data to CLEAR format")
-    convert_to_clear_format(traces_data_dir, clear_data_dir)
+        logger.info("STEP 1: Processing traces to trajectory data")
+        process_traces_to_traj_data(
+            traces_input_dir,
+            traces_data_dir,
+            agent_framework=agent_framework,
+            observability_framework=observability_framework,
+            separate_tools=separate_tools
+        )
 
-    logger.info("STEP 3: Running CLEAR analysis for each agent")
+        logger.info("STEP 2: Converting trajectory data to CLEAR format")
+        convert_to_clear_format(traces_data_dir, clear_data_dir)
 
-    judge_results_dir = run_clear_analysis(
-        clear_data_dir,
-        clear_results_dir,
-        config_dict,
-        overwrite=overwrite,
-    )
+        logger.info("STEP 3: Running CLEAR analysis for each agent")
 
-    logger.info("STEP 4: Creating comprehensive UI results")
-    ui_results_path = create_comprehensive_ui_results(
-        judge_results_dir,
-        traces_data_dir
-    )
+        judge_results_dir = run_clear_analysis(
+            clear_data_dir,
+            clear_results_dir,
+            config_dict,
+            overwrite=overwrite,
+        )
 
-    logger.info("=" * 80)
-    logger.info("PIPELINE COMPLETE")
+        logger.info("STEP 4: Creating comprehensive UI results")
+        ui_results_path = create_comprehensive_ui_results(
+            judge_results_dir,
+            traces_data_dir
+        )
 
-    json_results = save_comprehensive_json_results(
-        judge_results_dir = judge_results_dir,
-        traces_data_dir = traces_data_dir,
-        config_dict = config_dict,
-    )
+        logger.info("=" * 80)
+        logger.info("PIPELINE COMPLETE")
+        logger.info("Building JSON results")
+        json_results = build_comprehensive_json_results(
+            judge_results_dir=judge_results_dir,
+            traces_data_dir=traces_data_dir,
+            config_dict=config_dict,
+        )
 
+        if not memory_only:
+            from clear_eval.agentic.pipeline.build_json_results import save_json_to_file
+            save_json_to_file(
+                results=json_results,
+                output_dir=judge_results_dir,
+                output_filename="clear_results.json"
+            )
+        else:
+            logger.info("Memory-only mode: Results not saved to disk")
+        
+        logger.info("=" * 80)
+
+    finally:
+        # Clean up temporary directory if used
+        if temp_dir_context is not None:
+            temp_dir_context.__exit__(None, None, None)
+            logger.info("Temporary directory cleaned up")
+    
     return json_results
-
 
 def build_cli_overrides(args: argparse.Namespace) -> dict:
     """
@@ -218,14 +258,22 @@ Examples:
       --provider watsonx \\
       --eval-model-name meta-llama/llama-3-3-70b-instruct
 
+  # Memory-only mode (no files saved, only JSON results returned)
+  python -m clear_eval.agentic.pipeline.run_clear_pipeline \\
+      --traces-input-dir data/traces \\
+      --provider watsonx \\
+      --eval-model-name meta-llama/llama-3-3-70b-instruct \\
+      --memory-only true
+
 Config file structure (YAML format - see setup/default_config.yaml):
   # Agentic pipeline arguments
   traces_input_dir: data/traces
-  agentic_output_dir: output/analysis
+  agentic_output_dir: output/analysis  # Optional if memory_only: true
   agent_framework: langgraph
   observability_framework: mlflow
   separate_tools: false
   overwrite: true
+  memory_only: false  # Set to true to skip saving files
 
   # CLEAR arguments
   provider: watsonx
@@ -261,14 +309,27 @@ use run_clear_on_traj_data.py instead.
         **cli_overrides
     )
 
+    # Extract memory_only flag
+    memory_only = config_dict.get('memory_only', False)
+    
     # Validate required parameters
     if not config_dict.get('traces_input_dir'):
         parser.error("traces_input_dir is required (set in config or use --traces-input-dir)")
-    if not config_dict.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
+    if not memory_only and not config_dict.get('agentic_output_dir'):
+        parser.error("agentic_output_dir is required when memory_only=False (set in config or use --agentic-output-dir)")
 
-    # Run the full pipeline
-    run_full_pipeline(config_dict)
+    # Run the full pipeline (always returns dict)
+    result = run_full_pipeline(config_dict)
+    
+    logger.info("=" * 80)
+    logger.info("PIPELINE SUMMARY")
+    logger.info(f"Total agents: {len(result.get('agents', {}))}")
+    logger.info(f"Total traces: {result.get('metadata', {}).get('statistics', {}).get('total_traces', 0)}")
+    if memory_only:
+        logger.info("Mode: Memory-only (no files saved)")
+    else:
+        logger.info("Mode: Normal (results saved to disk)")
+    logger.info("=" * 80)
 
 
 if __name__ == "__main__":

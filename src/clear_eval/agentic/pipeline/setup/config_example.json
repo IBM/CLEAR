@@ -16,5 +16,6 @@
   "run_name": null,
   "success_threshold": 0.7,
   "evaluation_criteria": null,
-  "predefined_issues": null
+  "predefined_issues": null,
+  "memory_only": true
 }
