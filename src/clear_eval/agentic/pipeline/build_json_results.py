@@ -431,15 +431,54 @@ def build_comprehensive_json_results(
     return results
 
 
+def save_json_to_file(
+    results: Dict[str, Any],
+    output_dir: str | Path,
+    output_filename: str = "clear_results.json"
+) -> Path:
+    """
+    Save JSON results dictionary to a file.
+
+    Args:
+        results: JSON results dictionary to save
+        output_dir: Directory to save the JSON output
+        output_filename: Name of the output JSON file
+
+    Returns:
+        Path to the saved JSON file
+    """
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    json_output_path = output_path / output_filename
+
+    with open(json_output_path, 'w', encoding='utf-8') as f:
+        json.dump(results, f, indent=2, default=str)
+
+    stats = results["metadata"]["statistics"]
+    logger.info(f"Saved comprehensive results to: {json_output_path}")
+    logger.info(f"  Total agents: {stats['total_agents']}")
+    logger.info(f"  Total traces: {stats['total_traces']}")
+    logger.info(f"  Total issues discovered: {stats['total_issues_discovered']}")
+    logger.info(f"  Total interactions analyzed: {stats['total_interactions_analyzed']}")
+    logger.info(f"  Interactions with issues: {stats['total_interactions_with_issues']}")
+    logger.info(f"  Interactions with no issues: {stats['total_interactions_no_issues']}")
+    logger.info("=" * 80)
+
+    return json_output_path
+
+
 def save_comprehensive_json_results(
     judge_results_dir: str | Path,
     traces_data_dir: str | Path,
     config_dict: Dict[str, Any],
-    output_dir: str | Path = None,
+    output_dir: Optional[str | Path] = None,
     output_filename: str = "clear_results.json"
 ) -> Path:
     """
-    Build and save comprehensive JSON results.
+    Build and save comprehensive JSON results (wrapper function).
+
+    This is a convenience wrapper that calls build_comprehensive_json_results()
+    followed by save_json_to_file().
 
     Args:
         judge_results_dir: Directory containing agent CLEAR result subdirectories
@@ -464,24 +503,7 @@ def save_comprehensive_json_results(
     if not output_dir:
         output_dir = judge_results_dir
 
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    json_output_path = output_path / output_filename
-
-    with open(json_output_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, default=str)
-
-    stats = results["metadata"]["statistics"]
-    logger.info(f"Saved comprehensive results to: {json_output_path}")
-    logger.info(f"  Total agents: {stats['total_agents']}")
-    logger.info(f"  Total traces: {stats['total_traces']}")
-    logger.info(f"  Total issues discovered: {stats['total_issues_discovered']}")
-    logger.info(f"  Total interactions analyzed: {stats['total_interactions_analyzed']}")
-    logger.info(f"  Interactions with issues: {stats['total_interactions_with_issues']}")
-    logger.info(f"  Interactions with no issues: {stats['total_interactions_no_issues']}")
-    logger.info("=" * 80)
-
-    return json_output_path
+    return save_json_to_file(results, output_dir, output_filename)
 
 
 # Path to agentic pipeline default config
