@@ -22,7 +22,7 @@ import os
 import tempfile
 
 from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, \
-    save_comprehensive_json_results
+    save_comprehensive_json_results, save_json_to_file
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
     convert_to_clear_format,
@@ -120,40 +120,45 @@ def run_full_pipeline(config_dict: dict) -> dict:
     memory_only = config_dict.get('memory_only', False)
     if not traces_input_dir:
         raise ValueError("traces_input_dir is required")
-    if not memory_only and not agentic_output_dir:
-        raise ValueError("agentic_output_dir is required when memory_only=False")
+    if not agentic_output_dir:
+        raise ValueError("agentic_output_dir is required")
 
-    # Use temporary directory if memory_only mode
+    # Use temporary directory for intermediate files if memory_only mode
     if memory_only:
         temp_dir_context = tempfile.TemporaryDirectory()
         temp_dir = temp_dir_context.__enter__()
-        effective_output_dir = temp_dir
+        intermediate_output_dir = temp_dir
         logger.info("=" * 80)
         logger.info("CLEAR FULL PIPELINE: MEMORY-ONLY MODE")
         logger.info("=" * 80)
         logger.info("Using temporary directory for intermediate files")
-        logger.info("Only final JSON results will be returned (no files saved)")
+        logger.info(f"Final JSON results will be saved to: {agentic_output_dir}")
     else:
         temp_dir_context = None
-        effective_output_dir = agentic_output_dir
+        intermediate_output_dir = agentic_output_dir
         logger.info("=" * 80)
         logger.info("CLEAR FULL PIPELINE: FROM RAW TRACES")
         logger.info("=" * 80)
 
     try:
-        traces_data_dir = os.path.join(effective_output_dir, 'traces_data')
-        clear_data_dir = os.path.join(effective_output_dir, 'clear_data')
-        clear_results_dir = os.path.join(effective_output_dir, 'clear_results')
+        # Intermediate files go to temp dir (memory-only) or agentic_output_dir (normal)
+        traces_data_dir = os.path.join(intermediate_output_dir, 'traces_data')
+        clear_data_dir = os.path.join(intermediate_output_dir, 'clear_data')
+        clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
 
         logger.info(f"Input traces: {traces_input_dir}")
         logger.info(f"Agent framework: {agent_framework}")
         logger.info(f"Observability: {observability_framework}")
         logger.info(f"Separate tools: {separate_tools}")
-        if not memory_only:
-            logger.info(f"Output: {agentic_output_dir}")
+        logger.info(f"Output: {agentic_output_dir}")
+        if memory_only:
+            logger.info("  ├── clear_results/  (CLEAR analysis results)")
+            logger.info("  └──── clear_results.json  (Final JSON results only)")
+        else:
             logger.info("  ├── traces_data/    (Trajectory CSVs)")
             logger.info("  ├── clear_data/     (CLEAR format by agent)")
-            logger.info("  └── clear_results/  (CLEAR analysis results)")
+            logger.info("  ├── clear_results/  (CLEAR analysis results)")
+            logger.info("  └──── clear_results.json  (Final JSON results)")
         logger.info("=" * 80)
 
         logger.info("STEP 1: Processing traces to trajectory data")
@@ -186,29 +191,26 @@ def run_full_pipeline(config_dict: dict) -> dict:
         logger.info("=" * 80)
         logger.info("PIPELINE COMPLETE")
         logger.info("Building JSON results")
+        if memory_only:
+            final_json_dir = os.path.join(agentic_output_dir, 'clear_results')
+        else:
+            final_json_dir = judge_results_dir
         json_results = build_comprehensive_json_results(
             judge_results_dir=judge_results_dir,
             traces_data_dir=traces_data_dir,
             config_dict=config_dict,
         )
-
-        if not memory_only:
-            from clear_eval.agentic.pipeline.build_json_results import save_json_to_file
-            save_json_to_file(
-                results=json_results,
-                output_dir=judge_results_dir,
-                output_filename="clear_results.json"
-            )
-        else:
-            logger.info("Memory-only mode: Results not saved to disk")
-        
+        save_json_to_file(
+            results=json_results,
+            output_dir=final_json_dir,
+        )
         logger.info("=" * 80)
 
     finally:
         # Clean up temporary directory if used
         if temp_dir_context is not None:
             temp_dir_context.__exit__(None, None, None)
-            logger.info("Temporary directory cleaned up")
+            logger.info("Temporary intermediate files cleaned up")
     
     return json_results
 
@@ -325,11 +327,8 @@ use run_clear_on_traj_data.py instead.
     logger.info("PIPELINE SUMMARY")
     logger.info(f"Total agents: {len(result.get('agents', {}))}")
     logger.info(f"Total traces: {result.get('metadata', {}).get('statistics', {}).get('total_traces', 0)}")
-    if memory_only:
-        logger.info("Mode: Memory-only (no files saved)")
-    else:
-        logger.info("Mode: Normal (results saved to disk)")
     logger.info("=" * 80)
+    return result
 
 
 if __name__ == "__main__":
