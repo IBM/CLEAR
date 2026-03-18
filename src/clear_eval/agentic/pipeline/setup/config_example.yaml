@@ -2,13 +2,14 @@
 traces_input_dir: ../data/log_monitor_agent       # For run_clear_pipeline.py (full pipeline from raw traces)
 agentic_output_dir: ../output/mlflow_log_monitor_example
 agent_framework: langgraph
+observability_framework: mlflow
 separate_tools: false
 overwrite: true
 
 # CLEAR evaluation configuration
-# Uses LiteLLM - see https://docs.litellm.ai/docs/providers for model naming
 
 # inference params
+inference_backend: litellm
 provider: openai
 eval_model_name: gpt-4o  # LiteLLM model name (e.g., gpt-4o, claude-3-opus, gemini/gemini-pro)
 eval_model_params:
@@ -18,8 +19,10 @@ eval_model_params:
 #use cached results if available
 resume_enabled: false
 
-# dict {criteria_name: criteria_desc}, specific
+# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge. not
 evaluation_criteria: null
+
+
 
 # Pass/fail analysis
 success_threshold: 0.7  # Threshold for pass/fail determination
