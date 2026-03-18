@@ -14,7 +14,7 @@ import logging
 
 from clear_eval.pipeline.config_loader import load_config
 from clear_eval.pipeline.inference_utils.llm_client import run_async, LiteLLMClient, LangChainClient
-from pipeline.full_pipeline import get_eval_llm_from_config
+from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 
 logger = logging.getLogger(__name__)
 
