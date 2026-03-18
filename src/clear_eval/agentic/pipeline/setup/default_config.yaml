@@ -9,20 +9,33 @@ overwrite: true
 
 # CLEAR evaluation configuration
 
-  # inference params
+# inference params
+# Choose inference backend: "langchain" (default), "litellm", or "endpoint"
+# - inference_backend: "langchain" (default) - Use LangChain for built-in providers
+# - inference_backend: "litellm" - Use LiteLLM (supports many providers: anthropic, bedrock, groq, etc.)
+#   See https://docs.litellm.ai/docs/providers for full list
+# - inference_backend: "endpoint" - Use direct HTTP endpoint backend for custom APIs
+inference_backend: litellm # or langchain, endpoint
+inference_url: null # required for inference_backend endpoint
 provider: watsonx
-use_litellm: true
 eval_model_name: openai/gpt-oss-120b
 max_workers: 20
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
   max_tokens: 8096
 
+
+# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge.
+# These criteria will not be used directly, but will affect the discovered issues
+evaluation_criteria: null
+
+# list of predefined issues (strings) to be mapped to the individual records.
+# if this parameter is set, no issue discovery will be performed.
+predefined_issues: null
+
+## internal clear params
 #use cached results if available
 resume_enabled: false
-
-# dict {criteria_name: criteria_desc}, specific
-evaluation_criteria: null
 
 max_examples_to_analyze: null # for debugging
 
@@ -45,28 +58,8 @@ external_judge_function: evaluate
 external_judge_config: {}
 
 
-provider_defaults:
-  openai:
-    gen_model_name: gpt-4o
-    eval_model_name: gpt-3.5-turbo
-    max_workers: 10
-  azure:
-    gen_model_name: gpt-4o-mini-2024-07-18
-    eval_model_name: gpt-4o-2024-08-06
-    max_workers: 20
-  watsonx:
-    gen_model_name: ibm/granite-3-3-8b-instruct
-    eval_model_name: meta-llama/llama-3-3-70b-instruct
-    max_workers: 5
-  rits:
-    gen_model_name: ibm-granite/granite-3.3-8b-instruct
-    eval_model_name: meta-llama/llama-3-3-70b-instruct
-    max_workers: 20
-
-
 # whether to perform generation or take existing ones from data
 perform_generation: false
-predefined_issues: null
 
 # whether to use reference in the evaluations.
 is_reference_based: false
