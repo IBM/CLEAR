@@ -19,7 +19,7 @@ from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_da
 from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, \
     load_inputs, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
-from pipeline.inference_utils.llm_client import get_llm_client
+from clear_eval.pipeline.inference_utils.llm_client import get_llm_client
 from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
