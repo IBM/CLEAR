@@ -19,10 +19,13 @@ eval_model_params:
 #use cached results if available
 resume_enabled: false
 
-# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge. not
+# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge.
+# These criteria will not be used directly, but will affect the discovered issues
 evaluation_criteria: null
 
-
+# list of predefined issues (strings) to be mapped to the individual records.
+# if this parameter is set, no issue discovery will be performed.
+predefined_issues: null
 
 # Pass/fail analysis
 success_threshold: 0.7  # Threshold for pass/fail determination
