@@ -359,6 +359,65 @@ def create_comprehensive_ui_results(
     )
 
 
+def run_traj_data_pipeline(
+    traces_data_dir: str,
+    agentic_output_dir: str,
+    config_dict: dict,
+    overwrite: bool = True
+) -> str:
+    """
+    Run pipeline from trajectory data to CLEAR results.
+    
+    This function handles the complete workflow from trajectory CSVs:
+    - Convert trajectory data to CLEAR format
+    - Run CLEAR analysis for each agent
+    - Create comprehensive UI results
+    - Save JSON results
+    
+    This is the shared function used by both:
+    - run_clear_pipeline.py (after preprocessing traces)
+    - run_unified_agentic_pipeline.py (when starting from traces_data)
+    
+    Args:
+        traces_data_dir: Directory containing trajectory CSV files
+        agentic_output_dir: Base output directory
+        config_dict: Configuration dictionary with CLEAR params
+        overwrite: Whether to overwrite existing results
+        
+    Returns:
+        Path to the JSON results file
+    """
+    clear_data_dir = os.path.join(agentic_output_dir, 'clear_data')
+    clear_results_dir = os.path.join(agentic_output_dir, 'clear_results')
+    
+    logger.info("Converting trajectory data to CLEAR format...")
+    convert_to_clear_format(traces_data_dir, clear_data_dir)
+
+    logger.info("Running CLEAR analysis for each agent...")
+    judge_results_dir = run_clear_analysis(
+        clear_data_dir,
+        clear_results_dir,
+        config_dict,
+        overwrite=overwrite,
+    )
+
+    logger.info("Creating comprehensive UI results...")
+    ui_results_path = create_comprehensive_ui_results(
+        judge_results_dir,
+        traces_data_dir
+    )
+
+    logger.info("Saving comprehensive JSON results...")
+    json_results = save_comprehensive_json_results(
+        judge_results_dir=judge_results_dir,
+        traces_data_dir=traces_data_dir,
+        config_dict=config_dict,
+    )
+
+    logger.info("Pipeline complete!")
+    return json_results
+
+
 def main():
     """CLI entry point for running CLEAR analysis on preprocessed trajectory data."""
     parser = argparse.ArgumentParser(
@@ -434,10 +493,6 @@ Argument Precedence (lowest to highest):
     agentic_output_dir = config_dict['agentic_output_dir']
     overwrite = config_dict.get('overwrite', True)
 
-    # Create output directories
-    clear_data_dir = os.path.join(agentic_output_dir, 'clear_data')
-    clear_results_dir = os.path.join(agentic_output_dir, 'clear_results')
-
     logger.info("=" * 80)
     logger.info("CLEAR PIPELINE: TRAJECTORY DATA ANALYSIS")
     logger.info("=" * 80)
@@ -447,32 +502,18 @@ Argument Precedence (lowest to highest):
     logger.info("  └── clear_results/  (CLEAR analysis results)")
     logger.info("=" * 80)
 
-    logger.info("STEP 1: Converting trajectory data to CLEAR format")
-    convert_to_clear_format(traces_data_dir, clear_data_dir)
-
-    logger.info("STEP 2: Running CLEAR analysis for each agent")
-
-    judge_results_dir = run_clear_analysis(
-        clear_data_dir,
-        clear_results_dir,
-        config_dict,
-        overwrite=overwrite,
-    )
-
-    logger.info("STEP 3: Creating comprehensive UI results")
-    ui_results_path = create_comprehensive_ui_results(
-        judge_results_dir,
-        traces_data_dir
-    )
-
-    json_results = save_comprehensive_json_results(
-        judge_results_dir = judge_results_dir,
-        traces_data_dir = traces_data_dir,
-        config_dict = config_dict,
+    # Call the shared pipeline function
+    json_results = run_traj_data_pipeline(
+        traces_data_dir=traces_data_dir,
+        agentic_output_dir=agentic_output_dir,
+        config_dict=config_dict,
+        overwrite=overwrite
     )
 
     logger.info("=" * 80)
     logger.info("PIPELINE COMPLETE")
+    logger.info(f"Results saved to: {json_results}")
+    logger.info("=" * 80)
 
 
 if __name__ == "__main__":
