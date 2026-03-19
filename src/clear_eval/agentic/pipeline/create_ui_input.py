@@ -15,6 +15,7 @@ import zipfile
 from pathlib import Path
 from io import BytesIO, StringIO
 from datetime import datetime
+from typing import Optional
 import pandas as pd
 import tempfile
 
@@ -283,6 +284,151 @@ def create_ui_input_zip(
         logger.info(f"Total reduction: {total_original_size/(1024*1024):.2f}MB -> {final_size/(1024*1024):.2f}MB ({reduction:.1f}%)")
     logger.info("=" * 80)
 
+    return result_zip
+
+
+def create_unified_ui_zip(
+    output_dir: Path,
+    traces_data_dir: Optional[Path] = None,
+    step_by_step_clear_results_dir: Optional[Path] = None,
+    full_trajectory_results_dir: Optional[Path] = None,
+    output_zip_name: str = "ui_results.zip"
+) -> Path:
+    """
+    Create a unified UI input zip containing both step-by-step and full trajectory results.
+    
+    This combines:
+    - Step-by-step CLEAR analysis results (agent_results/)
+    - Full trajectory evaluation results (full_traj_results/)
+    - Trajectory data (trajectory_data.zip and traces_data/)
+    
+    Args:
+        output_dir: Directory to save the output zip
+        traces_data_dir: Directory containing trajectory CSV files
+        step_by_step_clear_results_dir: Directory containing step-by-step CLEAR results
+        full_trajectory_results_dir: Directory containing full trajectory evaluation results
+        output_zip_name: Name of the output zip file
+        
+    Returns:
+        Path to the created unified zip file
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_zip = output_dir / output_zip_name
+    
+    if result_zip.exists():
+        result_zip.unlink()
+    
+    logger.info("=" * 80)
+    logger.info("CREATING UNIFIED UI ZIP")
+    logger.info("=" * 80)
+    logger.info(f"Output: {result_zip}")
+    
+    with zipfile.ZipFile(result_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # 1. Add trajectory data if provided
+        if traces_data_dir and Path(traces_data_dir).exists():
+            traj_data_dir = Path(traces_data_dir)
+            logger.info(f"Processing trajectory data from: {traj_data_dir}")
+            csv_files = list(traj_data_dir.glob("*.csv"))
+            
+            if csv_files:
+                with tempfile.TemporaryDirectory() as temp_dir_str:
+                    temp_dir = Path(temp_dir_str)
+                    
+                    # Convert CSVs to Parquet
+                    parquet_files = convert_traj_csvs_to_parquet(csv_files, temp_dir)
+                    
+                    # Create trajectory data zip with Parquet files
+                    traj_zip_buffer = BytesIO()
+                    with zipfile.ZipFile(traj_zip_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as traj_zf:
+                        for parquet_file in sorted(parquet_files):
+                            traj_zf.write(parquet_file, arcname=parquet_file.name)
+                    
+                    traj_zip_buffer.seek(0)
+                    zf.writestr("trajectory_data.zip", traj_zip_buffer.read())
+                    logger.info(f"Added trajectory_data.zip with {len(parquet_files)} Parquet files")
+                    
+                    # Also add original CSV files
+                    for csv_file in sorted(csv_files):
+                        arcname = f"traces_data/{csv_file.name}"
+                        zf.write(csv_file, arcname=arcname)
+                    logger.info(f"Added {len(csv_files)} CSV files to traces_data/")
+        
+        # 2. Add step-by-step CLEAR results if provided
+        if step_by_step_clear_results_dir and Path(step_by_step_clear_results_dir).exists():
+            clear_dir = Path(step_by_step_clear_results_dir)
+            logger.info(f"Processing step-by-step CLEAR results from: {clear_dir}")
+            
+            agent_dirs = [d for d in clear_dir.iterdir() if d.is_dir()]
+            agent_count = 0
+            
+            for agent_dir in sorted(agent_dirs):
+                agent_name = agent_dir.name
+                zip_files = list(agent_dir.glob("analysis_results_*.zip"))
+                
+                if zip_files:
+                    for zip_file in zip_files:
+                        arcname = f"agent_results/{agent_name}.zip"
+                        dedup_buffer = BytesIO()
+                        try:
+                            deduplicate_agent_result_zip(zip_file, dedup_buffer)
+                            dedup_buffer.seek(0)
+                            zf.writestr(arcname, dedup_buffer.read())
+                            agent_count += 1
+                        except Exception as e:
+                            logger.warning(f"Deduplication failed for {agent_name}, using original: {e}")
+                            zf.write(zip_file, arcname=arcname)
+                            agent_count += 1
+            
+            logger.info(f"Added {agent_count} step-by-step agent results")
+        
+        # 3. Add full trajectory results if provided
+        if full_trajectory_results_dir and Path(full_trajectory_results_dir).exists():
+            full_traj_dir = Path(full_trajectory_results_dir)
+            logger.info(f"Processing full trajectory results from: {full_traj_dir}")
+            
+            # Map actual directory names to dashboard-expected names
+            dir_mapping = {
+                'task_success': 'task_success',
+                'full_trajectory': 'per_traj_results',  # Map to expected name
+                'rubric_evaluation': 'rubric_eval_results',  # Map to expected name
+                'clear_analysis': 'clear_results'
+            }
+            
+            for actual_dir_name, expected_dir_name in dir_mapping.items():
+                subdir = full_traj_dir / actual_dir_name
+                if subdir.exists():
+                    file_count = 0
+                    for file_path in subdir.rglob('*'):
+                        if file_path.is_file():
+                            arcname = f"full_traj_results/{expected_dir_name}/{file_path.relative_to(subdir)}"
+                            zf.write(file_path, arcname=arcname)
+                            file_count += 1
+                    if file_count > 0:
+                        logger.info(f"Added {file_count} files from {actual_dir_name}/ as {expected_dir_name}/")
+        
+        # 4. Create metadata
+        metadata = {
+            "created_at": datetime.now().isoformat(),
+            "type": "unified_results",
+            "structure": {
+                "trajectory_data.zip": "Trajectory data as Parquet (compressed)",
+                "traces_data/": "Original trajectory CSV files",
+                "agent_results/": "Step-by-step CLEAR analysis results",
+                "full_traj_results/": "Full trajectory evaluation results",
+                "metadata.json": "This file - information about the zip contents"
+            },
+            "format_version": "5.0"
+        }
+        zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+        logger.info("Added metadata.json")
+    
+    final_size = result_zip.stat().st_size
+    logger.info("=" * 80)
+    logger.info(f"Successfully created unified zip: {result_zip}")
+    logger.info(f"Final zip size: {final_size / (1024*1024):.2f} MB")
+    logger.info("=" * 80)
+    
     return result_zip
 
 
