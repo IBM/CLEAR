@@ -16,7 +16,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from agentic.full_traj_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
+from agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
 
