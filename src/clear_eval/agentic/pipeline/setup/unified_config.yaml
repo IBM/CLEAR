@@ -1,0 +1,101 @@
+# ============================================================================
+# UNIFIED AGENTIC PIPELINE CONFIGURATION
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Pipeline Execution Mode
+# ----------------------------------------------------------------------------
+run_step_by_step: true          # Run step-by-step CLEAR analysis
+run_full_trajectory: true       # Run full trajectory evaluation
+run_name: null                  # Optional run identifier for output organization
+
+# ----------------------------------------------------------------------------
+# Agentic Pipeline Input/Output (distinct from CLEAR's data-path/output-dir)
+# ----------------------------------------------------------------------------
+agentic_input_dir: null         # REQUIRED: Base input directory
+                                # Expected structure:
+                                #   agentic_input_dir/
+                                #   ├── traces/          (for step-by-step from raw traces)
+                                #   ├── traces_compact/  (for full trajectory evaluation)
+                                #   └── traces_data/     (for step-by-step from preprocessed CSVs)
+
+agentic_output_dir: null        # REQUIRED: Base output directory
+                                # Structure: agentic_output_dir/clear_results/<judge-model>/<run-name>/
+
+# ----------------------------------------------------------------------------
+# Step-by-Step Pipeline Options
+# ----------------------------------------------------------------------------
+process_from_traces: true       # If true, process from raw traces; if false, use traces_data/
+agent_framework: langgraph      # langgraph | crewai (only if process_from_traces=true)
+observability_framework: langfuse # mlflow | langfuse (only if process_from_traces=true)
+separate_tools: false           # Separate tool calls from text responses (keep false for now)
+
+# ----------------------------------------------------------------------------
+# Full Trajectory Pipeline Options
+# ----------------------------------------------------------------------------
+eval_types:                     # Evaluations to run
+  - task_success
+  - full_trajectory
+  - rubric
+generate_rubrics: false         # Generate rubrics before evaluation
+rubric_dir: null                # Path to existing rubrics (if not generating)
+clear_analysis_types:           # CLEAR analyses to run on full trajectory results
+  - root_cause                  # Analyze task_success failures
+  - issues                      # Analyze full_trajectory issues
+
+# ----------------------------------------------------------------------------
+# Execution Control
+# ----------------------------------------------------------------------------
+overwrite: true                 # Overwrite existing results
+concurrency: 10                 # Number of parallel workers
+max_files: null                 # Limit files to process (for testing)
+context_tokens: 128000          # Model context window (for full trajectory)
+
+# ----------------------------------------------------------------------------
+# CLEAR Configuration (all standard CLEAR arguments)
+# ----------------------------------------------------------------------------
+provider: watsonx
+eval_model_name: openai/gpt-oss-120b
+eval_model_params:
+  temperature: 0.0
+  max_tokens: 8096
+
+# CLEAR analysis settings
+resume_enabled: false
+evaluation_criteria: null
+high_score_threshold: 0.9
+max_examples_to_analyze: null
+max_shortcomings: 15
+min_shortcomings: 3
+max_eval_text_for_synthesis: 1000
+
+# Pass/fail analysis
+success_threshold: 0.7
+pass_criteria: avg              # "avg" or "min"
+
+# Agent mode configuration
+agent_mode: true
+input_columns:
+  - agent_name
+  - Name
+  - intent
+  - task_id
+  - step_in_trace_general
+  - step_in_trace_node
+  - id
+  - traj_score
+
+# Additional CLEAR settings
+use_litellm: true
+is_reference_based: false
+use_general_prompt: true
+perform_clustering: true
+task: general
+question_column: question
+model_output_column: response
+reference_column: ground_truth
+model_input_column: model_input
+qid_column: id
+documents_column: documents
+use_full_text_for_analysis: false
+
