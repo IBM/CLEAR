@@ -339,10 +339,6 @@ def run_full_trajectory_pipeline(
             max_files=config.get('max_files'),
         )
         
-        # Create UI input for full trajectory results
-        logger.info("Creating UI input for full trajectory results...")
-        create_full_trajectory_ui_input(output_dir)
-        
         logger.info("=" * 80)
         logger.info("FULL TRAJECTORY PIPELINE SUMMARY")
         logger.info("=" * 80)
@@ -354,55 +350,6 @@ def run_full_trajectory_pipeline(
     except Exception as e:
         logger.error(f"Full trajectory pipeline failed: {e}", exc_info=True)
         return False
-
-
-def create_full_trajectory_ui_input(output_dir: Path):
-    """
-    Create UI input zip for full trajectory results.
-    Includes: full_trajectory/, rubric/, and clear_analysis/ subdirectories.
-    """
-    import zipfile
-    
-    ui_zip_path = output_dir / "ui_input.zip"
-    
-    with zipfile.ZipFile(ui_zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-        # Add full_trajectory results
-        full_traj_dir = output_dir / 'full_trajectory'
-        if full_traj_dir.exists():
-            for file_path in full_traj_dir.rglob('*'):
-                if file_path.is_file():
-                    arcname = f"full_trajectory/{file_path.relative_to(full_traj_dir)}"
-                    zf.write(file_path, arcname=arcname)
-        
-        # Add rubric results
-        rubric_dir = output_dir / 'rubric'
-        if rubric_dir.exists():
-            for file_path in rubric_dir.rglob('*'):
-                if file_path.is_file():
-                    arcname = f"rubric/{file_path.relative_to(rubric_dir)}"
-                    zf.write(file_path, arcname=arcname)
-        
-        # Add CLEAR analysis results
-        clear_dir = output_dir / 'clear_analysis'
-        if clear_dir.exists():
-            for file_path in clear_dir.rglob('*'):
-                if file_path.is_file():
-                    arcname = f"clear_analysis/{file_path.relative_to(clear_dir)}"
-                    zf.write(file_path, arcname=arcname)
-        
-        # Add metadata
-        metadata = {
-            "created_at": datetime.now().isoformat(),
-            "type": "full_trajectory_results",
-            "structure": {
-                "full_trajectory/": "Full trajectory evaluation results",
-                "rubric/": "Rubric evaluation results",
-                "clear_analysis/": "CLEAR analysis on full trajectory results"
-            }
-        }
-        zf.writestr("metadata.json", json.dumps(metadata, indent=2))
-    
-    logger.info(f"Created UI input: {ui_zip_path}")
 
 
 def create_pipeline_summary(base_dir: Path, config: dict, results: dict):
@@ -527,6 +474,46 @@ def main():
     
     # Create pipeline summary
     create_pipeline_summary(output_paths['base'], config, results)
+    
+    # Create unified UI zip if both pipelines ran
+    logger.info("=" * 80)
+    logger.info("Creating unified UI zip...")
+    logger.info("=" * 80)
+    
+    from clear_eval.agentic.pipeline.create_ui_input import create_unified_ui_zip
+    
+    # Determine paths for unified zip
+    traces_data_path = None
+    step_by_step_results_path = None
+    full_traj_results_path = None
+    
+    # Check for traces_data from step-by-step pipeline
+    if results.get('step_by_step_success'):
+        potential_traces = output_paths['step_by_step'] / 'traces_data'
+        if potential_traces.exists():
+            traces_data_path = potential_traces
+        step_by_step_results_path = output_paths['step_by_step'] / 'clear_results'
+    
+    # Check for full trajectory results
+    if results.get('full_trajectory_success'):
+        full_traj_results_path = output_paths['full_trajectory']
+        # If no traces_data from step-by-step, check input
+        if not traces_data_path:
+            if input_structure.get('has_traces_data'):
+                traces_data_path = input_dir / 'traces_data'
+    
+    # Create unified zip
+    try:
+        unified_zip = create_unified_ui_zip(
+            output_dir=output_paths['base'],
+            traces_data_dir=traces_data_path,
+            step_by_step_clear_results_dir=step_by_step_results_path,
+            full_trajectory_results_dir=full_traj_results_path,
+            output_zip_name="ui_results.zip"
+        )
+        logger.info(f"✓ Created unified UI zip: {unified_zip}")
+    except Exception as e:
+        logger.error(f"Failed to create unified UI zip: {e}", exc_info=True)
     
     # Final summary
     logger.info("=" * 80)
