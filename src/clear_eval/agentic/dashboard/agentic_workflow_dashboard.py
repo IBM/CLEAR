@@ -1990,7 +1990,7 @@ def main_page():
         with ui.column().classes("w-full items-center p-4 gap-0"):
             ui.html("""
                 <div style="text-align:center; padding:16px 0 8px;">
-                    <div style="font-size:18px; font-weight:700; color:white; margin-top:4px;">CLEAR Agentic</div>
+                    <div style="font-size:18px; font-weight:700; color:white; margin-top:4px;">Agentic CLEAR</div>
                     <div style="font-size:12px; color:#94A3B8; margin-top:2px;">Workflow Analysis Dashboard</div>
                 </div>
             """)
@@ -2311,10 +2311,14 @@ def main_page():
                 yaxis_title="Total Calls",
                 plot_bgcolor="white",
                 paper_bgcolor="white",
-                margin=dict(l=60, r=20, t=40, b=120),
-                height=380,
+                margin=dict(l=60, r=20, t=80, b=120),
+                height=420,
                 xaxis=dict(tickangle=-35, tickfont=dict(size=11)),
-                yaxis=dict(gridcolor="#E2E8F0", title_standoff=20),
+                yaxis=dict(
+                    gridcolor="#E2E8F0",
+                    title_standoff=20,
+                    range=[0, max(node_counts) * 1.18] if node_counts else None,
+                ),
                 bargap=0.25,
                 uniformtext=dict(minsize=9, mode="hide"),
             )
@@ -3019,37 +3023,95 @@ def main_page():
                             if not full_issue_counts:
                                 ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">No issues to display</div>')
                             else:
-                                # Create comparison data
-                                all_issue_names = sorted(full_issue_counts.keys(), key=lambda x: full_issue_counts[x], reverse=True)[:20]
+                                # Create comparison data — sort ascending so top issue appears at top of chart
+                                all_issue_names = sorted(full_issue_counts.keys(), key=lambda x: full_issue_counts[x], reverse=False)[-20:]
                                 full_counts = [full_issue_counts.get(issue, 0) for issue in all_issue_names]
                                 filtered_counts = [filtered_issue_counts.get(issue, 0) for issue in all_issue_names]
-                                
-                                # Create grouped bar chart
+
+                                # Wrap long labels for the y-axis (max ~40 chars per line)
+                                def wrap_label(text, max_chars=40):
+                                    if len(text) <= max_chars:
+                                        return text
+                                    words = text.split()
+                                    lines, line = [], []
+                                    for word in words:
+                                        if sum(len(w) for w in line) + len(line) + len(word) > max_chars and line:
+                                            lines.append(" ".join(line))
+                                            line = [word]
+                                        else:
+                                            line.append(word)
+                                    if line:
+                                        lines.append(" ".join(line))
+                                    return "<br>".join(lines)
+
+                                wrapped_labels = [wrap_label(name) for name in all_issue_names]
+
+                                # Horizontal grouped bar chart
                                 fig = go.Figure()
                                 fig.add_trace(go.Bar(
                                     name="Full Dataset",
-                                    x=all_issue_names,
-                                    y=full_counts,
-                                    marker_color=COLORS["secondary"],
-                                    opacity=0.7
+                                    y=wrapped_labels,
+                                    x=full_counts,
+                                    orientation="h",
+                                    customdata=all_issue_names,
+                                    hovertemplate="<b>%{customdata}</b><br>Full Dataset: %{x}<extra></extra>",
+                                    marker=dict(color=COLORS["primary"], opacity=0.85),
+                                    text=full_counts,
+                                    textposition="outside",
+                                    textangle=0,
+                                    textfont=dict(size=12, color=COLORS["text"]),
+                                    cliponaxis=False,
                                 ))
                                 fig.add_trace(go.Bar(
                                     name="Filtered Subset",
-                                    x=all_issue_names,
-                                    y=filtered_counts,
-                                    marker_color=COLORS["primary"],
-                                    opacity=0.9
+                                    y=wrapped_labels,
+                                    x=filtered_counts,
+                                    orientation="h",
+                                    customdata=all_issue_names,
+                                    hovertemplate="<b>%{customdata}</b><br>Filtered Subset: %{x}<extra></extra>",
+                                    marker=dict(color=COLORS["secondary"], opacity=0.85),
+                                    text=filtered_counts,
+                                    textposition="outside",
+                                    textangle=0,
+                                    textfont=dict(size=12, color=COLORS["text"]),
+                                    cliponaxis=False,
                                 ))
-                                
+
+                                n_issues = len(all_issue_names)
+                                bar_height = 34  # px per bar pair
+                                chart_height = max(400, n_issues * bar_height * 2 + 100)
+                                max_count = max(full_counts + [1])
+
                                 fig.update_layout(
-                                    barmode='group',
-                                    height=400,
-                                    title="",
-                                    xaxis_title="Issue",
-                                    yaxis_title="Count",
+                                    barmode="group",
+                                    height=chart_height,
+                                    xaxis_title="Count",
+                                    yaxis_title="",
                                     showlegend=True,
-                                    legend=dict(x=0.7, y=0.95),
-                                    xaxis=dict(tickangle=-45)
+                                    legend=dict(
+                                        orientation="h",
+                                        x=0.5, xanchor="center",
+                                        y=1.02, yanchor="bottom",
+                                        font=dict(size=12),
+                                    ),
+                                    margin=dict(l=340, r=80, t=50, b=60),
+                                    plot_bgcolor="white",
+                                    paper_bgcolor="white",
+                                    xaxis=dict(
+                                        gridcolor="#F1F5F9",
+                                        zerolinecolor="#E2E8F0",
+                                        tickfont=dict(size=12),
+                                        range=[0, max_count * 1.15],
+                                    ),
+                                    yaxis=dict(
+                                        tickfont=dict(size=12, color=COLORS["text"]),
+                                        automargin=True,
+                                        ticklabelposition="outside left",
+                                        ticklabeloverflow="allow",
+                                    ),
+                                    bargap=0.3,
+                                    bargroupgap=0.05,
+                                    uniformtext=dict(minsize=10, mode="hide"),
                                 )
                                 ui.plotly(fig).classes("w-full")
                             
