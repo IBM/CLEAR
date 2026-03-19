@@ -14,7 +14,7 @@ import json
 import logging
 from pathlib import Path
 
-from agentic.full_traj_evaluation.clear_analysis.base_clear_runner import BaseClearRunner
+from agentic.pipeline.full_traces_evaluation.clear_analysis.base_clear_runner import BaseClearRunner
 
 logger = logging.getLogger(__name__)
 

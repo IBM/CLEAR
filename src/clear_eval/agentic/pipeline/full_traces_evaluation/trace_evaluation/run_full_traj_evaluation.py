@@ -13,8 +13,8 @@ Produces detailed feedback and overall scores (0.0-1.0).
 """
 
 from pathlib import Path
-from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from agentic.full_traj_evaluation.trace_evaluation.full_trajectory_evaluator import FullTrajectoryEvaluator
+from agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
+from agentic.pipeline.full_traces_evaluation.trace_evaluation.full_trajectory_evaluator import FullTrajectoryEvaluator
 
 
 def parse_args():

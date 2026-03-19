@@ -20,7 +20,7 @@ import logging
 from typing import Any
 from collections import defaultdict
 
-from agentic.full_traj_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
+from agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
 

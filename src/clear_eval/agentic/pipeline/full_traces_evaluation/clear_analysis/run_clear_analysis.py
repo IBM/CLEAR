@@ -36,9 +36,9 @@ Example workflow:
 """
 import logging
 from pathlib import Path
-from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from agentic.full_traj_evaluation.clear_analysis.issues_clear_runner import IssuesClearRunner
-from agentic.full_traj_evaluation.clear_analysis.root_cause_clear_runner import RootCauseClearRunner
+from agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
+from agentic.pipeline.full_traces_evaluation.clear_analysis.issues_clear_runner import IssuesClearRunner
+from agentic.pipeline.full_traces_evaluation.clear_analysis.root_cause_clear_runner import RootCauseClearRunner
 from logging_config import setup_logging
 
 setup_logging()

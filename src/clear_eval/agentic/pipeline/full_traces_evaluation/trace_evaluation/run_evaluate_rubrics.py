@@ -23,8 +23,8 @@ Example:
 
 from pathlib import Path
 
-from clear_eval.agentic.full_traj_evaluation.argument_parser import create_base_parser
-from agentic.full_traj_evaluation.trace_evaluation.rubric_evaluator import RubricEvaluator
+from agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
+from agentic.pipeline.full_traces_evaluation.trace_evaluation.rubric_evaluator import RubricEvaluator
 
 
 def main():
