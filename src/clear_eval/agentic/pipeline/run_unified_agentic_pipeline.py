@@ -100,11 +100,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         "--agentic-output-dir",
         help="Base output directory (required)"
     )
-    group.add_argument(
-        "--run-name",
-        help="Run identifier for output organization"
-    )
-    
     # Pipeline mode control
     group.add_argument(
         "--run-step-by-step",
@@ -218,7 +213,7 @@ def create_output_structure(
             'full_trajectory': .../full_trajectory/,
         }
     """
-    base_dir = output_dir / 'clear_results' / judge_model / run_name
+    base_dir = output_dir / 'clear_results' / run_name
     
     paths = {
         'base': base_dir,

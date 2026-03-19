@@ -2,12 +2,15 @@
 Shared Argument Parsing
 =======================
 
-Common argument parsing utilities for evaluation scripts.
+Common argument parsing utilities for full trajectory evaluation scripts.
+Uses unified argument names consistent with the rest of the agentic pipeline.
 """
 
 import argparse
 import json
 from typing import Optional
+
+from clear_eval.args import add_clear_args_to_parser, str2bool
 
 
 def parse_dict(arg: str) -> dict:
@@ -20,7 +23,10 @@ def parse_dict(arg: str) -> dict:
 
 def create_base_parser(description: str) -> argparse.ArgumentParser:
     """
-    Create base argument parser with common arguments.
+    Create base argument parser with unified argument names.
+    
+    This parser uses the same argument names as the unified pipeline and other
+    agentic scripts for consistency. It also includes CLEAR configuration arguments.
     
     Args:
         description: Script description
@@ -30,52 +36,40 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description=description)
     
-    # Input/Output directories
+    # Input/Output directories (unified names)
     parser.add_argument(
-        "--traj-input-dir",
+        "--agentic-input-dir",
         type=str,
         required=True,
-        help="Directory containing trajectory JSON files",
+        help="Directory containing trajectory JSON files (traces_compact/)",
     )
     parser.add_argument(
-        "--output-dir",
+        "--agentic-output-dir",
         type=str,
         required=True,
         help="Base directory for saving evaluation results",
     )
     
-    # Provider and model arguments
-    parser.add_argument(
-        "--provider",
-        type=str,
-        default="watsonx",
-        choices=["rits", "watsonx", "openai"],
-        help="LLM provider to use (default: watsonx)",
-    )
-    parser.add_argument(
-        "--model-id",
-        type=str,
-        default="openai/gpt-oss-120b",
-        help="Model ID for the judge (default: openai/gpt-oss-120b)",
-    )
+    # Add all CLEAR configuration arguments (includes provider, eval_model_name, etc.)
+    add_clear_args_to_parser(parser, group_name="CLEAR Configuration")
+    
+    # Set default for eval_model_params if not set by CLEAR args
+    parser.set_defaults(eval_model_params={})
+    
+    # Full trajectory specific arguments
     parser.add_argument(
         "--context-tokens",
         type=int,
         default=128_000,
         help="Model context window size in tokens (default: 128000)",
     )
-    parser.add_argument(
-        "--eval-model-params",
-        type=parse_dict,
-        default='{"max_tokens": 8096}',
-        help="JSON dictionary of eval model parameters. Example: --eval-model-params '{\"temperature\": 0.7, \"max_tokens\": 2000}'",
-    )
     
     # Execution control
     parser.add_argument(
         "--overwrite",
-        action="store_true",
-        help="Re-evaluate even if results already exist",
+        type=str2bool,
+        default=True,
+        help="Re-evaluate even if results already exist (default: true)",
     )
     parser.add_argument(
         "--max-files",
