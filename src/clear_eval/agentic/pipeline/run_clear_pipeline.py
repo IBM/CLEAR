@@ -20,14 +20,8 @@ import argparse
 import logging
 import os
 
-from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, \
-    save_comprehensive_json_results
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
-from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
-    convert_to_clear_format,
-    run_clear_analysis,
-    create_comprehensive_ui_results,
-)
+from clear_eval.agentic.pipeline.run_clear_on_traj_data import run_traj_data_pipeline
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
 from clear_eval.pipeline.config_loader import load_config
@@ -101,7 +95,7 @@ def run_full_pipeline(config_dict: dict) -> str:
         config_dict: Configuration dictionary with agentic and CLEAR params (all top-level)
 
     Returns:
-        Path to the ui_results.zip file
+        Path to the JSON results file
     """
     # Extract agentic-specific parameters
     traces_input_dir = config_dict.get('traces_input_dir')
@@ -117,8 +111,6 @@ def run_full_pipeline(config_dict: dict) -> str:
         raise ValueError("agentic_output_dir is required")
 
     traces_data_dir = os.path.join(agentic_output_dir, 'traces_data')
-    clear_data_dir = os.path.join(agentic_output_dir, 'clear_data')
-    clear_results_dir = os.path.join(agentic_output_dir, 'clear_results')
 
     logger.info("=" * 80)
     logger.info("CLEAR FULL PIPELINE: FROM RAW TRACES")
@@ -142,34 +134,13 @@ def run_full_pipeline(config_dict: dict) -> str:
         separate_tools=separate_tools
     )
 
-    logger.info("STEP 2: Converting trajectory data to CLEAR format")
-    convert_to_clear_format(traces_data_dir, clear_data_dir)
-
-    logger.info("STEP 3: Running CLEAR analysis for each agent")
-
-    judge_results_dir = run_clear_analysis(
-        clear_data_dir,
-        clear_results_dir,
-        config_dict,
-        overwrite=overwrite,
+    # Call the trajectory data pipeline for steps 2-4
+    return run_traj_data_pipeline(
+        traces_data_dir=traces_data_dir,
+        agentic_output_dir=agentic_output_dir,
+        config_dict=config_dict,
+        overwrite=overwrite
     )
-
-    logger.info("STEP 4: Creating comprehensive UI results")
-    ui_results_path = create_comprehensive_ui_results(
-        judge_results_dir,
-        traces_data_dir
-    )
-
-    logger.info("=" * 80)
-    logger.info("PIPELINE COMPLETE")
-
-    json_results = save_comprehensive_json_results(
-        judge_results_dir = judge_results_dir,
-        traces_data_dir = traces_data_dir,
-        config_dict = config_dict,
-    )
-
-    return json_results
 
 
 def build_cli_overrides(args: argparse.Namespace) -> dict:
