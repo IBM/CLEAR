@@ -7,7 +7,6 @@
 # ----------------------------------------------------------------------------
 run_step_by_step: true          # Run step-by-step CLEAR analysis
 run_full_trajectory: true       # Run full trajectory evaluation
-run_name: null                  # Optional run identifier for output organization
 
 # ----------------------------------------------------------------------------
 # Agentic Pipeline Input/Output (distinct from CLEAR's data-path/output-dir)
@@ -25,7 +24,7 @@ agentic_output_dir: null        # REQUIRED: Base output directory
 # ----------------------------------------------------------------------------
 # Step-by-Step Pipeline Options
 # ----------------------------------------------------------------------------
-process_from_traces: true       # If true, process from raw traces; if false, use traces_data/
+process_from_traces: false       # If true, process from raw traces; if false, use traces_data/ TODO!!!
 agent_framework: langgraph      # langgraph | crewai (only if process_from_traces=true)
 observability_framework: langfuse # mlflow | langfuse (only if process_from_traces=true)
 separate_tools: false           # Separate tool calls from text responses (keep false for now)
@@ -34,13 +33,13 @@ separate_tools: false           # Separate tool calls from text responses (keep 
 # Full Trajectory Pipeline Options
 # ----------------------------------------------------------------------------
 eval_types:                     # Evaluations to run
-  - task_success
+  #- task_success
   - full_trajectory
   - rubric
-generate_rubrics: false         # Generate rubrics before evaluation
+generate_rubrics: true         # Generate rubrics before evaluation
 rubric_dir: null                # Path to existing rubrics (if not generating)
 clear_analysis_types:           # CLEAR analyses to run on full trajectory results
-  - root_cause                  # Analyze task_success failures
+  #- root_cause                  # Analyze task_success failures
   - issues                      # Analyze full_trajectory issues
 
 # ----------------------------------------------------------------------------
@@ -60,7 +59,10 @@ eval_model_params:
   temperature: 0.0
   max_tokens: 8096
 
+run_name: test_unified
+
 # CLEAR analysis settings
+perform_generation: false
 resume_enabled: false
 evaluation_criteria: null
 high_score_threshold: 0.9

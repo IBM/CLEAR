@@ -7,14 +7,14 @@ Generates 3-5 task-specific evaluation rubrics for each trajectory based on
 task complexity. Uses the RubricGenerator class for centralized logic.
 
 Usage:
-    python run_generate_rubrics.py --traj-input-dir <dir> --output-dir <dir> \\
-        --model-id <model> --provider <provider>
+    python run_generate_rubrics.py --agentic-input-dir <dir> --agentic-output-dir <dir> \\
+        --eval-model-name <model> --provider <provider>
 
 Example:
     python run_generate_rubrics.py \\
-        --traj-input-dir data/trajectories \\
-        --output-dir results/rubrics \\
-        --model-id gpt-4 \\
+        --agentic-input-dir data/trajectories \\
+        --agentic-output-dir results/rubrics \\
+        --eval-model-name gpt-4o \\
         --provider openai
 """
 
@@ -31,12 +31,12 @@ def main():
     )
     args = parser.parse_args()
     
-    # Create evaluator
+    # Create evaluator (using unified argument names)
     evaluator = RubricGenerator(
-        judge_model_id=args.model_id,
+        judge_model_id=args.eval_model_name,
         provider=args.provider,
-        traj_input_dir=Path(args.traj_input_dir),
-        output_dir=Path(args.output_dir),
+        traj_input_dir=Path(args.agentic_input_dir),
+        output_dir=Path(args.agentic_output_dir),
         context_tokens=args.context_tokens,
         overwrite=args.overwrite,
         concurrency=args.concurrency,

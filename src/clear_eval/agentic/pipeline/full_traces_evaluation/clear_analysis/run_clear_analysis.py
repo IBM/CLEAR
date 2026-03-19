@@ -14,25 +14,25 @@ Two analysis sources (--source flag):
 Usage:
     python run_clear_analysis.py --source issues \\
         --eval-results-dir results/evals \\
-        --output-dir results/clear_analysis \\
-        --model-id gpt-4 \\
+        --agentic-output-dir results/clear_analysis \\
+        --eval-model-name gpt-4o \\
         --provider openai
 
     python run_clear_analysis.py --source root_cause \\
         --eval-results-dir results/evals \\
-        --output-dir results/clear_analysis \\
-        --model-id gpt-4 \\
+        --agentic-output-dir results/clear_analysis \\
+        --eval-model-name gpt-4o \\
         --provider openai
 
 Example workflow:
     1. Run trajectory evaluation:
-       python run_full_traj_evaluation.py --traj-input-dir data \\
-           --output-dir results/evals --model-id gpt-4 --provider openai
+       python run_full_traj_evaluation.py --agentic-input-dir data \\
+           --agentic-output-dir results/evals --eval-model-name gpt-4o --provider openai
     
     2. Run CLEAR analysis on results:
        python run_clear_analysis.py --source issues \\
-           --eval-results-dir results/evals --output-dir results/clear \\
-           --model-id gpt-4 --provider openai
+           --eval-results-dir results/evals --agentic-output-dir results/clear \\
+           --eval-model-name gpt-4o --provider openai
 """
 import logging
 from pathlib import Path
@@ -73,12 +73,12 @@ def main():
     
     args = parser.parse_args()
     
-    # Create appropriate runner based on source
+    # Create appropriate runner based on source (using unified argument names)
     if args.source == "issues":
         runner = IssuesClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
-            output_dir=Path(args.output_dir),
-            clear_model_id=args.model_id,
+            output_dir=Path(args.agentic_output_dir),
+            clear_model_id=args.eval_model_name,
             provider=args.provider,
             overwrite=args.overwrite,
             eval_model_params=args.eval_model_params,
@@ -86,8 +86,8 @@ def main():
     elif args.source == "root_cause":
         runner = RootCauseClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
-            output_dir=Path(args.output_dir),
-            clear_model_id=args.model_id,
+            output_dir=Path(args.agentic_output_dir),
+            clear_model_id=args.eval_model_name,
             provider=args.provider,
             overwrite=args.overwrite,
             eval_model_params=args.eval_model_params,
@@ -101,8 +101,8 @@ def main():
     logging.info("=" * 70)
     logging.info(f"  Source:             {args.source}")
     logging.info(f"  Eval Results Dir:   {args.eval_results_dir}")
-    logging.info(f"  Output Dir:         {args.output_dir}")
-    logging.info(f"  CLEAR Model:        {args.model_id}")
+    logging.info(f"  Output Dir:         {args.agentic_output_dir}")
+    logging.info(f"  CLEAR Model:        {args.eval_model_name}")
     logging.info(f"  Provider:           {args.provider}")
     logging.info(f"  Overwrite:          {args.overwrite}")
     logging.info("=" * 70)

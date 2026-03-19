@@ -22,59 +22,59 @@ Usage Examples:
 
     # Run all evaluations with all CLEAR analyses (default)
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai
 
     # Run specific evaluations
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success full_trajectory
 
     # Generate rubrics and run rubric evaluation
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
         --generate-rubrics
 
     # Use existing rubrics
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
         --rubric-dir ./rubrics/gpt-4o
 
     # Run with selective CLEAR analysis
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success \\
         --clear-analysis-types root_cause
 
     # Skip CLEAR analysis entirely
     python run_trajectory_evaluation_pipeline.py \\
-        --traj-input-dir ./trajectories \\
-        --output-dir ./results \\
-        --model-id gpt-4o \\
+        --agentic-input-dir ./trajectories \\
+        --agentic-output-dir ./results \\
+        --eval-model-name gpt-4o \\
         --provider openai \\
         --clear-analysis-types none
 
 Arguments:
     Required:
-        --traj-input-dir: Directory containing trajectory JSON files
-        --output-dir: Base directory for saving results
-        --model-id: Model identifier (e.g., gpt-4o, llama-3.3-70b)
+        --agentic-input-dir: Directory containing trajectory JSON files
+        --agentic-output-dir: Base directory for saving results
+        --eval-model-name: Model identifier (e.g., gpt-4o, llama-3.3-70b)
         --provider: LLM provider (openai, watsonx, anthropic, etc.)
 
     Evaluation Control:
@@ -616,17 +616,24 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    # Convert paths
-    traj_input_dir = Path(args.traj_input_dir)
-    output_dir = Path(args.output_dir)
+    # Convert paths (using unified argument names)
+    traj_input_dir = Path(args.agentic_input_dir)
+    output_dir = Path(args.agentic_output_dir)
     rubric_dir = Path(args.rubric_dir) if args.rubric_dir else None
+
+    # Get model configuration from CLEAR args
+    model_id = args.eval_model_name
+    provider = args.provider
+    
+    # Get eval_model_params from CLEAR args if available
+    eval_model_params = args.eval_model_params
 
     # Run the pipeline
     completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
         traj_input_dir=traj_input_dir,
         output_dir=output_dir,
-        model_id=args.model_id,
-        provider=args.provider,
+        model_id=model_id,
+        provider=provider,
         eval_types=args.eval_types,
         generate_rubrics=args.generate_rubrics,
         rubric_dir=rubric_dir,
@@ -634,7 +641,7 @@ def main():
         context_tokens=args.context_tokens,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
-        eval_model_params=args.eval_model_params,
+        eval_model_params=eval_model_params,
         max_files=args.max_files,
     )
 

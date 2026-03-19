@@ -26,12 +26,12 @@ def main():
     """Main entry point."""
     args = parse_args()
 
-    # Create evaluator
+    # Create evaluator (using unified argument names)
     evaluator = FullTrajectoryEvaluator(
-        judge_model_id=args.model_id,
+        judge_model_id=args.eval_model_name,
         provider=args.provider,
-        traj_input_dir=Path(args.traj_input_dir),
-        output_dir=Path(args.output_dir),
+        traj_input_dir=Path(args.agentic_input_dir),
+        output_dir=Path(args.agentic_output_dir),
         context_tokens=args.context_tokens,
         overwrite=args.overwrite,
         concurrency=args.concurrency,
