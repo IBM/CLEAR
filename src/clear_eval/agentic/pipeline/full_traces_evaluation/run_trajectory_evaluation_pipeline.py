@@ -468,30 +468,62 @@ def run_clear_analysis(
     return success
 
 
-def main():
-    """Main pipeline orchestration."""
-    parser = create_parser()
-    args = parser.parse_args()
-
+def run_trajectory_evaluation_pipeline(
+    traj_input_dir: Path,
+    output_dir: Path,
+    model_id: str,
+    provider: str,
+    eval_types: List[str],
+    generate_rubrics: bool = False,
+    rubric_dir: Optional[Path] = None,
+    clear_analysis_types: Optional[List[str]] = None,
+    context_tokens: Optional[int] = None,
+    overwrite: bool = False,
+    concurrency: int = 10,
+    eval_model_params: Optional[dict] = None,
+    max_files: Optional[int] = None,
+) -> tuple[List[str], List[str]]:
+    """
+    Run trajectory evaluation pipeline with given parameters.
+    
+    Args:
+        traj_input_dir: Directory containing trajectory JSON files
+        output_dir: Base directory for saving results
+        model_id: Model identifier for the judge
+        provider: LLM provider
+        eval_types: Evaluations to run (task_success, full_trajectory, rubric, all)
+        generate_rubrics: Generate rubrics before evaluation
+        rubric_dir: Path to existing rubrics
+        clear_analysis_types: CLEAR analyses to run (root_cause, issues, all, none)
+        context_tokens: Model context window size
+        overwrite: Re-run even if results exist
+        concurrency: Number of parallel workers
+        eval_model_params: Model parameters dict
+        max_files: Limit files to process
+        
+    Returns:
+        Tuple of (completed_evals, failed_evals)
+    """
+    if eval_model_params is None:
+        eval_model_params = {}
+    if clear_analysis_types is None:
+        clear_analysis_types = ["all"]
+    
     # Resolve evaluation types
-    eval_types = resolve_eval_types(args.eval_types)
+    eval_types = resolve_eval_types(eval_types)
     logger.info("Evaluation types to run: %s", eval_types)
-
-    # Convert paths
-    traj_input_dir = Path(args.traj_input_dir)
-    output_dir = Path(args.output_dir)
 
     # Prepare common evaluation arguments
     eval_kwargs = {
         "traj_input_dir": traj_input_dir,
         "output_dir": output_dir,
-        "judge_model_id": args.model_id,
-        "provider": args.provider,
-        "context_tokens": args.context_tokens,
-        "overwrite": args.overwrite,
-        "concurrency": args.concurrency,
-        "eval_model_params": args.eval_model_params,
-        "max_files": args.max_files,
+        "judge_model_id": model_id,
+        "provider": provider,
+        "context_tokens": context_tokens,
+        "overwrite": overwrite,
+        "concurrency": concurrency,
+        "eval_model_params": eval_model_params,
+        "max_files": max_files,
     }
 
     # Track which evaluations succeeded
@@ -499,32 +531,32 @@ def main():
     failed_evals = []
 
     # Handle rubric generation/validation if rubric evaluation is requested
-    rubric_dir = None
+    rubric_dir_path = None
     if EVAL_TYPE_RUBRIC in eval_types:
-        if args.generate_rubrics:
+        if generate_rubrics:
             # Generate rubrics
             logger.info("Generating rubrics...")
             success, generated_rubric_dir = run_rubric_generation(**eval_kwargs)
             if success and generated_rubric_dir:
-                rubric_dir = generated_rubric_dir
-                logger.info("Using generated rubrics from: %s", rubric_dir)
+                rubric_dir_path = generated_rubric_dir
+                logger.info("Using generated rubrics from: %s", rubric_dir_path)
             else:
                 logger.error("Rubric generation failed")
                 failed_evals.append("rubric_generation")
                 eval_types.remove(EVAL_TYPE_RUBRIC)  # Skip rubric evaluation
-        elif args.rubric_dir:
+        elif rubric_dir:
             # Use existing rubrics
-            rubric_dir = Path(args.rubric_dir)
-            if not rubric_dir.exists():
-                logger.warning("Rubric directory does not exist: %s", rubric_dir)
+            rubric_dir_path = Path(rubric_dir) if not isinstance(rubric_dir, Path) else rubric_dir
+            if not rubric_dir_path.exists():
+                logger.warning("Rubric directory does not exist: %s", rubric_dir_path)
                 logger.warning("Skipping rubric evaluation")
                 eval_types.remove(EVAL_TYPE_RUBRIC)  # Skip rubric evaluation
             else:
-                logger.info("Using existing rubrics from: %s", rubric_dir)
+                logger.info("Using existing rubrics from: %s", rubric_dir_path)
         else:
             # No rubrics available - warn and skip
             logger.warning("Rubric evaluation requested but no rubrics available")
-            logger.warning("Use --rubric-dir to specify existing rubrics or --generate-rubrics to create them")
+            logger.warning("Use rubric_dir to specify existing rubrics or generate_rubrics=True to create them")
             logger.warning("Skipping rubric evaluation")
             eval_types.remove(EVAL_TYPE_RUBRIC)  # Skip rubric evaluation
 
@@ -541,8 +573,8 @@ def main():
         else:
             failed_evals.append(EVAL_TYPE_FULL_TRAJECTORY)
 
-    if EVAL_TYPE_RUBRIC in eval_types and rubric_dir:
-        if run_rubric_evaluation(rubrics_dir=rubric_dir, **eval_kwargs):
+    if EVAL_TYPE_RUBRIC in eval_types and rubric_dir_path:
+        if run_rubric_evaluation(rubrics_dir=rubric_dir_path, **eval_kwargs):
             completed_evals.append(EVAL_TYPE_RUBRIC)
         else:
             failed_evals.append(EVAL_TYPE_RUBRIC)
@@ -551,7 +583,7 @@ def main():
     if completed_evals:
         # Resolve which CLEAR analyses to run
         clear_types = resolve_clear_analysis_types(
-            args.clear_analysis_types, completed_evals
+            clear_analysis_types, completed_evals
         )
         
         if clear_types:
@@ -562,10 +594,10 @@ def main():
                 eval_results_dir=output_dir,
                 clear_output_dir=clear_output_dir,
                 clear_types=clear_types,
-                model_id=args.model_id,
-                provider=args.provider,
-                eval_model_params=args.eval_model_params,
-                overwrite=args.overwrite,
+                model_id=model_id,
+                provider=provider,
+                eval_model_params=eval_model_params,
+                overwrite=overwrite,
             )
 
     # Print summary
@@ -575,6 +607,36 @@ def main():
     logger.info("Completed evaluations: %s", completed_evals or "None")
     logger.info("Failed evaluations: %s", failed_evals or "None")
     logger.info("Results directory: %s", output_dir)
+
+    return completed_evals, failed_evals
+
+
+def main():
+    """Main pipeline orchestration (CLI entry point)."""
+    parser = create_parser()
+    args = parser.parse_args()
+
+    # Convert paths
+    traj_input_dir = Path(args.traj_input_dir)
+    output_dir = Path(args.output_dir)
+    rubric_dir = Path(args.rubric_dir) if args.rubric_dir else None
+
+    # Run the pipeline
+    completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
+        traj_input_dir=traj_input_dir,
+        output_dir=output_dir,
+        model_id=args.model_id,
+        provider=args.provider,
+        eval_types=args.eval_types,
+        generate_rubrics=args.generate_rubrics,
+        rubric_dir=rubric_dir,
+        clear_analysis_types=args.clear_analysis_types,
+        context_tokens=args.context_tokens,
+        overwrite=args.overwrite,
+        concurrency=args.concurrency,
+        eval_model_params=args.eval_model_params,
+        max_files=args.max_files,
+    )
 
     if failed_evals:
         logger.warning("Some evaluations failed. Check logs for details.")
