@@ -182,9 +182,7 @@ class BaseClearRunner(ABC):
             Path to output directory
         """
         source_name = self.get_source_name()
-        clear_model_folder = self.clear_model_id.replace("/", "_").replace(":", "_")
-        
-        return self.output_dir / f"clear_analysis_{source_name}" / clear_model_folder / group_key
+        return self.output_dir / f"clear_analysis_{source_name}" / group_key
 
     def run_clear_on_group(
         self,
