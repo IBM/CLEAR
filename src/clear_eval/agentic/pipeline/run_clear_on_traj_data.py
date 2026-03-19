@@ -206,13 +206,12 @@ def run_analysis_for_agent(
 
     agent_name = csv_path.stem
     eval_model_name = config_dict.get("eval_model_name", "unknown")
-    judge_folder = get_judge_model_folder_name(eval_model_name)
 
-    output_dir = Path(results_dir) / judge_folder / agent_name
+    output_dir = Path(results_dir) / agent_name
 
     logger.info("=" * 80)
     logger.info(f"Processing: {agent_name}")
-    logger.info(f"Judge Model: {judge_folder}")
+    logger.info(f"Output folder: {output_dir}")
     logger.info("=" * 80)
 
     if output_dir.exists() and not overwrite and list(Path(output_dir).glob('*.zip')):
@@ -320,9 +319,6 @@ def run_clear_analysis(
     logger.info("           └── ui_results.zip")
     logger.info("=" * 80)
 
-    judge_results_dir = os.path.join(results_dir, judge_folder)
-    return judge_results_dir
-
 
 def create_comprehensive_ui_results(
     judge_results_dir: str | Path,
@@ -394,7 +390,7 @@ def run_traj_data_pipeline(
     convert_to_clear_format(traces_data_dir, clear_data_dir)
 
     logger.info("Running CLEAR analysis for each agent...")
-    judge_results_dir = run_clear_analysis(
+    run_clear_analysis(
         clear_data_dir,
         clear_results_dir,
         config_dict,
@@ -403,13 +399,13 @@ def run_traj_data_pipeline(
 
     logger.info("Creating comprehensive UI results...")
     ui_results_path = create_comprehensive_ui_results(
-        judge_results_dir,
+        clear_results_dir,
         traces_data_dir
     )
 
     logger.info("Saving comprehensive JSON results...")
     json_results = save_comprehensive_json_results(
-        judge_results_dir=judge_results_dir,
+        judge_results_dir=clear_results_dir,
         traces_data_dir=traces_data_dir,
         config_dict=config_dict,
     )

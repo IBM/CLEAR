@@ -58,7 +58,6 @@ from typing import Dict, Optional
 from clear_eval.agentic.pipeline.run_clear_pipeline import run_full_pipeline
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
     run_traj_data_pipeline,
-    get_judge_model_folder_name,
 )
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
@@ -200,7 +199,6 @@ def detect_input_structure(input_dir: Path) -> Dict[str, bool]:
 
 def create_output_structure(
     output_dir: Path,
-    judge_model: str,
     run_name: str
 ) -> Dict[str, Path]:
     """
@@ -493,8 +491,7 @@ def main():
     logger.info(f"  - traces_data/: {input_structure['has_traces_data']}")
     
     # Create output structure
-    judge_model = get_judge_model_folder_name(config.get('eval_model_name', 'unknown'))
-    output_paths = create_output_structure(output_dir, judge_model, run_name)
+    output_paths = create_output_structure(output_dir, run_name)
     logger.info(f"Output base directory: {output_paths['base']}")
     
     # Map concurrency to max_workers for CLEAR compatibility
