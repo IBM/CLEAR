@@ -30,6 +30,19 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from nicegui import events, ui
 
+# ─── NiceGUI 3.0+ Compatibility ──────────────────────────────────────────────
+# NiceGUI 3.0 introduced a required 'sanitize' parameter for ui.html().
+# Since all HTML in this dashboard is trusted (not user input), we use sanitize=False.
+_original_ui_html = ui.html
+
+def _html_safe(*args, **kwargs):
+    """Wrapper for ui.html that sets sanitize=False by default for NiceGUI 3.0+ compatibility."""
+    if 'sanitize' not in kwargs:
+        kwargs['sanitize'] = False
+    return _original_ui_html(*args, **kwargs)
+
+ui.html = _html_safe
+
 # ─── Color Palette & Theme Constants ─────────────────────────────────────────
 COLORS = {
     "primary": "#6366F1",  # Brighter indigo
