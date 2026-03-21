@@ -37,6 +37,13 @@ dependencies = [
     # Async litellm backend (use_litellm=true)
     "litellm>=1.0.0",
     "nest-asyncio",
+    "nicegui>=2.0.0",
+    "plotly",
+    "networkx",
+    "litellm>=1.0.0",
+    "nest-asyncio",
+    "scipy",
+    'scikit-learn'
 ]
 
 [project.optional-dependencies]
