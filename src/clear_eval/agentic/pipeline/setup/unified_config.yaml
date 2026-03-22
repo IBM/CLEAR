@@ -42,7 +42,7 @@ clear_analysis_types:           # CLEAR analyses to run on full trajectory resul
 overwrite: true                 # Overwrite existing results
 concurrency: 10                 # Number of parallel workers
 max_files: null                 # Limit files to process (for testing)
-context_tokens: null          # Model context window (for full trajectory)
+context_tokens: null            # Model context window; if set, long trajectories are truncated to avoid inference errors
 
 # ----------------------------------------------------------------------------
 # CLEAR Configuration (all standard CLEAR arguments)

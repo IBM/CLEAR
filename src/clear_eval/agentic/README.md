@@ -8,9 +8,9 @@ This module provides evaluation pipelines for multi-agent systems, from raw trac
 2. [Quick Start](#quick-start)
 3. [Input Data Formats](#input-data-formats)
 4. [Running the Pipeline](#running-the-pipeline)
-5. [Output Structure](#output-structure)
-6. [Dashboard](#dashboard)
-7. [Configuration Reference](#configuration-reference)
+5. [Configuration Reference](#configuration-reference)
+6. [Output Structure](#output-structure)
+7. [Dashboard](#dashboard)
 8. [Examples](#examples)
 
 ---
@@ -28,20 +28,26 @@ Both analyses share a centralized CSV intermediate representation and produce re
 
 ### Supported Frameworks
 
+The pipeline includes built-in preprocessors for the following combinations:
+
 | Agent Framework | Observability Platform | Status |
 |-----------------|------------------------|--------|
 | LangGraph | MLflow | Supported |
 | LangGraph | Langfuse | Supported |
 | CrewAI | Langfuse | Supported |
 
+For other frameworks or observability platforms, preprocess your traces to the CSV format described below and use `--from-raw-traces false`.
+
 ---
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install from Source
 
 ```bash
-pip install clear-eval
+git clone <repository-url>
+cd CLEAR
+pip install -e .
 ```
 
 ### 2. Set Up Credentials
@@ -111,19 +117,21 @@ Use `--from-raw-traces false` to use existing CSV files directly.
 
 **CSV Schema:**
 
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `id` | str | Yes | Unique identifier: `{task_id}_{step}` |
-| `Name` or `agent_name` | str | Yes | Agent/node name |
-| `task_id` | str | Yes | Trajectory identifier |
-| `step_in_trace_general` | int | Yes | Step number in trajectory (0-indexed) |
-| `step_in_trace_node` | int | Yes | Step number within this agent |
-| `model_input` | str | Yes | Input to the agent |
-| `response` | str | Yes | Output from the agent |
-| `tool_or_agent` | str | Yes | Type: `tool` or `agent` |
-| `intent` | str | No | Original user query |
-| `meta_data` | json | No | Additional metadata (tokens, latency) |
-| `traj_score` | float | No | Ground truth trajectory score (0-1) |
+Each row represents a single LLM call within a trajectory. The `Name` column identifies the component (agent/tool) that made the call—CLEAR analysis is performed separately for each unique component.
+
+| Column | Type | Required | Description                                               |
+|--------|------|----------|-----------------------------------------------------------|
+| `id` | str | Yes      | Unique row identifier: `{task_id}_{step}`                 |
+| `Name` or `agent_name` | str | Yes      | Component name (CLEAR analyzes each component separately) |
+| `task_id` | str | Yes      | Trajectory identifier                                     |
+| `step_in_trace_general` | int | Yes      | Step number in trajectory (0-indexed)                     |
+| `step_in_trace_node` | int | Yes      | Step number within this component                         |
+| `model_input` | str | Yes      | Input to the LLM call                                     |
+| `response` | str | Yes      | Output from the LLM call                                  |
+| `tool_or_agent` | str | NO       | Type: `tool` or `agent`                                   |
+| `intent` | str | No       | Original user query                                       |
+| `meta_data` | json | No       | Additional metadata (tokens, latency)                     |
+| `traj_score` | float | No       | Ground truth trajectory score (0-1)                       |
 
 ---
 
@@ -138,43 +146,8 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-config-path config.yaml
 ```
 
-**Example config.yaml:**
-```yaml
-# Input/Output
-agentic_input_dir: data/my_traces
-agentic_output_dir: results
-run_name: experiment_001
-
-# Pipeline Control
-run_step_by_step: true
-run_full_trajectory: true
-from_raw_traces: true
-
-# Preprocessing (when from_raw_traces=true)
-agent_framework: langgraph       # langgraph | crewai
-observability_framework: mlflow  # mlflow | langfuse
-
-# Full Trajectory Evaluation
-eval_types:
-  - task_success
-  - full_trajectory
-  - rubric
-generate_rubrics: true
-clear_analysis_types:
-  - root_cause    # Analyze task_success failures
-  - issues        # Analyze full_trajectory issues
-
-# Model Configuration
-provider: openai
-eval_model_name: gpt-4o
-eval_model_params:
-  temperature: 0.0
-  max_tokens: 8096
-
-# Execution
-concurrency: 10
-overwrite: true
-```
+See the default configuration file for all available options:
+[`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml)
 
 ### Step-by-Step Analysis Only
 
@@ -183,8 +156,8 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-input-dir data/my_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
-    --run-step-by-step \
-    --no-run-full-trajectory \
+    --run-step-by-step true \
+    --run-full-trajectory false \
     --eval-model-name gpt-4o \
     --provider openai
 ```
@@ -196,24 +169,73 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-input-dir data/my_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
-    --no-run-step-by-step \
-    --run-full-trajectory \
+    --run-step-by-step false \
+    --run-full-trajectory true \
     --eval-types task_success full_trajectory \
     --eval-model-name gpt-4o \
     --provider openai
 ```
 
-### Alternative: Direct Step-by-Step from CSVs
+---
 
-For running step-by-step analysis directly on preprocessed CSV files:
+## Configuration Reference
 
-```bash
-python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \
-    --traces-data-dir data/preprocessed_csvs \
-    --agentic-output-dir results \
-    --eval-model-name gpt-4o \
-    --provider openai
-```
+For the complete list of options, see [`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml).
+
+### Required Parameters
+
+| Parameter           | CLI Flag | Description                                     |
+|---------------------|----------|-------------------------------------------------|
+| `agentic_input_dir` | `--agentic-input-dir` | Input directory containing traces (JSON or CSV) |
+| `agentic_output_dir` | `--agentic-output-dir` | Output directory for results                    |
+| `eval_model_name`   | `--eval-model-name` | Model identifier (e.g., `gpt-4o`)               |
+
+### Pipeline Control
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `run_step_by_step` | `--run-step-by-step` | `true` | Enable step-by-step analysis |
+| `run_full_trajectory` | `--run-full-trajectory` | `true` | Enable trajectory evaluation |
+| `from_raw_traces` | `--from-raw-traces` | `false` | `true` = process JSON traces, `false` = use CSV files |
+
+### Preprocessing (when `from_raw_traces=true`)
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `agent_framework` | `--agent-framework` | `langgraph` | Agent framework (`langgraph`, `crewai`) |
+| `observability_framework` | `--observability-framework` | `mlflow` | Platform (`mlflow`, `langfuse`) |
+| `separate_tools` | `--separate-tools` | `false` | Emit separate rows for tool calls |
+
+### Full Trajectory Evaluation
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `eval_types` | `--eval-types` | `all` | Evaluations: `task_success`, `full_trajectory`, `rubric`, `all` |
+| `generate_rubrics` | `--generate-rubrics` | `false` | Generate rubrics before evaluation |
+| `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics |
+| `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none` |
+
+### Model Configuration
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `provider` | `--provider` | `openai` | LLM provider |
+| `eval_model_params` | `--eval-model-params` | `{}` | Model parameters (JSON) |
+| `context_tokens` | `--context-tokens` | None | Model context window; if set, long trajectories are truncated to avoid inference errors |
+
+### Execution
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `overwrite` | `--overwrite` | `true` | Overwrite existing results |
+| `concurrency` | `--concurrency` | `10` | Parallel workers |
+| `max_files` | `--max-files` | None | Limit files (for testing) |
+
+### Configuration Precedence
+
+1. Default config ([`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml))
+2. User config file (`--agentic-config-path`)
+3. CLI arguments (highest priority)
 
 ---
 
@@ -272,6 +294,8 @@ results/
 
 See [README_DASHBOARD.md](dashboard/README_DASHBOARD.md) for detailed dashboard documentation.
 
+**Note:** The dashboard requires at least step-by-step analysis results. Without full trajectory analysis, the dashboard will display partial results (trajectory-level scores and evaluations will be unavailable).
+
 ### Quick Launch
 
 ```bash
@@ -288,58 +312,6 @@ Then upload `unified_ui_results.zip` from your results directory.
 - **Path Analysis**: Common path patterns and success/failure analysis
 - **Temporal Analysis**: Agent position and score progression
 - **Score Prediction**: ROC analysis for trajectory success prediction
-
----
-
-## Configuration Reference
-
-### Pipeline Control
-
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
-| `run_step_by_step` | `--run-step-by-step` | `true` | Enable step-by-step analysis |
-| `run_full_trajectory` | `--run-full-trajectory` | `true` | Enable trajectory evaluation |
-| `from_raw_traces` | `--from-raw-traces` | `false` | Process JSON traces vs. use CSV files |
-
-### Preprocessing (when `from_raw_traces=true`)
-
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
-| `agent_framework` | `--agent-framework` | `langgraph` | Agent framework (`langgraph`, `crewai`) |
-| `observability_framework` | `--observability-framework` | `mlflow` | Platform (`mlflow`, `langfuse`) |
-| `separate_tools` | `--separate-tools` | `false` | Emit separate rows for tool calls |
-
-### Full Trajectory Evaluation
-
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
-| `eval_types` | `--eval-types` | `all` | Evaluations: `task_success`, `full_trajectory`, `rubric`, `all` |
-| `generate_rubrics` | `--generate-rubrics` | `false` | Generate rubrics before evaluation |
-| `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics |
-| `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none` |
-
-### Model Configuration
-
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
-| `provider` | `--provider` | `openai` | LLM provider |
-| `eval_model_name` | `--eval-model-name` | Required | Model identifier |
-| `eval_model_params` | `--eval-model-params` | `{}` | Model parameters (JSON) |
-| `context_tokens` | `--context-tokens` | None | Model context window |
-
-### Execution
-
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
-| `overwrite` | `--overwrite` | `true` | Overwrite existing results |
-| `concurrency` | `--concurrency` | `10` | Parallel workers |
-| `max_files` | `--max-files` | None | Limit files (for testing) |
-
-### Configuration Precedence
-
-1. Default config (`setup/unified_config.yaml`)
-2. User config file (`--agentic-config-path`)
-3. CLI arguments (highest priority)
 
 ---
 
@@ -371,8 +343,8 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-input-dir data/traces \
     --agentic-output-dir results \
     --from-raw-traces true \
-    --no-run-step-by-step \
-    --run-full-trajectory \
+    --run-step-by-step false \
+    --run-full-trajectory true \
     --eval-types rubric \
     --generate-rubrics \
     --eval-model-name gpt-4o \
@@ -402,56 +374,16 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --eval-model-name gpt-4o
 ```
 
-### Full Configuration File
+### Using a Configuration File
 
-```yaml
-# config.yaml - Complete configuration example
+Copy and modify the default configuration:
 
-# Input/Output
-agentic_input_dir: data/my_experiment
-agentic_output_dir: results
-run_name: full_analysis_001
-
-# Pipeline Control
-run_step_by_step: true
-run_full_trajectory: true
-from_raw_traces: true
-
-# Preprocessing
-agent_framework: langgraph
-observability_framework: mlflow
-separate_tools: false
-
-# Full Trajectory Evaluation
-eval_types:
-  - task_success
-  - full_trajectory
-  - rubric
-generate_rubrics: true
-clear_analysis_types:
-  - root_cause
-  - issues
-
-# Model Configuration
-provider: openai
-eval_model_name: gpt-4o
-eval_model_params:
-  temperature: 0.0
-  max_tokens: 8096
-
-# CLEAR Settings
-agent_mode: true
-success_threshold: 0.7
-pass_criteria: avg
-
-# Execution
-overwrite: true
-concurrency: 10
-context_tokens: 128000
-```
-
-Run with:
 ```bash
+cp src/clear_eval/agentic/pipeline/setup/unified_config.yaml my_config.yaml
+# Edit my_config.yaml with your settings
+
 python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
-    --agentic-config-path config.yaml
+    --agentic-config-path my_config.yaml
 ```
+
+See [`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml) for all available options.

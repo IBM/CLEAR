@@ -256,7 +256,7 @@ def build_comprehensive_json_results(
             score_val = row.get('score', 0)
 
             # Get tool_or_agent from CSV (indicates if this is a tool call or agent response)
-            tool_or_agent = row.get('tool_or_agent', traj_row.get('tool_or_agent', ''))
+            tool_or_agent = row.get('tool_or_agent', traj_row.get('tool_or_agent', 'agent'))
 
             span_data = {
                 "trace_id": str(task_id),

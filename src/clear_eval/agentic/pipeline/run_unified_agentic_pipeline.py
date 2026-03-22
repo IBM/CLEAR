@@ -24,9 +24,9 @@ Usage Examples:
     python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
         --agentic-input-dir data/experiment_001 \\
         --agentic-output-dir results \\
-        --run-step-by-step \\
-        --no-run-full-trajectory \\
-        --process-from-traces \\
+        --run-step-by-step true \\
+        --run-full-trajectory false \\
+        --from-raw-traces true \\
         --eval-model-name openai/gpt-oss-120b \\
         --provider watsonx
 
@@ -34,9 +34,9 @@ Usage Examples:
     python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
         --agentic-input-dir data/experiment_001 \\
         --agentic-output-dir results \\
-        --run-step-by-step \\
-        --no-run-full-trajectory \\
-        --no-process-from-traces \\
+        --run-step-by-step true \\
+        --run-full-trajectory false \\
+        --from-raw-traces false \\
         --eval-model-name openai/gpt-oss-120b
 
     # Run both with custom run name

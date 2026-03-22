@@ -224,6 +224,7 @@ class BaseClearRunner(ABC):
                 "input_columns": self.get_input_columns(),
                 "agent_mode": True,
                 "eval_model_params": self.eval_model_params,
+                "resume_enabled": not self.overwrite
             }
 
             run_clear_eval_aggregation(**analysis_kwargs)
