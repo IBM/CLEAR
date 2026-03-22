@@ -10,9 +10,9 @@ overwrite: true
 # CLEAR evaluation configuration
 
   # inference params
-provider: watsonx
+provider: openai
 use_litellm: true
-eval_model_name: openai/gpt-oss-120b
+eval_model_name: gpt-4o
 max_workers: 20
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
@@ -43,25 +43,6 @@ external_judge_path: null
 external_judge_function: evaluate
 # Additional configuration passed to the external judge
 external_judge_config: {}
-
-
-provider_defaults:
-  openai:
-    gen_model_name: gpt-4o
-    eval_model_name: gpt-3.5-turbo
-    max_workers: 10
-  azure:
-    gen_model_name: gpt-4o-mini-2024-07-18
-    eval_model_name: gpt-4o-2024-08-06
-    max_workers: 20
-  watsonx:
-    gen_model_name: ibm/granite-3-3-8b-instruct
-    eval_model_name: meta-llama/llama-3-3-70b-instruct
-    max_workers: 5
-  rits:
-    gen_model_name: ibm-granite/granite-3.3-8b-instruct
-    eval_model_name: meta-llama/llama-3-3-70b-instruct
-    max_workers: 20
 
 
 # whether to perform generation or take existing ones from data

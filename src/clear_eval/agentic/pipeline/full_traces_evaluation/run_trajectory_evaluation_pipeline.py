@@ -114,11 +114,14 @@ Output Structure:
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import List, Optional
 
 from clear_eval.logging_config import setup_logging
+from clear_eval.pipeline.config_loader import load_config
+from clear_eval.agentic.pipeline.utils import build_cli_overrides
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.task_success_evaluator import TaskSuccessEvaluator
@@ -131,6 +134,10 @@ from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_cl
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+# Path to default config
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_TRAJECTORY_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_trajectory_config.yaml")
 
 
 # Evaluation type constants
@@ -150,6 +157,14 @@ def create_parser() -> argparse.ArgumentParser:
     parser = create_base_parser(
         description="Run trajectory evaluation pipeline with optional CLEAR analysis"
     )
+    
+    # Add optional config file argument
+    parser.add_argument(
+        "--agentic-config-path",
+        type=str,
+        default=None,
+        help="Path to config file (JSON or YAML). CLI args override config values."
+    )
 
     # Evaluation type selection
     parser.add_argument(
@@ -157,7 +172,7 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="+",
         choices=ALL_EVAL_TYPES + ["all"],
-        default=["all"],
+        default=None,
         help=(
             "Evaluation types to run. Options: task_success, full_trajectory, rubric, all. "
             "Default: all (runs all three; rubric skipped if no rubrics available)"
@@ -184,7 +199,7 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         nargs="+",
         choices=ALL_CLEAR_TYPES + ["all", "none"],
-        default=["all"],
+        default=None,
         help=(
             "CLEAR analysis types to run. Options: root_cause (from task_success), "
             "issues (from full_trajectory), all, none. Default: all"
@@ -670,18 +685,33 @@ def main():
     """Main pipeline orchestration (CLI entry point)."""
     parser = create_parser()
     args = parser.parse_args()
+    
+    # Build CLI overrides (only include non-None arguments)
+    cli_overrides = build_cli_overrides(args)
+    
+    # Load configuration with precedence: default -> user config -> CLI overrides
+    config = load_config(
+        DEFAULT_TRAJECTORY_CONFIG_PATH,
+        args.agentic_config_path,
+        **cli_overrides
+    )
+    
+    # Validate required parameters
+    if not config.get('agentic_input_dir'):
+        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
+    
+    if not config.get('agentic_output_dir'):
+        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 
     # Convert paths (using unified argument names)
-    traj_input_dir = Path(args.agentic_input_dir)
-    output_dir = Path(args.agentic_output_dir)
-    rubric_dir = Path(args.rubric_dir) if args.rubric_dir else None
+    traj_input_dir = Path(config['agentic_input_dir'])
+    output_dir = Path(config['agentic_output_dir'])
+    rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
 
-    # Get model configuration from CLEAR args
-    model_id = args.eval_model_name
-    provider = args.provider
-    
-    # Get eval_model_params from CLEAR args if available
-    eval_model_params = args.eval_model_params
+    # Get model configuration from config
+    model_id = config['eval_model_name']
+    provider = config['provider']
+    eval_model_params = config.get('eval_model_params', {})
 
     # Validate input directory
     if not traj_input_dir.exists():
@@ -692,10 +722,10 @@ def main():
     csv_input_dir = preprocess_traces_if_needed(
         input_dir=traj_input_dir,
         output_dir=output_dir,
-        from_raw_traces=args.from_raw_traces,
-        agent_framework=args.agent_framework,
-        observability_framework=args.observability_framework,
-        separate_tools=args.separate_tools
+        from_raw_traces=config.get('from_raw_traces'),
+        agent_framework=config.get('agent_framework'),
+        observability_framework=config.get('observability_framework'),
+        separate_tools=config.get('separate_tools', False)
     )
     
     # Run the evaluation pipeline
@@ -708,15 +738,15 @@ def main():
         output_dir=output_dir,
         model_id=model_id,
         provider=provider,
-        eval_types=args.eval_types,
-        generate_rubrics=args.generate_rubrics,
+        eval_types=config.get('eval_types'),
+        generate_rubrics=config.get('generate_rubrics'),
         rubric_dir=rubric_dir,
-        clear_analysis_types=args.clear_analysis_types,
-        context_tokens=args.context_tokens,
-        overwrite=args.overwrite,
-        concurrency=args.concurrency,
+        clear_analysis_types=config.get('clear_analysis_types'),
+        context_tokens=config.get('context_tokens'),
+        overwrite=config.get('overwrite'),
+        concurrency=config.get('concurrency'),
         eval_model_params=eval_model_params,
-        max_files=args.max_files,
+        max_files=config.get('max_files'),
     )
 
     if failed_evals:

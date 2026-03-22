@@ -1,0 +1,54 @@
+# ============================================================================
+# TRAJECTORY EVALUATION PIPELINE DEFAULT CONFIGURATION
+# ============================================================================
+# This config provides defaults for run_trajectory_evaluation_pipeline.py
+# All values can be overridden via CLI arguments or a custom config file.
+
+# ----------------------------------------------------------------------------
+# Input/Output
+# ----------------------------------------------------------------------------
+agentic_input_dir: null         # REQUIRED: Input directory (JSON traces or CSV files)
+agentic_output_dir: null        # REQUIRED: Base output directory
+from_raw_traces: false          # If true, process JSON traces; else use CSV files
+
+# ----------------------------------------------------------------------------
+# Trace Preprocessing (only used when from_raw_traces=true)
+# ----------------------------------------------------------------------------
+agent_framework: langgraph      # langgraph | crewai
+observability_framework: langfuse # mlflow | langfuse
+separate_tools: false           # Separate tool calls (keep false for now)
+
+# ----------------------------------------------------------------------------
+# Evaluation Types
+# ----------------------------------------------------------------------------
+eval_types:                     # Evaluations to run
+  - all                         # Options: task_success, full_trajectory, rubric, all
+
+# ----------------------------------------------------------------------------
+# Rubric Options
+# ----------------------------------------------------------------------------
+generate_rubrics: true         # Generate rubrics before evaluation
+rubric_dir: null                # Path to existing rubrics
+
+# ----------------------------------------------------------------------------
+# CLEAR Analysis Control
+# ----------------------------------------------------------------------------
+clear_analysis_types:           # CLEAR analyses to run
+  - all                         # Options: root_cause, issues, all, none
+
+# ----------------------------------------------------------------------------
+# Execution Control
+# ----------------------------------------------------------------------------
+overwrite: true                 # Re-run even if results exist
+concurrency: 10                 # Number of parallel workers
+max_files: null                 # Limit files to process (for testing)
+context_tokens: null            # Model context window size
+
+# ----------------------------------------------------------------------------
+# Model Configuration (CLEAR args)
+# ----------------------------------------------------------------------------
+provider: openai                  # REQUIRED: LLM provider (openai, watsonx, anthropic, etc.)
+eval_model_name: null           # REQUIRED: Model identifier
+eval_model_params: {}           # Model parameters (temperature, max_tokens, etc.)
+
+# Made with Bob
