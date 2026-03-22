@@ -347,13 +347,7 @@ def create_unified_ui_zip(
                     traj_zip_buffer.seek(0)
                     zf.writestr("trajectory_data.zip", traj_zip_buffer.read())
                     logger.info(f"Added trajectory_data.zip with {len(parquet_files)} Parquet files")
-                    
-                    # Also add original CSV files
-                    for csv_file in sorted(csv_files):
-                        arcname = f"traces_data/{csv_file.name}"
-                        zf.write(csv_file, arcname=arcname)
-                    logger.info(f"Added {len(csv_files)} CSV files to traces_data/")
-        
+
         # 2. Add step-by-step CLEAR results if provided
         if step_by_step_clear_results_dir and Path(step_by_step_clear_results_dir).exists():
             clear_dir = Path(step_by_step_clear_results_dir)
@@ -413,7 +407,7 @@ def create_unified_ui_zip(
             "type": "unified_results",
             "structure": {
                 "trajectory_data.zip": "Trajectory data as Parquet (compressed)",
-                "traces_data/": "Original trajectory CSV files",
+#                "traces_data/": "Original trajectory CSV files",
                 "agent_results/": "Step-by-step CLEAR analysis results",
                 "full_traj_results/": "Full trajectory evaluation results",
                 "metadata.json": "This file - information about the zip contents"
