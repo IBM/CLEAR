@@ -147,7 +147,7 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
 ```
 
 See the default configuration file for all available options:
-[`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml)
+[`pipeline/setup/default_unified_config.yaml`](pipeline/setup/default_unified_config.yaml)
 
 ### Step-by-Step Analysis Only
 
@@ -180,7 +180,7 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
 
 ## Configuration Reference
 
-For the complete list of options, see [`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml).
+For the complete list of options, see [`pipeline/setup/default_unified_config.yaml`](pipeline/setup/default_unified_config.yaml).
 
 ### Required Parameters
 
@@ -231,7 +231,7 @@ For the complete list of options, see [`pipeline/setup/unified_config.yaml`](pip
 
 ### Configuration Precedence
 
-1. Default config ([`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml))
+1. Default config ([`pipeline/setup/default_unified_config.yaml`](pipeline/setup/default_unified_config.yaml))
 2. User config file (`--agentic-config-path`)
 3. CLI arguments (highest priority)
 
@@ -366,11 +366,10 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
 Copy and modify the default configuration:
 
 ```bash
-cp src/clear_eval/agentic/pipeline/setup/unified_config.yaml my_config.yaml
+cp src/clear_eval/agentic/pipeline/setup/default_unified_config.yaml my_config.yaml
 # Edit my_config.yaml with your settings
 
 python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-config-path my_config.yaml
 ```
 
-See [`pipeline/setup/unified_config.yaml`](pipeline/setup/unified_config.yaml) for all available options.
