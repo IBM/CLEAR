@@ -11,20 +11,14 @@ run_full_trajectory: true       # Run full trajectory evaluation
 # ----------------------------------------------------------------------------
 # Agentic Pipeline Input/Output (distinct from CLEAR's data-path/output-dir)
 # ----------------------------------------------------------------------------
-agentic_input_dir: null         # REQUIRED: Base input directory
-                                # Expected structure:
-                                #   agentic_input_dir/
-                                #   ├── traces/          (for step-by-step from raw traces)
-                                #   ├── traces_compact/  (for full trajectory evaluation)
-                                #   └── traces_data/     (for step-by-step from preprocessed CSVs)
-
+agentic_input_dir: null         # REQUIRED: Base input directory with the input
 agentic_output_dir: null        # REQUIRED: Base output directory
-                                # Structure: agentic_output_dir/clear_results/<judge-model>/<run-name>/
+                                # results will be kept in: agentic_output_dir/clear_results/<run-name>/
 
 # ----------------------------------------------------------------------------
 # Step-by-Step Pipeline Options
 # ----------------------------------------------------------------------------
-process_from_traces: false       # If true, process from raw traces; if false, use traces_data/ TODO!!!
+process_from_traces: false       # If true, process from raw traces; else expect the processed csvs in the input directory
 agent_framework: langgraph      # langgraph | crewai (only if process_from_traces=true)
 observability_framework: langfuse # mlflow | langfuse (only if process_from_traces=true)
 separate_tools: false           # Separate tool calls from text responses (keep false for now)
@@ -48,7 +42,7 @@ clear_analysis_types:           # CLEAR analyses to run on full trajectory resul
 overwrite: true                 # Overwrite existing results
 concurrency: 10                 # Number of parallel workers
 max_files: null                 # Limit files to process (for testing)
-context_tokens: 128000          # Model context window (for full trajectory)
+context_tokens: null          # Model context window (for full trajectory)
 
 # ----------------------------------------------------------------------------
 # CLEAR Configuration (all standard CLEAR arguments)
@@ -60,11 +54,12 @@ eval_model_params:
   max_tokens: 8096
 
 run_name: test_unified
+evaluation_criteria: null
 
-# CLEAR analysis settings
+
+# CLEAR analysis settings: don't change
 perform_generation: false
 resume_enabled: false
-evaluation_criteria: null
 high_score_threshold: 0.9
 max_examples_to_analyze: null
 max_shortcomings: 15
