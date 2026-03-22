@@ -204,16 +204,15 @@ For the complete list of options, see [`pipeline/setup/unified_config.yaml`](pip
 |-----------|----------|---------|-------------|
 | `agent_framework` | `--agent-framework` | `langgraph` | Agent framework (`langgraph`, `crewai`) |
 | `observability_framework` | `--observability-framework` | `mlflow` | Platform (`mlflow`, `langfuse`) |
-| `separate_tools` | `--separate-tools` | `false` | Emit separate rows for tool calls |
 
 ### Full Trajectory Evaluation
 
-| Parameter | CLI Flag | Default | Description |
-|-----------|----------|---------|-------------|
+| Parameter | CLI Flag | Default | Description                                                     |
+|-----------|----------|---------|-----------------------------------------------------------------|
 | `eval_types` | `--eval-types` | `all` | Evaluations: `task_success`, `full_trajectory`, `rubric`, `all` |
-| `generate_rubrics` | `--generate-rubrics` | `false` | Generate rubrics before evaluation |
-| `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics |
-| `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none` |
+| `generate_rubrics` | `--generate-rubrics` | `false` | Generate rubrics before evaluation                              |
+| `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics (if not generate-rubrics)              |
+| `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none`           |
 
 ### Model Configuration
 
@@ -229,7 +228,6 @@ For the complete list of options, see [`pipeline/setup/unified_config.yaml`](pip
 |-----------|----------|---------|-------------|
 | `overwrite` | `--overwrite` | `true` | Overwrite existing results |
 | `concurrency` | `--concurrency` | `10` | Parallel workers |
-| `max_files` | `--max-files` | None | Limit files (for testing) |
 
 ### Configuration Precedence
 
@@ -360,17 +358,6 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --from-raw-traces true \
     --eval-types rubric \
     --rubric-dir path/to/rubrics \
-    --eval-model-name gpt-4o
-```
-
-### Test Run with Limited Files
-
-```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
-    --agentic-input-dir data/traces \
-    --agentic-output-dir results \
-    --from-raw-traces true \
-    --max-files 10 \
     --eval-model-name gpt-4o
 ```
 
