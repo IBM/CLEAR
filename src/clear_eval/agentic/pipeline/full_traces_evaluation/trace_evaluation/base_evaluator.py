@@ -407,8 +407,9 @@ class TrajectoryEvaluator(ABC):
         try:
             trajectory_text = format_compact_trace(df)
             # Cap trajectory to fit in context window
-            max_chars = self.get_max_trajectory_chars()
-            trajectory_text = cap_trajectory(trajectory_text, max_chars)
+            if self.context_tokens:
+                max_chars = self.get_max_trajectory_chars()
+                trajectory_text = cap_trajectory(trajectory_text, max_chars)
         except Exception as e:
             logger.error("Failed to format trajectory %s: %s", traj_name, e)
             return None
