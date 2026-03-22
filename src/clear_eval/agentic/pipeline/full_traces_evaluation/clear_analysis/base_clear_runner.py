@@ -16,7 +16,7 @@ from typing import Any
 import pandas as pd
 
 from clear_eval.analysis_runner import run_clear_eval_aggregation
-from logging_config import setup_logging
+from clear_eval.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
