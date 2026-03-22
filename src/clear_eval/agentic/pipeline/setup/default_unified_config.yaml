@@ -18,9 +18,9 @@ agentic_output_dir: null        # REQUIRED: Base output directory
 # ----------------------------------------------------------------------------
 # Step-by-Step Pipeline Options
 # ----------------------------------------------------------------------------
-process_from_traces: false       # If true, process from raw traces; else expect the processed csvs in the input directory
-agent_framework: langgraph      # langgraph | crewai (only if process_from_traces=true)
-observability_framework: langfuse # mlflow | langfuse (only if process_from_traces=true)
+from_raw_traces: false       # If true, process from raw traces; else expect the processed csvs in the input directory
+agent_framework: langgraph      # langgraph | crewai (only if from_raw_traces=true)
+observability_framework: langfuse # mlflow | langfuse (only if from_raw_traces=true)
 separate_tools: false           # Separate tool calls from text responses (keep false for now)
 
 # ----------------------------------------------------------------------------
