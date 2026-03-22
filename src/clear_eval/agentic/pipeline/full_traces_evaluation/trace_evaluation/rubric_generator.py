@@ -20,6 +20,7 @@ import logging
 from typing import Any
 from collections import defaultdict
 
+import pandas as pd
 from agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
@@ -85,26 +86,24 @@ IMPORTANT: Return ONLY valid JSON matching the schema in the user prompt. \
 No text outside the JSON."""
 
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict
+        self, entry: dict, intent: str
     ) -> dict[str, Any] | None:
         """
-        Extract task objective from trajectory data.
+        Prepare task objective for rubric generation.
         
         Args:
             entry: Entry dict with file_path, traj_name
-            traj_data: The loaded trajectory JSON data
+            intent: Task intent/objective extracted from first row
             
         Returns:
-            Dictionary with 'task_objective' key, or None if extraction fails
+            Dictionary with 'task_objective' key, or None if intent is missing
         """
-        # Extract task objective/intent from trajectory
-        task_objective = traj_data.get("intent") or traj_data.get("task") or ""
-        
-        if not task_objective:
-            logger.warning(f"Empty task objective for {entry['traj_name']}")
+        # Use the intent passed from base evaluator
+        if not intent:
+            logger.warning(f"No intent provided for {entry['traj_name']}")
             return None
             
-        return {"task_objective": task_objective}
+        return {"task_objective": intent}
 
     def prepare_context(
         self, trajectory_text: str, eval_data: dict

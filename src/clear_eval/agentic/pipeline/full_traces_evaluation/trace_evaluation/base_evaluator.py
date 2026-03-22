@@ -15,14 +15,16 @@ from pathlib import Path
 from typing import Any
 
 import logging
+import pandas as pd
 from clear_eval.pipeline.llm_client import get_llm_client, run_parallel, ParallelResult
 from clear_eval.logging_config import setup_logging
+from clear_eval.agentic.pipeline.preprocess_traces.compact_trace_formatter import format_compact_trace
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 # Constants for trajectory length calculation
-CHARS_PER_TOKEN = 4
+CHARS_PER_TOKEN = 3.5
 RESPONSE_RESERVED_TOKENS = 4_096
 PROMPT_OVERHEAD_TOKENS = 2_500
 CONTEXT_SAFETY_MARGIN = 0.90
@@ -222,27 +224,27 @@ class TrajectoryEvaluator(ABC):
 
     @abstractmethod
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict
+        self, entry: dict, intent: str
     ) -> dict | None:
         """
         Prepare evaluation-specific data before building prompt.
         
         This hook allows subclasses to:
         - Load additional files (e.g., rubrics)
-        - Extract specific information from trajectory
+        - Use the extracted intent
         - Perform preprocessing
         
         Args:
             entry: Entry dict with file_path, traj_name
-            traj_data: Loaded trajectory data (JSON)
+            intent: Task intent/objective extracted from first row of DataFrame
         
         Returns:
             Dict with evaluation-specific data to be used in prepare_context()
             Return None to skip this evaluation (e.g., missing rubrics)
         
         Example returns:
-            - Task success: {"task_objective": "..."}
-            - Rubric eval: {"rubrics": [...], "task_objective": "..."}
+            - Task success: {"task_objective": intent}
+            - Rubric eval: {"rubrics": [...], "task_objective": intent}
             - Full traj: {} (no additional data needed)
         """
         pass
@@ -385,17 +387,24 @@ class TrajectoryEvaluator(ABC):
             logger.debug("Skipping (exists): %s", traj_name)
             return None
 
-        # Load trajectory file
+        # Load trajectory file (CSV format from traces_data)
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                traj_data = json.load(f)
+            df = pd.read_csv(file_path)
         except Exception as e:
             logger.error("Failed to load %s: %s", file_path, e)
             return None
 
-        # Format trajectory text (simple JSON string conversion)
+        # Extract intent from first row (do this once here)
         try:
-            trajectory_text = json.dumps(traj_data, indent=2)
+            first_row = df.iloc[0]
+            intent = first_row.get("intent", "")
+        except Exception as e:
+            logger.error("Failed to extract intent from %s: %s", traj_name, e)
+            return None
+
+        # Format trajectory text using format_compact_trace
+        try:
+            trajectory_text = format_compact_trace(df)
             # Cap trajectory to fit in context window
             max_chars = self.get_max_trajectory_chars()
             trajectory_text = cap_trajectory(trajectory_text, max_chars)
@@ -403,9 +412,9 @@ class TrajectoryEvaluator(ABC):
             logger.error("Failed to format trajectory %s: %s", traj_name, e)
             return None
 
-        # Prepare evaluation-specific data
+        # Prepare evaluation-specific data (pass extracted intent)
         try:
-            eval_data = self.prepare_evaluation_data(entry, traj_data)
+            eval_data = self.prepare_evaluation_data(entry, intent)
             if eval_data is None:
                 # Subclass returned None to skip this evaluation
                 logger.info("Skipping %s (prepare_evaluation_data returned None)", traj_name)
@@ -584,10 +593,10 @@ class TrajectoryEvaluator(ABC):
     @staticmethod
     def discover_trajectories(traj_input_dir: Path) -> list[dict]:
         """
-        Discover all trajectory JSON files in a directory.
+        Discover all trajectory CSV files in a directory.
         
         Args:
-            traj_input_dir: Directory containing trajectory JSON files
+            traj_input_dir: Directory containing trajectory CSV files
         
         Returns:
             List of dicts with keys: file_path, traj_name
@@ -595,10 +604,10 @@ class TrajectoryEvaluator(ABC):
         traj_input_dir = Path(traj_input_dir)
         entries = []
         
-        for json_file in traj_input_dir.glob("*.json"):
+        for csv_file in traj_input_dir.glob("*.csv"):
             entries.append({
-                "file_path": str(json_file),
-                "traj_name": json_file.stem,
+                "file_path": str(csv_file),
+                "traj_name": csv_file.stem,
             })
         
         logger.info("Discovered %d trajectory files in %s", len(entries), traj_input_dir)

@@ -12,7 +12,7 @@ Configuration Precedence (lowest to highest):
     3. CLI arguments (override both config files)
 
 Arguments are split into two groups:
-    - Agentic Pipeline Arguments: Pipeline-specific (traces_input_dir, etc.)
+    - Agentic Pipeline Arguments: Pipeline-specific (agentic_input_dir, etc.)
     - CLEAR Configuration: Evaluation args from clear_eval.args (provider, eval_model_name, etc.)
 """
 
@@ -22,6 +22,7 @@ import os
 
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import run_traj_data_pipeline
+from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
 from clear_eval.pipeline.config_loader import load_config
@@ -49,28 +50,17 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to config file (JSON or YAML) that overrides defaults"
     )
     group.add_argument(
-        "--traces-input-dir",
+        "--agentic-input-dir",
         help="Directory containing raw traces (required)"
     )
     group.add_argument(
         "--agentic-output-dir",
         help="Output directory for pipeline results (required)"
     )
-    group.add_argument(
-        "--agent-framework",
-        choices=['langgraph', 'crewai'],
-        help="Agent framework used to generate traces (default: langgraph)"
-    )
-    group.add_argument(
-        "--observability-framework",
-        choices=['mlflow', 'langsmith'],
-        help="Observability framework used for tracing (default: mlflow)"
-    )
-    group.add_argument(
-        "--separate-tools",
-        type=str2bool,
-        help="Whether to separate tool calls in processing (default: false)"
-    )
+    
+    # Add preprocessing arguments (agent-framework, observability-framework, separate-tools)
+    add_preprocessing_args_to_parser(parser)
+    
     group.add_argument(
         "--overwrite",
         type=str2bool,
@@ -98,7 +88,7 @@ def run_full_pipeline(config_dict: dict) -> str:
         Path to the JSON results file
     """
     # Extract agentic-specific parameters
-    traces_input_dir = config_dict.get('traces_input_dir')
+    traces_input_dir = config_dict.get('agentic_input_dir')
     agentic_output_dir = config_dict.get('agentic_output_dir')
     agent_framework = config_dict.get('agent_framework', 'langgraph')
     observability_framework = config_dict.get('observability_framework', 'mlflow')
@@ -106,7 +96,7 @@ def run_full_pipeline(config_dict: dict) -> str:
     overwrite = config_dict.get('overwrite', True)
 
     if not traces_input_dir:
-        raise ValueError("traces_input_dir is required")
+        raise ValueError("agentic_input_dir is required")
     if not agentic_output_dir:
         raise ValueError("agentic_output_dir is required")
 
@@ -184,14 +174,14 @@ Examples:
 
   # CLI only (all parameters)
   python -m clear_eval.agentic.pipeline.run_clear_pipeline \\
-      --traces-input-dir data/traces \\
+      --agentic-input-dir data/traces \\
       --agentic-output-dir output/analysis \\
       --provider watsonx \\
       --eval-model-name meta-llama/llama-3-3-70b-instruct
 
 Config file structure (YAML format - see setup/default_config.yaml):
   # Agentic pipeline arguments
-  traces_input_dir: data/traces
+  agentic_input_dir: data/traces
   agentic_output_dir: output/analysis
   agent_framework: langgraph
   observability_framework: mlflow
@@ -233,8 +223,8 @@ use run_clear_on_traj_data.py instead.
     )
 
     # Validate required parameters
-    if not config_dict.get('traces_input_dir'):
-        parser.error("traces_input_dir is required (set in config or use --traces-input-dir)")
+    if not config_dict.get('agentic_input_dir'):
+        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
     if not config_dict.get('agentic_output_dir'):
         parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 

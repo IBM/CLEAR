@@ -45,35 +45,27 @@ class TaskSuccessEvaluator(TrajectoryEvaluator):
     """
 
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict
-    ) -> dict:
+        self, entry: dict, intent: str
+    ) -> dict | None:
         """
-        Extract task objective from trajectory.
+        Prepare task objective for evaluation.
         
         Args:
             entry: Entry dict with file_path, traj_name
-            traj_data: Loaded trajectory data
+            intent: Task intent/objective extracted from first row
         
         Returns:
-            Dict with task_objective, or None if extraction fails
+            Dict with task_objective, or None if intent is missing
         """
-        try:
-            # Extract intent from trajectory data
-            task_objective = traj_data.get("intent")
-            if not task_objective:
-                logger.warning(
-                    "Could not extract intent for %s",
-                    entry["traj_name"]
-                )
-                return None
-            
-            return {"task_objective": task_objective}
-        except Exception as e:
-            logger.error(
-                "Failed to extract task objective for %s: %s",
-                entry["traj_name"], e
+        # Use the intent passed from base evaluator
+        if not intent:
+            logger.warning(
+                "No intent provided for %s",
+                entry["traj_name"]
             )
             return None
+        
+        return {"task_objective": intent}
 
     def prepare_context(self, trajectory_text: str, eval_data: dict) -> dict:
         """

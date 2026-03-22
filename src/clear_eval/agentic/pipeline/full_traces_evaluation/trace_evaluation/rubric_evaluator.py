@@ -15,7 +15,6 @@ import re
 import logging
 from pathlib import Path
 from typing import Any
-
 from agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
@@ -109,14 +108,14 @@ IMPORTANT: Return ONLY valid JSON matching the schema in the user prompt. \
 No text outside the JSON."""
 
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict
+        self, entry: dict, intent: str
     ) -> dict[str, Any] | None:
         """
         Load rubrics for this trajectory.
         
         Args:
             entry: Entry dict with file_path, traj_name
-            traj_data: The loaded trajectory JSON data
+            intent: Task intent/objective extracted from first row
             
         Returns:
             Dictionary with 'rubrics' and 'task_objective', or None if rubrics not found
@@ -141,7 +140,8 @@ No text outside the JSON."""
             return None
 
         rubrics = rubric_data.get("rubrics", [])
-        task_objective = rubric_data.get("task_objective", "")
+        # Use task_objective from rubric file, fallback to intent parameter
+        task_objective = rubric_data.get("task_objective", intent)
 
         if not rubrics:
             logger.warning(f"Empty rubrics for {traj_name}")

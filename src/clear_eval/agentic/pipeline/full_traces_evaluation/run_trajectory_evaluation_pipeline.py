@@ -119,6 +119,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from clear_eval.logging_config import setup_logging
+from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
 from agentic.pipeline.full_traces_evaluation.trace_evaluation.task_success_evaluator import TaskSuccessEvaluator
 from agentic.pipeline.full_traces_evaluation.trace_evaluation.full_trajectory_evaluator import FullTrajectoryEvaluator
@@ -468,6 +469,55 @@ def run_clear_analysis(
     return success
 
 
+def preprocess_traces_if_needed(
+    input_dir: Path,
+    output_dir: Path,
+    from_raw_traces: bool,
+    agent_framework: str = "langgraph",
+    observability_framework: str = "mlflow",
+    separate_tools: bool = False,
+) -> Path:
+    """
+    Preprocess raw traces to CSV if needed, otherwise return input directory.
+    
+    Args:
+        input_dir: Input directory (JSON traces or CSV files)
+        output_dir: Base output directory
+        from_raw_traces: If True, process JSON traces; if False, use CSV files directly
+        agent_framework: Agent framework (for JSON processing)
+        observability_framework: Observability framework (for JSON processing)
+        separate_tools: Separate tool calls (for JSON processing)
+        
+    Returns:
+        Path to directory containing CSV files
+    """
+    if from_raw_traces:
+        # Process JSON traces to CSV
+        logger.info("=" * 80)
+        logger.info("PREPROCESSING: Converting raw traces to CSV")
+        logger.info("=" * 80)
+        logger.info(f"Input: {input_dir}")
+        logger.info(f"Agent framework: {agent_framework}")
+        logger.info(f"Observability framework: {observability_framework}")
+        
+        traces_data_dir = output_dir / "traces_data"
+        traces_data_dir.mkdir(parents=True, exist_ok=True)
+        
+        process_traces_to_traj_data(
+            input_dir=str(input_dir),
+            output_dir=str(traces_data_dir),
+            agent_framework=agent_framework,
+            observability_framework=observability_framework,
+            separate_tools=separate_tools
+        )
+        logger.info(f"✓ Processed traces to: {traces_data_dir}")
+        return traces_data_dir
+    else:
+        # Use CSV files directly from input directory
+        logger.info(f"Using existing CSV files from: {input_dir}")
+        return input_dir
+
+
 def run_trajectory_evaluation_pipeline(
     traj_input_dir: Path,
     output_dir: Path,
@@ -484,10 +534,13 @@ def run_trajectory_evaluation_pipeline(
     max_files: Optional[int] = None,
 ) -> tuple[List[str], List[str]]:
     """
-    Run trajectory evaluation pipeline with given parameters.
+    Run trajectory evaluation pipeline on CSV trajectory data.
+    
+    This function expects CSV files to already be available in traj_input_dir.
+    For preprocessing raw traces, use the main() function or call process_traces_to_traj_data() first.
     
     Args:
-        traj_input_dir: Directory containing trajectory JSON files
+        traj_input_dir: Directory containing CSV trajectory files
         output_dir: Base directory for saving results
         model_id: Model identifier for the judge
         provider: LLM provider
@@ -508,6 +561,8 @@ def run_trajectory_evaluation_pipeline(
         eval_model_params = {}
     if clear_analysis_types is None:
         clear_analysis_types = ["all"]
+    
+    logger.info(f"Using CSV trajectory files from: {traj_input_dir}")
     
     # Resolve evaluation types
     eval_types = resolve_eval_types(eval_types)
@@ -628,9 +683,28 @@ def main():
     # Get eval_model_params from CLEAR args if available
     eval_model_params = args.eval_model_params
 
-    # Run the pipeline
+    # Validate input directory
+    if not traj_input_dir.exists():
+        logger.error(f"Input directory does not exist: {traj_input_dir}")
+        sys.exit(1)
+    
+    # Preprocess traces if needed
+    csv_input_dir = preprocess_traces_if_needed(
+        input_dir=traj_input_dir,
+        output_dir=output_dir,
+        from_raw_traces=args.from_raw_traces,
+        agent_framework=args.agent_framework,
+        observability_framework=args.observability_framework,
+        separate_tools=args.separate_tools
+    )
+    
+    # Run the evaluation pipeline
+    logger.info("=" * 80)
+    logger.info("RUNNING TRAJECTORY EVALUATION PIPELINE")
+    logger.info("=" * 80)
+    
     completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
-        traj_input_dir=traj_input_dir,
+        traj_input_dir=csv_input_dir,
         output_dir=output_dir,
         model_id=model_id,
         provider=provider,
