@@ -229,6 +229,7 @@ def run_analysis_for_agent(
         # Add computed paths to config
         config_dict["data_path"] = str(csv_path)
         config_dict["output_dir"] = str(output_dir)
+        config_dict["resume_enabled"] = not overwrite
 
         # Run evaluation pipeline
         run_eval_pipeline(config_dict)
