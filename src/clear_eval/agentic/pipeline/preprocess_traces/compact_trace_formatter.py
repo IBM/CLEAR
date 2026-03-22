@@ -71,8 +71,8 @@ def parse_model_input(model_input: str) -> List[Dict[str, Any]]:
 
 def extract_input_context(
     model_input: str,
-    max_system_len: int = 300,
-    max_total_len: int = 2000,
+    max_system_len: int = 5000,
+    max_total_len: int = 50000,
     include_tool_defs: bool = False,
 ) -> str:
     """
@@ -114,8 +114,7 @@ def extract_input_context(
 
         # Truncate system prompts
         if role == "system":
-            if len(content) > max_system_len:
-                content = content[:max_system_len] + "...[truncated]"
+            content = truncate_text(content, max_system_len, strategy="middle")
 
         # Format output
         output_parts.append(f"{role}: {content}")
@@ -123,10 +122,7 @@ def extract_input_context(
     result = "\n\n".join(output_parts)
 
     # Final truncation if needed
-    if len(result) > max_total_len:
-        # Keep beginning and end
-        keep_each = (max_total_len - 30) // 2
-        result = f"{result[:keep_each]}\n...[truncated]...\n{result[-keep_each:]}"
+    result = truncate_text(result, max_total_len, strategy="middle")
 
     return result
 
@@ -230,9 +226,7 @@ def format_response_compact(response: str, max_len: int = 1000) -> str:
     result = "\n".join(parts)
 
     # Truncate if needed
-    if len(result) > max_len:
-        keep_each = (max_len - 15) // 2
-        result = f"{result[:keep_each]}...[truncated]...{result[-keep_each:]}"
+    result = truncate_text(result, max_len, strategy="middle")
 
     return result
 
@@ -272,7 +266,7 @@ def parse_metadata(meta_data: str) -> Dict[str, Any]:
         return {}
 
 
-def truncate_text(text: str, max_len: int, strategy: str = "end") -> str:
+def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
     """
     Truncate text to max_len.
 
@@ -299,9 +293,9 @@ def truncate_text(text: str, max_len: int, strategy: str = "end") -> str:
 
 def format_compact_trace(
     df: pd.DataFrame,
-    max_input_context: int = 1500,
-    max_response_len: int = 1000,
-    max_system_prompt: int = 300,
+    max_input_context: int = 5000,
+    max_response_len: int = 5000,
+    max_system_prompt: int = 5000,
     include_tools_per_step: bool = True,
     include_input_context: bool = True,
     include_metadata: bool = True,
