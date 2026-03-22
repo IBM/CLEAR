@@ -56,11 +56,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from clear_eval.agentic.pipeline.run_clear_pipeline import run_full_pipeline
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
     run_traj_data_pipeline,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
+from clear_eval.agentic.pipeline.utils import build_cli_overrides
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
 from clear_eval.pipeline.config_loader import load_config
@@ -226,8 +226,8 @@ def prepare_traces_data(
             process_traces_to_traj_data(
                 input_dir=str(agentic_input_dir),
                 output_dir=str(traces_data_dir),
-                agent_framework=config.get('agent_framework', 'langgraph'),
-                observability_framework=config.get('observability_framework', 'mlflow'),
+                agent_framework=config.get('agent_framework'),
+                observability_framework=config.get('observability_framework'),
                 separate_tools=config.get('separate_tools', False)
             )
             logger.info(f"✓ Processed traces successfully")
@@ -377,16 +377,6 @@ def create_pipeline_summary(base_dir: Path, config: dict, results: dict):
     
     logger.info(f"Created pipeline summary: {summary_path}")
 
-
-def build_cli_overrides(args: argparse.Namespace) -> dict:
-    """Build CLI overrides dictionary from parsed arguments."""
-    return {
-        key: value
-        for key, value in vars(args).items()
-        if value is not None and key != 'agentic_config_path'
-    }
-
-
 def main():
     """Main entry point for unified agentic pipeline."""
     parser = argparse.ArgumentParser(
@@ -402,8 +392,7 @@ def main():
     add_clear_args_to_parser(parser, group_name="CLEAR Configuration")
     
     args = parser.parse_args()
-    
-    # Build CLI overrides
+
     cli_overrides = build_cli_overrides(args)
     
     # Load configuration with precedence: default -> user config -> CLI overrides

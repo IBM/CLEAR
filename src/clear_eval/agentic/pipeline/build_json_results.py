@@ -19,6 +19,8 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
+from clear_eval.agentic.pipeline.utils import build_cli_overrides
+
 logger = logging.getLogger(__name__)
 
 
@@ -484,22 +486,6 @@ def save_comprehensive_json_results(
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_config.yaml")
 
-
-def build_cli_overrides(args) -> dict:
-    """
-    Build CLI overrides dictionary from parsed arguments.
-
-    Args:
-        args: Parsed command line arguments
-
-    Returns:
-        Dictionary of CLI overrides ready for load_config()
-    """
-    return {
-        key: value
-        for key, value in vars(args).items()
-        if value is not None and key != 'agentic_config_path'
-    }
 
 
 def main():
