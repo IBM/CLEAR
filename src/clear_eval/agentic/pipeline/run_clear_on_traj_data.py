@@ -21,6 +21,7 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
+from clear_eval.agentic.pipeline.utils import build_cli_overrides
 from clear_eval.agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
 from clear_eval.args import add_clear_args_to_parser, str2bool
@@ -73,20 +74,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         choices=['avg', 'min'],
         help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
     )
-
-
-def build_cli_overrides(args: argparse.Namespace) -> dict:
-    """
-    Build CLI overrides dictionary from parsed arguments.
-
-    All arguments are at top level (both agentic and CLEAR).
-    """
-    return {
-        key: value
-        for key, value in vars(args).items()
-        if value is not None and key != 'agentic_config_path'
-    }
-
 
 
 ##########################################

@@ -20,6 +20,7 @@ import argparse
 import logging
 import os
 
+from clear_eval.agentic.pipeline.utils import build_cli_overrides
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import run_traj_data_pipeline
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
@@ -131,25 +132,6 @@ def run_full_pipeline(config_dict: dict) -> str:
         config_dict=config_dict,
         overwrite=overwrite
     )
-
-
-def build_cli_overrides(args: argparse.Namespace) -> dict:
-    """
-    Build CLI overrides dictionary from parsed arguments.
-
-    All arguments are at top level (both agentic and CLEAR).
-
-    Args:
-        args: Parsed command line arguments
-
-    Returns:
-        Dictionary of CLI overrides ready for load_config()
-    """
-    return {
-        key: value
-        for key, value in vars(args).items()
-        if value is not None and key != 'agentic_config_path'
-    }
 
 
 def main():
