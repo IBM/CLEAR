@@ -51,4 +51,3 @@ provider: openai                  # REQUIRED: LLM provider (openai, watsonx, ant
 eval_model_name: null           # REQUIRED: Model identifier
 eval_model_params: {}           # Model parameters (temperature, max_tokens, etc.)
 
-# Made with Bob
