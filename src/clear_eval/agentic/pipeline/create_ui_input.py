@@ -440,18 +440,15 @@ def main():
         "--output_dir",
         type=str,
         help="Root directory containing traces_data/ and clear_results/ subdirectories",
-        default="/Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/paper_experiments/clear_step/TRAIL/GAIA/clear_result/gpt-oss-120b"
-    )
+        )
     parser.add_argument(
         "--traces-data",
         type=str,
-        default="/Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/data/paper_experiments/TRAIL/GAIA/csvs/",
         help="Path to trajectory data directory (default: output_dir/traces_data)"
     )
     parser.add_argument(
         "--clear-results",
         type=str,
-        default="/Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/paper_experiments/clear_step/TRAIL/GAIA/clear_result/gpt-oss-120b",
         help="Path to CLEAR results directory (default: output_dir/clear_results)"
     )
     parser.add_argument(

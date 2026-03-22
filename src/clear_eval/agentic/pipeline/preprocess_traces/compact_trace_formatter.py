@@ -481,7 +481,7 @@ if __name__ == "__main__":
     #     print("\nConverts unified CSV trace to compact text format for LLM judges.")
     #     sys.exit(1)
 
-    csv_path = "/Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/db2/random_100/clear_results/test_unified/step_by_step/traces_data/0f91ee691c6cc84e72277ab89b85d509.csv" #sys.argv[1]
+    csv_path = "/agentic/output/db2/random_100old/clear_results/test_unified/step_by_step/traces_data/0f91ee691c6cc84e72277ab89b85d509.csv"  #sys.argv[1]
 
     compact = format_compact_trace_from_csv(csv_path)
 
