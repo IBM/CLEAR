@@ -177,7 +177,7 @@ def _extract_common_from_trace_root(json_data: Any, file_name: str):
     Accepts either the full trace dict or a raw list of observations.
     """
     if isinstance(json_data, dict):
-        metadata = json_data.get("metadata") or {}
+        metadata = safe_json(json_data.get("metadata")) or {}
         intent = metadata.get("user_query") or metadata.get("intent") or ""
         trace_id = json_data.get("id", file_name)
         session_id = json_data.get("sessionId")
