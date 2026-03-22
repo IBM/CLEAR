@@ -48,6 +48,10 @@ An interactive dashboard for visualizing and analyzing multi-agent system trajec
 
 The dashboard requires the `clear_eval` package to be installed.
 
+## Requirements
+
+The dashboard requires at least **step-by-step analysis** results to function. Without full trajectory analysis, the dashboard will display partial results—trajectory-level scores and evaluations will be unavailable.
+
 ## Usage
 
 ### Quick Start
