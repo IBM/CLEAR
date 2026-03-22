@@ -2351,9 +2351,9 @@ def main_page():
                 render_section_header(f"Agent Details: {node_name}", "Statistics and connections for the selected agent")
                 
                 # Debug: Check if node exists in stats
-                if node_name not in node_stats:
-                    ui.html(f'<div style="text-align:center; padding:40px; color:#F59E0B;">Agent "{node_name}" not found in node_stats. Available agents: {list(node_stats.keys())}</div>')
-                    return
+               # if node_name not in node_stats:
+               #     ui.html(f'<div style="text-align:center; padding:40px; color:#F59E0B;">Agent "{node_name}" not found in node_stats. Available agents: {list(node_stats.keys())}</div>')
+                #    return
                 
                 stats = node_stats[node_name]
 
@@ -2395,14 +2395,14 @@ def main_page():
             all_dimension_scores = defaultdict(list)
             
             # Debug: print structure of first trace evaluation
-            if traj_eval_results:
-                first_traj = next(iter(traj_eval_results.values()))
-                print(f"🔍 Debug - First trace eval keys: {first_traj.keys()}")
-                if "parsed_evaluation" in first_traj:
-                    print(f"🔍 Debug - parsed_evaluation keys: {first_traj['parsed_evaluation'].keys()}")
-                if "dimension_scores" in first_traj:
-                    print(f"🔍 Debug - dimension_scores: {first_traj['dimension_scores']}")
-            
+            # if traj_eval_results:
+            #     first_traj = next(iter(traj_eval_results.values()))
+            #     print(f"🔍 Debug - First trace eval keys: {first_traj.keys()}")
+            #     if "parsed_evaluation" in first_traj:
+            #         print(f"🔍 Debug - parsed_evaluation keys: {first_traj['parsed_evaluation'].keys()}")
+            #     if "dimension_scores" in first_traj:
+            #         print(f"🔍 Debug - dimension_scores: {first_traj['dimension_scores']}")
+            #
             for traj_name, eval_data in traj_eval_results.items():
                 # Collect overall scores
                 overall_score = eval_data.get("overall_score")
@@ -4366,7 +4366,7 @@ def main_page():
         available_columns = set(state.traj_df.columns)
         
         # Debug: show available columns
-        ui.html(f'<div style="color:#64748B; font-size:12px; margin-bottom:10px;">Available columns: {", ".join(sorted(available_columns))}</div>')
+        #ui.html(f'<div style="color:#64748B; font-size:12px; margin-bottom:10px;">Available columns: {", ".join(sorted(available_columns))}</div>')
         
         if not has_traj_score:
             ui.html('<div style="text-align:center; padding:40px; color:#F59E0B;"><p>No trace score data available.</p><p style="margin-top:10px; color:#94A3B8; font-size:14px;">The "traj_score" column is required for this analysis. This column should contain the ground truth success score for each trace.</p></div>')
