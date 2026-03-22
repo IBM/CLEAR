@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Callable
 
 from .trace_utils import (
     safe_json,
-    normalize_messages,
+    normalize_input_messages,
     normalize_response,
     extract_tool_calls,
     extract_api_spec,
@@ -57,13 +57,19 @@ def _build_llm_rows_for_observation(
     parent_id = obs.get("parentObservationId")
     model = obs.get("model", "")
 
-    # Input
+    # Input - normalize and serialize
     input_data = safe_json(obs.get("input"))
     messages = input_data if isinstance(input_data, list) else input_data.get("messages") or input_data.get("contents")
     if messages:
-        model_input_str = normalize_messages(messages, system_trunc_limit)
+        model_input_normalized = normalize_input_messages(messages, system_trunc_limit)
     else:
-        model_input_str = normalize_messages(input_data, system_trunc_limit) if input_data else ""
+        model_input_normalized = normalize_input_messages(input_data, system_trunc_limit) if input_data else []
+
+    # Serialize: if already string keep as-is, otherwise JSON encode
+    if isinstance(model_input_normalized, str):
+        model_input_str = model_input_normalized
+    else:
+        model_input_str = json.dumps(model_input_normalized, ensure_ascii=False)
 
     # Output
     output_data = safe_json(obs.get("output"))
