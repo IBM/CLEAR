@@ -103,8 +103,8 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--context-tokens",
         type=int,
-        default=128_000,
-        help="Model context window size in tokens (default: 128000)",
+        default=None,
+        help="Model context window size in tokens (default: None)",
     )
     
     # Execution control

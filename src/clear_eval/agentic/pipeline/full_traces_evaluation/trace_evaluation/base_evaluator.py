@@ -87,7 +87,7 @@ class TrajectoryEvaluator(ABC):
         provider: str,
         traj_input_dir: Path,
         output_dir: Path,
-        context_tokens: int = 128_000,
+        context_tokens: int = None,
         overwrite: bool = False,
         concurrency: int = 7,
         eval_model_params: dict | None = None,
@@ -111,6 +111,7 @@ class TrajectoryEvaluator(ABC):
         self.provider = provider
         self.traj_input_dir = Path(traj_input_dir)
         self.context_tokens = context_tokens
+        self.max_traj_chars = self.get_max_trajectory_chars() if self.context_tokens else None
         self.overwrite = overwrite
         self.concurrency = concurrency
         self.eval_model_params = eval_model_params or {}
@@ -195,15 +196,15 @@ class TrajectoryEvaluator(ABC):
             concurrency: Concurrency level
             extra_info: Optional dict with additional info to display
         """
-        max_traj_chars = self.context_tokens * 4 * 0.9  # Approximate
         
         logger.info("=" * 70)
         logger.info(self.get_evaluation_type())
         logger.info("=" * 70)
         logger.info(f"Provider:     {self.provider}")
         logger.info(f"Judge Model:  {self.judge_model_id}")
-        logger.info(f"Context Win:  {self.context_tokens:,} tokens → "
-                   f"max trajectory ~{int(max_traj_chars):,} chars")
+        if self.context_tokens:
+            logger.info(f"Context Win:  {self.context_tokens:,} tokens → "
+                       f"max trajectory ~{int(self.max_traj_chars):,} chars")
         logger.info(f"Data Dir:     {data_dir}")
         logger.info(f"Results Dir:  {self.results_dir}")
         

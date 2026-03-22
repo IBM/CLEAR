@@ -333,7 +333,7 @@ def run_full_trajectory_pipeline(
             generate_rubrics=config.get('generate_rubrics', False),
             rubric_dir=rubric_dir,
             clear_analysis_types=config.get('clear_analysis_types', ['all']),
-            context_tokens=config.get('context_tokens', 128000),
+            context_tokens=config.get('context_tokens'),
             overwrite=config.get('overwrite', True),
             concurrency=config.get('concurrency', 10),
             eval_model_params=config.get('eval_model_params', {}),
@@ -515,7 +515,7 @@ def main():
             traces_data_dir=traces_data_dir,
             step_by_step_clear_results_dir=step_by_step_results_path,
             full_trajectory_results_dir=full_traj_results_path,
-            output_zip_name="ui_results.zip"
+            output_zip_name="unified_ui_results.zip"
         )
         logger.info(f"✓ Created unified UI zip: {unified_zip}")
     except Exception as e:
