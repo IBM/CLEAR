@@ -131,12 +131,21 @@ def find_predictive_patterns(
         df['significant'] = df['p_value'] <= df['bh_threshold']
         df = df.drop(columns=['rank', 'bh_threshold'])
 
-    significant = df[df['significant']].copy()
-    minimal_patterns = remove_redundant_patterns(significant)
-    base_success_rate = np.mean(labels)
-    minimal_patterns.loc[:,"predictive_score"] = minimal_patterns.apply(lambda p: predictive_score(p, base_success_rate), axis=1)
-    # Return the full dataframe for more flexible display
-    return minimal_patterns
+        significant = df[df['significant']].copy()
+        
+        if len(significant) > 0:
+            # Remove redundant patterns
+            minimal_patterns = remove_redundant_patterns(significant)
+            base_success_rate = np.mean(labels)
+            minimal_patterns.loc[:,"predictive_score"] = minimal_patterns.apply(lambda p: predictive_score(p, base_success_rate), axis=1)
+            # Return the full dataframe for more flexible display
+            return minimal_patterns
+        else:
+            # No significant patterns found
+            return pd.DataFrame()
+    else:
+        # No patterns found at all
+        return pd.DataFrame()
 
 
 def predictive_score(row, base_success_rate):
@@ -159,29 +168,3 @@ def predictive_score(row, base_success_rate):
         score = -((fr_with - fr_base) / max(fr_base, 1e-9))
 
     return round(score * 100, 1)
-
-if __name__ == "__main__":
-    import os, json
-    trajs = []
-    labels =[]
-    traj_dir = "/Users/lilache/PycharmProjects/CLEAR/src/clear_eval/agentic/output/new_ui/orig_cuga/traj_data"
-    for f in os.listdir(traj_dir):
-        if f.endswith(".csv"):
-            df = pd.read_csv(os.path.join(traj_dir,f))
-            traj = list(df["agent_name"])
-            trajs.append(traj)
-            labels.append(json.loads((list(df["meta_data"])[0]))["trajectory_score"])
-    res_df = find_predictive_patterns(trajs, labels, min_pattern_len=3)
-
-    print("=== FAILURE SIGNALS ===")
-    print(res_df[res_df['significant'] & (res_df['effect'] < 0)]
-          .sort_values('effect')
-          .head(10)
-          .to_string(index=False))
-
-    # Top success-predictive patterns
-    print("\n=== SUCCESS SIGNALS ===")
-    print(res_df[res_df['significant'] & (res_df['effect'] > 0)]
-          .sort_values('effect', ascending=False)
-          .head(10)
-          .to_string(index=False))

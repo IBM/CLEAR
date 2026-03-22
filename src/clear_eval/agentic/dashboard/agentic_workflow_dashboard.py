@@ -4509,8 +4509,9 @@ def main_page():
         try:
             from sklearn.metrics import roc_curve, auc, roc_auc_score
             
-            # Get list of unique agents
-            agent_names = sorted(traj_scores_df["agent_name"].unique())
+            # Get list of unique agents - use "Name" column (which may have been created from "agent_name")
+            agent_col = "Name" if "Name" in traj_scores_df.columns else "agent_name"
+            agent_names = sorted(traj_scores_df[agent_col].unique())
             agent_options = ["All Agents"] + agent_names
             
             # Create containers for controls
@@ -4573,8 +4574,8 @@ def main_page():
                         filtered_scores_df = traj_scores_df
                         title_suffix = "All Agents"
                     else:
-                        # Filter to specific agent
-                        filtered_scores_df = traj_scores_df[traj_scores_df["agent_name"] == selected_agent]
+                        # Filter to specific agent - use the same column we determined earlier
+                        filtered_scores_df = traj_scores_df[traj_scores_df[agent_col] == selected_agent]
                         title_suffix = selected_agent
                     
                     # Recalculate trace-level data for filtered agent(s)
