@@ -36,7 +36,7 @@ class RubricEvaluator(TrajectoryEvaluator):
         traj_input_dir: Path,
         output_dir: Path,
         rubrics_dir: Path,
-        context_tokens: int = 128_000,
+        context_tokens: int = None,
         overwrite: bool = False,
         concurrency: int = 7,
         eval_model_params: dict | None = None,

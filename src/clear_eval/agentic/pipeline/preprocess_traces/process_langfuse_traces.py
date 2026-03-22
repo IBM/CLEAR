@@ -92,7 +92,7 @@ def _build_llm_rows_for_observation(
         # Model-level info
         "observation_id": obs_id,
         "parent_observation_id": parent_id,
-        "agent_name": agent_name,
+        "Name": agent_name,
         "session_id": session_id,
         "model": model,
         "tokens": {

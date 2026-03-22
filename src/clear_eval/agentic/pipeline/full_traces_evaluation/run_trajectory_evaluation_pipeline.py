@@ -353,7 +353,7 @@ def run_rubric_generation(
             provider=provider,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
-            context_tokens=context_tokens or 128000,  # Default if not specified
+            context_tokens=context_tokens,
             overwrite=overwrite,
             concurrency=concurrency,
             eval_model_params=eval_model_params,
