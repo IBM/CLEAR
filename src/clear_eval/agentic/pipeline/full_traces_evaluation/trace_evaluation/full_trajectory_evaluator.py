@@ -19,7 +19,7 @@ import json
 import logging
 import re
 
-from agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
+from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
 
 logger = logging.getLogger(__name__)
 

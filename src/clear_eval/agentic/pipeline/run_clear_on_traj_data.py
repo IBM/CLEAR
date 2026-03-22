@@ -21,7 +21,7 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
-from agentic.pipeline.build_json_results import save_comprehensive_json_results
+from clear_eval.agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
