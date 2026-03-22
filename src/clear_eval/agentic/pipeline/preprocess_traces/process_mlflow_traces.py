@@ -18,9 +18,10 @@ import json
 from typing import Any, Dict, List, Optional
 
 from .trace_utils import (
-    normalize_messages,
+    normalize_input_messages,
     normalize_response,
     extract_tool_calls,
+    extract_from_output_messages,
     extract_api_spec,
 )
 
@@ -119,7 +120,17 @@ def _extract_input_output_from_span(
                 if messages is not None:
                     break
 
-    model_input_str = normalize_messages(messages, system_trunc_limit) if messages else json.dumps(inputs, ensure_ascii=False)
+    # Normalize input and serialize
+    if messages:
+        model_input_normalized = normalize_input_messages(messages, system_trunc_limit)
+    else:
+        model_input_normalized = normalize_input_messages(inputs, system_trunc_limit) if inputs else []
+
+    # Serialize: if already string keep as-is, otherwise JSON encode
+    if isinstance(model_input_normalized, str):
+        model_input_str = model_input_normalized
+    else:
+        model_input_str = json.dumps(model_input_normalized, ensure_ascii=False)
 
     # Extract response and tool calls
     response_text = ""
@@ -129,18 +140,24 @@ def _extract_input_output_from_span(
         response_text = normalize_response(outputs_obj)
         tool_calls = extract_tool_calls(outputs_obj)
 
+    # Fallback: check gen_ai.output.messages in attributes
     if not response_text:
         out_msgs = _get(attrs, ["gen_ai.output.messages"]) or _get(attrs, ["gen_ai.completion"])
         if out_msgs is not None:
-            response_text = normalize_messages(out_msgs) if isinstance(out_msgs, list) else json.dumps(out_msgs, ensure_ascii=False)
+            response_text, extra_tool_calls = extract_from_output_messages(out_msgs)
+            if not tool_calls and extra_tool_calls:
+                tool_calls = extra_tool_calls
 
+    # Fallback: check events (OTel-style instrumentation)
     if not response_text and isinstance(s.get("events"), list):
         for ev in s["events"]:
             if ev.get("name") == "gen_ai.client.inference.operation.details":
                 ev_attrs = ev.get("attributes", {})
                 out_msgs = ev_attrs.get("gen_ai.output.messages") or ev_attrs.get("gen_ai.completion")
                 if out_msgs is not None:
-                    response_text = normalize_messages(out_msgs) if isinstance(out_msgs, list) else json.dumps(out_msgs, ensure_ascii=False)
+                    response_text, extra_tool_calls = extract_from_output_messages(out_msgs)
+                    if not tool_calls and extra_tool_calls:
+                        tool_calls = extra_tool_calls
                     break
 
     # Build metadata (model-level, span-level added separately)

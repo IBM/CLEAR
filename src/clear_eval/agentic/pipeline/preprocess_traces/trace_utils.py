@@ -61,47 +61,114 @@ def normalize_content(content: Any, include_function_calls: bool = True) -> str:
     return json.dumps(content, ensure_ascii=False) if isinstance(content, dict) else str(content)
 
 
-def normalize_messages(messages: Any, system_trunc_limit: int = 50_000) -> str:
+def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) -> Any:
     """
-    Convert messages/contents list into a flat text string.
-    Handles OpenAI (role/content), Anthropic, and Gemini (role/parts) formats.
-    Preserves original order; truncates long system messages in the middle.
+    Normalize input messages (what goes INTO the LLM).
+
+    Behavior:
+    - If string: return as-is
+    - If list/dict of messages: transform to structured list
+
+    Returns:
+        str (if input was string) or List[{"role": str, "content": str, "is_tool_def": bool}]
     """
     if messages is None:
-        return ""
+        return []
+
     if isinstance(messages, str):
         return messages
-    if not isinstance(messages, list):
-        return json.dumps(messages, ensure_ascii=False) if isinstance(messages, dict) else str(messages)
 
-    lines = []
+    if isinstance(messages, dict):
+        messages = [messages]
+
+    if not isinstance(messages, list):
+        return str(messages)
+
+    result = []
     system_chars_used = 0
 
     for msg in messages:
         if msg is None:
             continue
         if isinstance(msg, str):
-            lines.append(f"unknown: {msg}")
+            result.append({"role": "unknown", "content": msg, "is_tool_def": False})
             continue
         if not isinstance(msg, dict):
-            lines.append(f"unknown: {str(msg)}")
+            result.append({"role": "unknown", "content": str(msg), "is_tool_def": False})
             continue
 
         role = (msg.get("role") or msg.get("type") or "unknown").lower()
-        # Handle OpenAI (content), Gemini (parts), and raw content
-        content = normalize_content(msg.get("content") or msg.get("parts") or "")
-        if not content:
-            continue
+        raw_content = msg.get("content") or msg.get("parts") or ""
 
-        if role == "system":
+        # Normalize content to string
+        content = normalize_content(raw_content)
+
+        # Truncate system messages
+        if role == "system" and content:
             remaining = max(0, system_trunc_limit - system_chars_used)
             if len(content) > remaining:
                 content = truncate_middle(content, remaining)
             system_chars_used += len(content)
 
-        lines.append(f"{role}: {content}")
+        # Detect tool definitions
+        is_tool_def = False
+        if role == "tool" and isinstance(raw_content, (dict, str)):
+            content_to_check = raw_content
+            if isinstance(content_to_check, str):
+                try:
+                    content_to_check = json.loads(content_to_check)
+                except:
+                    pass
+            if isinstance(content_to_check, dict) and "function" in content_to_check:
+                is_tool_def = True
 
-    return "\n\n".join(lines)
+        if not content:
+            continue
+
+        result.append({"role": role, "content": content, "is_tool_def": is_tool_def})
+
+    return result
+
+
+def extract_from_output_messages(messages: Any) -> tuple:
+    """
+    Extract response text and tool calls from message-format output.
+
+    Used for fallback when output is stored as gen_ai.output.messages.
+
+    Args:
+        messages: Output in message format [{"role": "assistant", "content": "...", "tool_calls": [...]}]
+
+    Returns:
+        (response_text: str, tool_calls: list)
+    """
+    if messages is None:
+        return "", []
+    if isinstance(messages, str):
+        return messages, []
+    if isinstance(messages, dict):
+        messages = [messages]
+    if not isinstance(messages, list):
+        return str(messages), []
+
+    text_parts = []
+    tool_calls = []
+
+    for msg in messages:
+        if isinstance(msg, str):
+            text_parts.append(msg)
+        elif isinstance(msg, dict):
+            content = msg.get("content") or msg.get("parts") or ""
+            if isinstance(content, str) and content:
+                text_parts.append(content)
+            elif content:
+                text_parts.append(normalize_content(content))
+
+            tc = msg.get("tool_calls")
+            if tc and isinstance(tc, list):
+                tool_calls.extend(tc)
+
+    return "\n".join(text_parts), tool_calls
 
 
 def normalize_response(output_data: Any) -> str:
