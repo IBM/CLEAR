@@ -47,8 +47,8 @@ context_tokens: null            # Model context window; if set, long trajectorie
 # ----------------------------------------------------------------------------
 # CLEAR Configuration (all standard CLEAR arguments)
 # ----------------------------------------------------------------------------
-provider: watsonx
-eval_model_name: openai/gpt-oss-120b
+provider: openai
+eval_model_name: gpt-4o
 eval_model_params:
   temperature: 0.0
   max_tokens: 8096
