@@ -21,6 +21,40 @@ def parse_dict(arg: str) -> dict:
         raise argparse.ArgumentTypeError(f"Invalid JSON format: {e}")
 
 
+def add_preprocessing_args_to_parser(parser: argparse.ArgumentParser) -> None:
+    """
+    Add trace preprocessing arguments to parser.
+    
+    These arguments control how raw traces are processed into trajectory data.
+    Only relevant when --from-raw-traces is True.
+    
+    Args:
+        parser: ArgumentParser to add arguments to
+    """
+    group = parser.add_argument_group("Trace Preprocessing (only used when --from-raw-traces=True)")
+    
+    group.add_argument(
+        "--agent-framework",
+        type=str,
+        choices=['langgraph', 'crewai'],
+        default='langgraph',
+        help="Agent framework used to generate traces (default: langgraph)",
+    )
+    group.add_argument(
+        "--observability-framework",
+        type=str,
+        choices=['mlflow', 'langfuse'],
+        default='mlflow',
+        help="Observability framework used to capture traces (default: mlflow)",
+    )
+    group.add_argument(
+        "--separate-tools",
+        type=str2bool,
+        default=False,
+        help="Separate tool calls in preprocessing (default: false, keep false for now)",
+    )
+
+
 def create_base_parser(description: str) -> argparse.ArgumentParser:
     """
     Create base argument parser with unified argument names.
@@ -41,7 +75,13 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         "--agentic-input-dir",
         type=str,
         required=True,
-        help="Directory containing trajectory JSON files (traces_compact/)",
+        help="Input directory (JSON traces if from-raw-traces=True, else CSV files)",
+    )
+    parser.add_argument(
+        "--from-raw-traces",
+        type=str2bool,
+        default=False,
+        help="If True, process JSON traces; if False, use CSV files directly (default: false)",
     )
     parser.add_argument(
         "--agentic-output-dir",
@@ -49,6 +89,9 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         required=True,
         help="Base directory for saving evaluation results",
     )
+    
+    # Add preprocessing arguments
+    add_preprocessing_args_to_parser(parser)
     
     # Add all CLEAR configuration arguments (includes provider, eval_model_name, etc.)
     add_clear_args_to_parser(parser, group_name="CLEAR Configuration")

@@ -144,14 +144,14 @@ class FullTrajectoryEvaluator(TrajectoryEvaluator):
     """
 
     def prepare_evaluation_data(
-        self, entry: dict, traj_data: dict
+        self, entry: dict, intent: str
     ) -> dict:
         """
         No additional data needed for full trajectory evaluation.
         
         Args:
             entry: Entry dict with file_path, traj_name
-            traj_data: Loaded trajectory data
+            intent: Task intent/objective (not used in full trajectory eval)
         
         Returns:
             Empty dict (no extra data needed)
