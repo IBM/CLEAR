@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """
 Create optimized UI input zip from CLEAR results and trajectory data.
-
-NEW APPROACH:
-- Trajectory data: Keep model_input and response, store as Parquet (compressed)
-- CLEAR results: Remove model_input and response columns
-- Dashboard: Join data using (task_id, step_in_trace_general) as key
 """
 
 import argparse
@@ -126,11 +121,6 @@ def create_ui_input_zip(
     """
     Create optimized UI input zip from trajectory data and CLEAR results.
 
-    NEW APPROACH:
-    - Trajectory data stored as Parquet (keeps model_input & response)
-    - CLEAR results have model_input & response removed
-    - Dashboard joins them using (task_id, step_in_trace_general)
-
     Args:
         output_dir: Directory to save the output zip
         traces_data_dir: Directory containing trajectory CSV files
@@ -161,10 +151,6 @@ def create_ui_input_zip(
     logger.info(f"Trajectory data: {traj_data_dir}")
     logger.info(f"CLEAR results: {clear_results_dir}")
     logger.info(f"Output: {result_zip}")
-    logger.info("NEW APPROACH:")
-    logger.info("  - Trajectory data: Parquet format (keeps model_input & response)")
-    logger.info("  - CLEAR results: Remove model_input & response columns")
-    logger.info("  - Dashboard: Joins data by (task_id, step_in_trace_general)")
 
     total_original_size = 0
     total_compressed_size = 0
