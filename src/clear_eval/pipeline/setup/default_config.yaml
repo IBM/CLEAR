@@ -4,7 +4,7 @@
 #   See https://docs.litellm.ai/docs/providers for full list
 # - inference_backend: "endpoint" - Use direct HTTP endpoint backend for custom APIs
 # Backward compatible: use_litellm: true maps to inference_backend: "litellm"
-inference_backend: langchain
+inference_backend: litellm
 
 # Endpoint-specific configuration (only used when inference_backend: "endpoint")
 endpoint_url: null # e.g. "https://api.example.com/v1"
@@ -15,10 +15,6 @@ provider_defaults:
   openai:
     gen_model_name: gpt-4o
     eval_model_name: gpt-3.5-turbo
-    max_workers: 20
-  azure:
-    gen_model_name: gpt-4o-mini-2024-07-18
-    eval_model_name: gpt-4o-2024-08-06
     max_workers: 20
   watsonx:
     gen_model_name: ibm/granite-3-3-8b-instruct
