@@ -1,5 +1,5 @@
 # Agentic pipeline configuration
-traces_input_dir: ../data/log_monitor_agent       # For run_clear_pipeline.py (full pipeline from raw traces)
+agentic_input_dir: ../data/log_monitor_agent       # For run_clear_pipeline.py (full pipeline from raw traces)
 agentic_output_dir: ../output/mlflow_log_monitor_example
 agent_framework: langgraph
 observability_framework: mlflow

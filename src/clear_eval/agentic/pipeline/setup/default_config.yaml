@@ -1,5 +1,5 @@
 # Agentic pipeline configuration
-traces_input_dir: null       # For run_clear_pipeline.py (full pipeline from raw traces)
+agentic_input_dir: null       # For run_clear_pipeline.py (full pipeline from raw traces)
 traces_data_dir: null        # For run_clear_on_traj_data.py (from preprocessed trajectory data)
 agentic_output_dir: null
 agent_framework: langgraph
