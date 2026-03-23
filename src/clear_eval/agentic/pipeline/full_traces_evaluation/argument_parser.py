@@ -37,20 +37,20 @@ def add_preprocessing_args_to_parser(parser: argparse.ArgumentParser) -> None:
         "--agent-framework",
         type=str,
         choices=['langgraph', 'crewai'],
-        default='langgraph',
+        default=None,
         help="Agent framework used to generate traces (default: langgraph)",
     )
     group.add_argument(
         "--observability-framework",
         type=str,
         choices=['mlflow', 'langfuse'],
-        default='mlflow',
+        default=None,
         help="Observability framework used to capture traces (default: mlflow)",
     )
     group.add_argument(
         "--separate-tools",
         type=str2bool,
-        default=False,
+        default=None,
         help="Separate tool calls in preprocessing (default: false, keep false for now)",
     )
 
@@ -80,7 +80,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--from-raw-traces",
         type=str2bool,
-        default=False,
+        default=None,
         help="If True, process JSON traces; if False, use CSV files directly (default: false)",
     )
     parser.add_argument(
@@ -96,9 +96,6 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     # Add all CLEAR configuration arguments (includes provider, eval_model_name, etc.)
     add_clear_args_to_parser(parser, group_name="CLEAR Configuration")
     
-    # Set default for eval_model_params if not set by CLEAR args
-    parser.set_defaults(eval_model_params={})
-    
     # Full trajectory specific arguments
     parser.add_argument(
         "--context-tokens",
@@ -111,7 +108,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--overwrite",
         type=str2bool,
-        default=True,
+        default=None,
         help="Re-evaluate even if results already exist (default: true)",
     )
     parser.add_argument(
@@ -123,7 +120,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=10,
+        default=None,
         help="Number of concurrent API requests (default: 10)",
     )
 
