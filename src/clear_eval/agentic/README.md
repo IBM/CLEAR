@@ -214,6 +214,12 @@ For the complete list of options, see [`pipeline/setup/default_unified_config.ya
 | `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics (if not generate-rubrics)              |
 | `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none`           |
 
+**Important Note on Rubric Evaluation:**
+- Rubric analysis requires trajectories to have a clear `intent` field in the CSV data
+- If no trajectories have intent data, rubric evaluation will be automatically skipped
+- If some trajectories have intent and others don't, rubric evaluation will run only on those with valid intent
+- Intent must be non-empty and not just whitespace to be considered valid
+
 ### Model Configuration
 
 | Parameter | CLI Flag | Default | Description |

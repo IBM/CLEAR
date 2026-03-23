@@ -534,6 +534,39 @@ def preprocess_traces_if_needed(
         return input_dir
 
 
+def check_intent_availability(traj_input_dir: Path) -> tuple[bool, int, int]:
+    """
+    Check if all trajectory files have valid intent data.
+    
+    Intent is considered valid if it exists, is not None, and is not empty/whitespace.
+    
+    Args:
+        traj_input_dir: Directory containing CSV trajectory files
+        
+    Returns:
+        Tuple of (all_have_intent, total_files, files_with_intent)
+    """
+    csv_files = list(traj_input_dir.glob("*.csv"))
+    total_files = len(csv_files)
+    files_with_intent = 0
+    
+    for csv_file in csv_files:
+        try:
+            df = pd.read_csv(csv_file)
+            if not df.empty:
+                first_row = df.iloc[0]
+                intent = first_row.get("intent", "")
+                # Check if intent is valid (not None, not empty, not just whitespace)
+                if intent is not None and not pd.isna(intent) and str(intent).strip():
+                    files_with_intent += 1
+        except Exception as e:
+            logger.warning(f"Failed to check intent in {csv_file}: {e}")
+            continue
+    
+    all_have_intent = files_with_intent == total_files
+    return all_have_intent, total_files, files_with_intent
+
+
 def run_trajectory_evaluation_pipeline(
     traj_input_dir: Path,
     output_dir: Path,
@@ -583,6 +616,38 @@ def run_trajectory_evaluation_pipeline(
     # Resolve evaluation types
     eval_types = resolve_eval_types(eval_types)
     logger.info("Evaluation types to run: %s", eval_types)
+    
+    # Check if rubric evaluation is requested and verify intent availability
+    if EVAL_TYPE_RUBRIC in eval_types:
+        logger.info("Checking intent availability for rubric evaluation...")
+        all_have_intent, total_files, files_with_intent = check_intent_availability(traj_input_dir)
+        
+        if files_with_intent == 0:
+            # No trajectories have intent - skip rubric evaluation entirely
+            logger.warning("=" * 80)
+            logger.warning("RUBRIC EVALUATION SKIPPED")
+            logger.warning("=" * 80)
+            logger.warning(
+                f"None of the {total_files} trajectory files have intent data. "
+                "Rubric evaluation requires intent to generate/evaluate rubrics."
+            )
+            logger.warning("Removing rubric evaluation from the pipeline.")
+            logger.warning("=" * 80)
+            eval_types.remove(EVAL_TYPE_RUBRIC)
+            
+            # Also skip rubric generation if it was requested
+            if generate_rubrics:
+                logger.warning("Skipping rubric generation as well.")
+                generate_rubrics = False
+        elif not all_have_intent:
+            # Some trajectories have intent, some don't - run on those with intent
+            logger.info("=" * 80)
+            logger.info(
+                f"Intent data found in {files_with_intent}/{total_files} trajectory files. "
+                "Rubric evaluation will run on trajectories with intent data only. "
+                "Trajectories without intent will be skipped automatically."
+            )
+            logger.info("=" * 80)
 
     # Prepare common evaluation arguments
     eval_kwargs = {
