@@ -17,7 +17,19 @@ CLEAR makes it easier to diagnose model shortcomings and prioritize targeted imp
 
 You can run CLEAR as a full pipeline, or reuse specific stages (generation, evaluation, or just UI).
 
+---
 
+## 🤖 CLEAR for Agentic Workflows
+
+CLEAR also supports **multi-agent system evaluation** with specialized pipelines for analyzing agent trajectories, tool usage, and task completion. This includes:
+
+- **Step-by-step analysis**: Evaluate individual agent interactions using CLEAR methodology
+- **Full trajectory evaluation**: Assess complete task trajectories (success, quality, rubric-based)
+- **Interactive dashboard**: Visualize agent workflows, paths, and performance metrics
+
+📖 **[See the Agentic Workflows Documentation →](src/clear_eval/agentic/README.md)**
+
+---
 
 ## 🚀 Quickstart
 

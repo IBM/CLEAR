@@ -99,8 +99,9 @@ No text outside the JSON."""
             Dictionary with 'task_objective' key, or None if intent is missing
         """
         # Use the intent passed from base evaluator
-        if not intent:
-            logger.warning(f"No intent provided for {entry['traj_name']}")
+        # Check if intent is missing, empty, or just whitespace
+        if not intent or not str(intent).strip():
+            logger.warning(f"No valid intent provided for {entry['traj_name']} - skipping rubric generation")
             return None
             
         return {"task_objective": intent}

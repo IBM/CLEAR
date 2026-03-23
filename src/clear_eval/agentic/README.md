@@ -56,6 +56,7 @@ Configure your LLM provider credentials. See the main [README](../../README.md#s
 
 ### 3. Run the Unified Pipeline
 
+**Using Python module:**
 ```bash
 python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-input-dir data/my_traces \
@@ -65,10 +66,26 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --provider openai
 ```
 
+**Using CLI command:**
+```bash
+run-agentic-clear-analysis \
+    --agentic-input-dir data/my_traces \
+    --agentic-output-dir results \
+    --from-raw-traces true \
+    --eval-model-name gpt-4o \
+    --provider openai
+```
+
 ### 4. Launch the Dashboard
 
+**Using Python module:**
 ```bash
 python -m clear_eval.agentic.dashboard.launch_dashboard
+```
+
+**Using CLI command:**
+```bash
+run-clear-agentic-dashboard
 ```
 
 Upload the generated `unified_ui_results.zip` from your results directory.
@@ -213,6 +230,12 @@ For the complete list of options, see [`pipeline/setup/default_unified_config.ya
 | `generate_rubrics` | `--generate-rubrics` | `false` | Generate rubrics before evaluation                              |
 | `rubric_dir` | `--rubric-dir` | None | Path to existing rubrics (if not generate-rubrics)              |
 | `clear_analysis_types` | `--clear-analysis-types` | `all` | CLEAR analyses: `root_cause`, `issues`, `all`, `none`           |
+
+**Important Note on Rubric Evaluation:**
+- Rubric analysis requires trajectories to have a clear `intent` field in the CSV data
+- If no trajectories have intent data, rubric evaluation will be automatically skipped
+- If some trajectories have intent and others don't, rubric evaluation will run only on those with valid intent
+- Intent must be non-empty and not just whitespace to be considered valid
 
 ### Model Configuration
 

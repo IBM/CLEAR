@@ -385,13 +385,10 @@ def run_traj_data_pipeline(
         overwrite=overwrite,
     )
 
-    logger.info("Creating comprehensive UI results...")
     ui_results_path = create_comprehensive_ui_results(
         clear_results_dir,
         traces_data_dir
     )
-
-    logger.info("Saving comprehensive JSON results...")
     json_results = save_comprehensive_json_results(
         judge_results_dir=clear_results_dir,
         traces_data_dir=traces_data_dir,
