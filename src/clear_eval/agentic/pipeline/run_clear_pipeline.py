@@ -201,7 +201,7 @@ Examples:
 
   # Memory-only mode (no files saved, only JSON results returned)
   python -m clear_eval.agentic.pipeline.run_clear_pipeline \\
-      --traces-input-dir data/traces \\
+      --agentic-input-dir data/traces \\
       --provider watsonx \\
       --eval-model-name meta-llama/llama-3-3-70b-instruct \\
       --memory-only true
@@ -252,7 +252,7 @@ use run_clear_on_traj_data.py instead.
 
     # Validate required parameters
     if not config_dict.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --traces-input-dir)")
+        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
     if not config_dict.get('agentic_output_dir'):
         parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 
