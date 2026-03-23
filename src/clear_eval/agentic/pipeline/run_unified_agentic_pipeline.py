@@ -158,6 +158,11 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         type=int,
         help="Model context window (for full trajectory)"
     )
+    group.add_argument(
+        "--memory-only",
+        type=str2bool,
+        help="If true, use temporary directories and save only ui_input and json_result to agentic_output_dir (default: false)"
+    )
 
 
 def create_output_structure(

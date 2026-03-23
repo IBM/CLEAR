@@ -87,7 +87,7 @@ def _parse_issues_list(recurring_issues_str):
 
 
 def build_comprehensive_json_results(
-    judge_results_dir: str | Path,
+    clear_results_dir: str | Path,
     traces_data_dir: str | Path,
     config_dict: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -103,7 +103,7 @@ def build_comprehensive_json_results(
     - pass_fail_summary: pass/fail metrics per trace and agent
 
     Args:
-        judge_results_dir: Directory containing agent CLEAR result subdirectories
+        clear_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
         config_dict: Pipeline configuration containing:
             - success_threshold: Threshold for pass/fail (default: 0.7)
@@ -115,7 +115,7 @@ def build_comprehensive_json_results(
     # Extract pass/fail config from config_dict
     success_threshold = config_dict.get("success_threshold", 0.7)
     pass_criteria = config_dict.get("pass_criteria", "avg")
-    judge_results_path = Path(judge_results_dir)
+    clear_results_path = Path(clear_results_dir)
     traces_data_path = Path(traces_data_dir)
 
     # Filter config for JSON output (exclude internal params)
@@ -168,7 +168,7 @@ def build_comprehensive_json_results(
     agent_weighted_severity = {}  # {agent_name: sum(freq * severity)}
 
     # Process each agent's results
-    agent_dirs = [d for d in judge_results_path.iterdir() if d.is_dir()]
+    agent_dirs = [d for d in clear_results_path.iterdir() if d.is_dir()]
 
     for agent_dir in sorted(agent_dirs):
         agent_name = agent_dir.name
@@ -470,7 +470,7 @@ def save_json_to_file(
 
 
 def save_comprehensive_json_results(
-    judge_results_dir: str | Path,
+    clear_results_dir: str | Path,
     traces_data_dir: str | Path,
     config_dict: Dict[str, Any],
     output_dir: Optional[str | Path] = None,
@@ -483,10 +483,10 @@ def save_comprehensive_json_results(
     followed by save_json_to_file().
 
     Args:
-        judge_results_dir: Directory containing agent CLEAR result subdirectories
+        clear_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
         config_dict: Pipeline configuration containing success_threshold and pass_criteria
-        output_dir: Directory to save the JSON output (defaults to judge_results_dir)
+        output_dir: Directory to save the JSON output (defaults to clear_results_dir)
         output_filename: Name of the output JSON file
 
     Returns:
@@ -497,13 +497,13 @@ def save_comprehensive_json_results(
     logger.info("=" * 80)
 
     results = build_comprehensive_json_results(
-        judge_results_dir=judge_results_dir,
+        clear_results_dir=clear_results_dir,
         traces_data_dir=traces_data_dir,
         config_dict=config_dict
     )
 
     if not output_dir:
-        output_dir = judge_results_dir
+        output_dir = clear_results_dir
 
     return save_json_to_file(results, output_dir, output_filename)
 
@@ -555,7 +555,7 @@ Examples:
         help="Path to config file (JSON or YAML) that overrides defaults"
     )
     parser.add_argument(
-        "--judge-results-dir",
+        "--clear-results-dir",
         type=str,
         required=True,
         help="Directory containing agent CLEAR result subdirectories"
@@ -607,7 +607,7 @@ Examples:
     )
 
     save_comprehensive_json_results(
-        judge_results_dir=args.judge_results_dir,
+        clear_results_dir=args.clear_results_dir,
         traces_data_dir=args.traces_data_dir,
         config_dict=config_dict,
         output_dir=args.output_dir,

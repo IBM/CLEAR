@@ -22,8 +22,6 @@ import os
 import tempfile
 
 from clear_eval.agentic.pipeline.utils import build_cli_overrides
-from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, \
-    save_comprehensive_json_results, save_json_to_file
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.run_clear_on_traj_data import run_traj_data_pipeline
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
@@ -129,8 +127,6 @@ def run_full_pipeline(config_dict: dict) -> dict:
     try:
         # Intermediate files go to temp dir (memory-only) or agentic_output_dir (normal)
         traces_data_dir = os.path.join(intermediate_output_dir, 'traces_data')
-        clear_data_dir = os.path.join(intermediate_output_dir, 'clear_data')
-        clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
 
         logger.info(f"Input traces: {traces_input_dir}")
         logger.info(f"Agent framework: {agent_framework}")
@@ -147,7 +143,7 @@ def run_full_pipeline(config_dict: dict) -> dict:
             logger.info("  └──── clear_results.json  (Final JSON results)")
         logger.info("=" * 80)
 
-        logger.info("STEP 1: Processing traces to trajectory data")
+        logger.info("Processing traces to trajectory data")
         process_traces_to_traj_data(
             traces_input_dir,
             traces_data_dir,
@@ -156,23 +152,14 @@ def run_full_pipeline(config_dict: dict) -> dict:
             separate_tools=separate_tools
         )
 
-        # Call the trajectory data pipeline for steps 2-4
+        # Call the trajectory data pipeline
         json_results = run_traj_data_pipeline(
             traces_data_dir=traces_data_dir,
-            agentic_output_dir=intermediate_output_dir,
+            agentic_output_dir=agentic_output_dir,
             config_dict=config_dict,
-            overwrite=overwrite
+            overwrite=overwrite,
+            intermediate_output_dir=intermediate_output_dir
         )
-
-        if not memory_only:
-            from clear_eval.agentic.pipeline.build_json_results import save_json_to_file
-            save_json_to_file(
-                results=json_results,
-                output_dir=agentic_output_dir,
-                output_filename="clear_results.json"
-            )
-        else:
-            logger.info("Memory-only mode: Results not saved to disk")
         
         logger.info("=" * 80)
 
@@ -263,24 +250,14 @@ use run_clear_on_traj_data.py instead.
         **cli_overrides
     )
 
-    # Extract memory_only flag
-    memory_only = config_dict.get('memory_only', False)
-
     # Validate required parameters
     if not config_dict.get('agentic_input_dir'):
         parser.error("agentic_input_dir is required (set in config or use --traces-input-dir)")
-    if not memory_only and not config_dict.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required when memory_only=False (set in config or use --agentic-output-dir)")
+    if not config_dict.get('agentic_output_dir'):
+        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 
-    # Run the full pipeline (always returns dict)
-    result = run_full_pipeline(config_dict)
-
-    logger.info("=" * 80)
-    logger.info("PIPELINE SUMMARY")
-    logger.info(f"Total agents: {len(result.get('agents', {}))}")
-    logger.info(f"Total traces: {result.get('metadata', {}).get('statistics', {}).get('total_traces', 0)}")
-    logger.info("=" * 80)
-    return result
+    # Run the full pipeline
+    run_full_pipeline(config_dict)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import argparse
 import json
 import logging
 import os
+import tempfile
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -73,6 +74,11 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         "--pass-criteria",
         choices=['avg', 'min'],
         help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
+    )
+    group.add_argument(
+        "--memory-only",
+        type=str2bool,
+        help="If true, use temporary directories and save only ui_input and json_result to agentic_output_dir (default: false)"
     )
 
 
@@ -309,7 +315,7 @@ def run_clear_analysis(
 
 
 def create_comprehensive_ui_results(
-    judge_results_dir: str | Path,
+    clear_results_dir: str | Path,
     traj_data_dir: str | Path,
     result_zip_name: str = "ui_results.zip",
 ) -> Path:
@@ -321,7 +327,7 @@ def create_comprehensive_ui_results(
 
     Parameters
     ----------
-    judge_results_dir : str | Path
+    clear_results_dir : str | Path
         Directory containing agent subdirectories with CLEAR results
     traj_data_dir : str | Path
         Directory containing trajectory CSV files
@@ -333,12 +339,12 @@ def create_comprehensive_ui_results(
     Path
         Path to the created ui_results.zip
     """
-    judge_results_path = Path(judge_results_dir).resolve()
+    clear_results_path = Path(clear_results_dir).resolve()
 
     return create_ui_input_zip(
-        output_dir=judge_results_path,
+        output_dir=clear_results_path,
         traces_data_dir=traj_data_dir,
-        clear_results_dir=judge_results_path,
+        clear_results_dir=clear_results_path,
         output_zip_name=result_zip_name
     )
 
@@ -347,8 +353,9 @@ def run_traj_data_pipeline(
     traces_data_dir: str,
     agentic_output_dir: str,
     config_dict: dict,
-    overwrite: bool = True
-) -> str:
+    overwrite: bool = True,
+    intermediate_output_dir: Optional[str] = None
+) -> dict:
     """
     Run pipeline from trajectory data to CLEAR results.
     
@@ -364,39 +371,76 @@ def run_traj_data_pipeline(
     
     Args:
         traces_data_dir: Directory containing trajectory CSV files
-        agentic_output_dir: Base output directory
+        agentic_output_dir: Base output directory for final results
         config_dict: Configuration dictionary with CLEAR params
         overwrite: Whether to overwrite existing results
+        intermediate_output_dir: Optional directory for intermediate files (if None, will create temp dir in memory-only mode)
         
     Returns:
-        Path to the JSON results file
+        Dictionary with JSON results
     """
-    clear_data_dir = os.path.join(agentic_output_dir, 'clear_data')
-    clear_results_dir = os.path.join(agentic_output_dir, 'clear_results')
+    memory_only = config_dict.get('memory_only', False)
+
+    # Create output directory for final results
+    os.makedirs(agentic_output_dir, exist_ok=True)
+    # Use temporary directory for intermediate files if memory_only mode and no intermediate_output_dir provided
+    if memory_only and intermediate_output_dir is None:
+        temp_dir_context = tempfile.TemporaryDirectory()
+        temp_dir = temp_dir_context.__enter__()
+        intermediate_output_dir = temp_dir
+        logger.info("Memory-only mode: Using temporary directory for intermediate files")
+    elif intermediate_output_dir is None:
+        temp_dir_context = None
+        intermediate_output_dir = agentic_output_dir
+    else:
+        # intermediate_output_dir was provided (from run_full_pipeline)
+        temp_dir_context = None
     
-    logger.info("Converting trajectory data to CLEAR format...")
-    convert_to_clear_format(traces_data_dir, clear_data_dir)
+    try:
+        clear_data_dir = os.path.join(intermediate_output_dir, 'clear_data')
+        clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
+        
+        logger.info("Converting trajectory data to CLEAR format...")
+        convert_to_clear_format(traces_data_dir, clear_data_dir)
 
-    logger.info("Running CLEAR analysis for each agent...")
-    run_clear_analysis(
-        clear_data_dir,
-        clear_results_dir,
-        config_dict,
-        overwrite=overwrite,
-    )
+        logger.info("Running CLEAR analysis for each agent...")
+        run_clear_analysis(
+            clear_data_dir,
+            clear_results_dir,
+            config_dict,
+            overwrite=overwrite,
+        )
 
-    ui_results_path = create_comprehensive_ui_results(
-        clear_results_dir,
-        traces_data_dir
-    )
-    json_results = save_comprehensive_json_results(
-        judge_results_dir=clear_results_dir,
-        traces_data_dir=traces_data_dir,
-        config_dict=config_dict,
-    )
+        # Build JSON results (returns dict)
+        from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, save_json_to_file
+        json_results = save_comprehensive_json_results(
+            clear_results_dir=clear_results_dir,
+            traces_data_dir=traces_data_dir,
+            config_dict=config_dict,
+            output_dir = agentic_output_dir,
+        )
+        
+        # Create UI results zip directly in final output directory
+        from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
+        ui_results_path = create_ui_input_zip(
+            output_dir=Path(agentic_output_dir),
+            traces_data_dir=Path(traces_data_dir),
+            clear_results_dir=Path(clear_results_dir),
+            output_zip_name="ui_results.zip"
+        )
+        logger.info(f"Saved UI results to: {ui_results_path}")
 
-    logger.info("Pipeline complete!")
-    return json_results
+        if memory_only:
+            logger.info("Memory-only mode: Intermediate files will be cleaned up")
+
+        logger.info("Pipeline complete!")
+        return json_results
+        
+    finally:
+        # Clean up temporary directory if used
+        if temp_dir_context is not None:
+            temp_dir_context.__exit__(None, None, None)
+            logger.info("Temporary intermediate files cleaned up")
 
 
 def main():
@@ -463,6 +507,9 @@ Argument Precedence (lowest to highest):
         **cli_overrides
     )
 
+    # Extract memory_only flag
+    memory_only = config_dict.get('memory_only', False)
+    
     # Validate required parameters
     if not config_dict.get('traces_data_dir'):
         parser.error("traces_data_dir is required (set in config or use --traces-data-dir)")
@@ -479,8 +526,11 @@ Argument Precedence (lowest to highest):
     logger.info("=" * 80)
     logger.info(f"Trajectory data: {traces_data_dir}")
     logger.info(f"Output: {agentic_output_dir}")
-    logger.info("  ├── clear_data/     (CLEAR format by agent)")
-    logger.info("  └── clear_results/  (CLEAR analysis results)")
+    if memory_only:
+        logger.info("  └── Memory-only mode: Only ui_results.zip and clear_results.json will be saved")
+    else:
+        logger.info("  ├── clear_data/     (CLEAR format by agent)")
+        logger.info("  └── clear_results/  (CLEAR analysis results)")
     logger.info("=" * 80)
 
     # Call the shared pipeline function
@@ -490,11 +540,6 @@ Argument Precedence (lowest to highest):
         config_dict=config_dict,
         overwrite=overwrite
     )
-
-    logger.info("=" * 80)
-    logger.info("PIPELINE COMPLETE")
-    logger.info(f"Results saved to: {json_results}")
-    logger.info("=" * 80)
 
 
 if __name__ == "__main__":
