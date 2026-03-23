@@ -46,5 +46,11 @@ def run_agentic_clear_analysis():
     from clear_eval.agentic.pipeline.run_unified_agentic_pipeline import main as agentic_main
     agentic_main()
 
+def run_clear_agentic_dashboard():
+    """Run the agentic workflow dashboard (NiceGUI)."""
+    from clear_eval.agentic.dashboard.launch_dashboard import main as dashboard_main
+    dashboard_main()
+
+
 if __name__ == "__main__":
     main()

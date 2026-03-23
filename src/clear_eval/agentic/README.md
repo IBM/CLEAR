@@ -56,6 +56,7 @@ Configure your LLM provider credentials. See the main [README](../../README.md#s
 
 ### 3. Run the Unified Pipeline
 
+**Using Python module:**
 ```bash
 python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --agentic-input-dir data/my_traces \
@@ -65,10 +66,26 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
     --provider openai
 ```
 
+**Using CLI command:**
+```bash
+run-agentic-clear-analysis \
+    --agentic-input-dir data/my_traces \
+    --agentic-output-dir results \
+    --from-raw-traces true \
+    --eval-model-name gpt-4o \
+    --provider openai
+```
+
 ### 4. Launch the Dashboard
 
+**Using Python module:**
 ```bash
 python -m clear_eval.agentic.dashboard.launch_dashboard
+```
+
+**Using CLI command:**
+```bash
+run-clear-agentic-dashboard
 ```
 
 Upload the generated `unified_ui_results.zip` from your results directory.
