@@ -6,6 +6,7 @@
   "separate_tools": false,
   "overwrite": true,
   "inference_backend": "litellm",
+  "inference_url": null,
   "provider": "openai",
   "eval_model_name": "Azure/gpt-4.1",
   "eval_model_params": {

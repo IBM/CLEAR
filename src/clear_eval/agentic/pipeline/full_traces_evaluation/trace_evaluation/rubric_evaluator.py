@@ -33,6 +33,7 @@ class RubricEvaluator(TrajectoryEvaluator):
         self,
         judge_model_id: str,
         provider: str,
+        inference_backend: str,
         traj_input_dir: Path,
         output_dir: Path,
         rubrics_dir: Path,
@@ -60,6 +61,7 @@ class RubricEvaluator(TrajectoryEvaluator):
         super().__init__(
             judge_model_id=judge_model_id,
             provider=provider,
+            inference_backend=inference_backend,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,

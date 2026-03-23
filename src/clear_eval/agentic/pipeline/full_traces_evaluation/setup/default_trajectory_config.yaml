@@ -50,4 +50,4 @@ context_tokens: null            # Model context window size
 provider: openai                  # REQUIRED: LLM provider (openai, watsonx, anthropic, etc.)
 eval_model_name: null           # REQUIRED: Model identifier
 eval_model_params: {}           # Model parameters (temperature, max_tokens, etc.)
-
+inference_backend: "litellm"

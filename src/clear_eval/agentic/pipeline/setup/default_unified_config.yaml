@@ -47,6 +47,7 @@ context_tokens: null            # Model context window; if set, long trajectorie
 # ----------------------------------------------------------------------------
 # CLEAR Configuration (all standard CLEAR arguments)
 # ----------------------------------------------------------------------------
+inference_backend: litellm
 provider: openai
 eval_model_name: gpt-4o
 eval_model_params:
@@ -83,7 +84,6 @@ input_columns:
   - traj_score
 
 # Additional CLEAR settings
-use_litellm: true
 is_reference_based: false
 use_general_prompt: true
 perform_clustering: true

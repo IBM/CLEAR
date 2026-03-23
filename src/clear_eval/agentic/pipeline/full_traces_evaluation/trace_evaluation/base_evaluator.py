@@ -16,9 +16,10 @@ from typing import Any
 
 import logging
 import pandas as pd
-from clear_eval.pipeline.llm_client import get_llm_client, run_parallel, ParallelResult
+
 from clear_eval.logging_config import setup_logging
 from clear_eval.agentic.pipeline.preprocess_traces.compact_trace_formatter import format_compact_trace
+from clear_eval.pipeline.inference_utils.llm_client import get_llm_client, run_parallel, ParallelResult
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class TrajectoryEvaluator(ABC):
     def __init__(
         self,
         judge_model_id: str,
+        inference_backend: str,
         provider: str,
         traj_input_dir: Path,
         output_dir: Path,
@@ -108,6 +110,7 @@ class TrajectoryEvaluator(ABC):
             max_files: Maximum number of files to process (for testing)
         """
         self.judge_model_id = judge_model_id
+        self.inference_backend = inference_backend
         self.provider = provider
         self.traj_input_dir = Path(traj_input_dir)
         self.context_tokens = context_tokens
@@ -520,7 +523,7 @@ class TrajectoryEvaluator(ABC):
         llm_client = get_llm_client(
             provider=self.provider,
             model=self.judge_model_id,
-            use_litellm=True,
+            inference_backend=self.inference_backend,
             eval_mode=True,
             parameters=eval_model_params or {},
         )

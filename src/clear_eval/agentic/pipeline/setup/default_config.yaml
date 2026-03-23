@@ -2,7 +2,8 @@
 traces_input_dir: null       # For run_clear_pipeline.py (full pipeline from raw traces)
 traces_data_dir: null        # For run_clear_on_traj_data.py (from preprocessed trajectory data)
 agentic_output_dir: null
-observability_framework: mlflow
+agent_framework: langgraph
+observability_framework: langfuse
 separate_tools: false
 overwrite: true
 memory_only: false           # If true, use temp directories and return only JSON results (no files saved)
@@ -17,8 +18,8 @@ memory_only: false           # If true, use temp directories and return only JSO
 # - inference_backend: "endpoint" - Use direct HTTP endpoint backend for custom APIs
 inference_backend: litellm # or langchain, endpoint
 inference_url: null # required for inference_backend endpoint
-provider: watsonx
-eval_model_name: openai/gpt-oss-120b
+provider: openai
+eval_model_name: gpt-4o
 max_workers: 20
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation
