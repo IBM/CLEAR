@@ -602,6 +602,7 @@ def run_trajectory_evaluation_pipeline(
         output_dir: Base directory for saving results
         model_id: Model identifier for the judge
         provider: LLM provider
+        inference_backend: Inference backend: litellm, langchain or endpoint
         eval_types: Evaluations to run (task_success, full_trajectory, rubric, all)
         generate_rubrics: Generate rubrics before evaluation
         rubric_dir: Path to existing rubrics
