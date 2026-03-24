@@ -1,13 +1,18 @@
 """
-Run CLEAR Analysis on Preprocessed Trajectory Data
+CLEAR Step-by-Step Analysis Pipeline for Agentic Workflows
 
-This script runs CLEAR analysis starting from already-preprocessed trajectory CSV files.
-For the full pipeline from raw traces, use run_clear_pipeline.py instead.
+This module runs the step-by-step CLEAR analysis pipeline:
+- If from_raw_traces=True: traces (LangGraph/CrewAI) -> trajectory data -> CLEAR format -> CLEAR results
+- If from_raw_traces=False: trajectory data (CSVs) -> CLEAR format -> CLEAR results
 
 Configuration Precedence (lowest to highest):
     1. Default config: setup/default_config.yaml
     2. User config file: --agentic-config-path (if provided)
     3. CLI arguments (override both config files)
+
+Arguments are split into two groups:
+    - Agentic Pipeline Arguments: Pipeline-specific (agentic_input_dir, etc.)
+    - CLEAR Configuration: Evaluation args from clear_eval.args (provider, eval_model_name, etc.)
 """
 
 import argparse
@@ -16,19 +21,20 @@ import logging
 import os
 import tempfile
 from collections import Counter, defaultdict
-from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 import pandas as pd
 
+from clear_eval.analysis_runner import run_clear_eval_evaluation
 from clear_eval.agentic.pipeline.utils import build_cli_overrides
 from clear_eval.agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
+from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
+from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
 from clear_eval.pipeline.config_loader import load_config
-from clear_eval.pipeline.full_pipeline import run_eval_pipeline
 
 # Initialize logging
 setup_logging()
@@ -42,7 +48,7 @@ AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_config.
 
 def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
     """
-    Add agentic pipeline arguments for trajectory data processing.
+    Add agentic pipeline arguments to the parser.
 
     These correspond to the agentic pipeline section in default_config.yaml.
     """
@@ -53,13 +59,22 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to config file (JSON or YAML) that overrides defaults"
     )
     group.add_argument(
-        "--traces-data-dir",
-        help="Directory containing preprocessed trajectory CSV files (required)"
+        "--agentic-input-dir",
+        help="Input directory: raw traces (if from-raw-traces=true) or trajectory CSVs (if from-raw-traces=false)"
     )
     group.add_argument(
         "--agentic-output-dir",
         help="Output directory for pipeline results (required)"
     )
+    group.add_argument(
+        "--from-raw-traces",
+        type=str2bool,
+        help="If true, preprocess raw traces first; if false, use trajectory CSVs directly (default: false)"
+    )
+
+    # Add preprocessing arguments (agent-framework, observability-framework, separate-tools)
+    add_preprocessing_args_to_parser(parser)
+
     group.add_argument(
         "--overwrite",
         type=str2bool,
@@ -78,7 +93,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--memory-only",
         type=str2bool,
-        help="If true, use temporary directories and save only ui_input and json_result to agentic_output_dir (default: false)"
+        help="If true, use temp directories and return only JSON results (no files saved) (default: false)"
     )
 
 
@@ -225,7 +240,7 @@ def run_analysis_for_agent(
         config_dict["resume_enabled"] = not overwrite
 
         # Run evaluation pipeline
-        run_eval_pipeline(config_dict)
+        run_clear_eval_evaluation(None, **config_dict)
 
         logger.info("Analysis completed!")
         logger.info(f"  Results saved to: {output_dir}")
@@ -349,7 +364,7 @@ def create_comprehensive_ui_results(
     )
 
 
-def run_traj_data_pipeline(
+def run_step_analysis_pipeline(
     traces_data_dir: str,
     agentic_output_dir: str,
     config_dict: dict,
@@ -358,24 +373,20 @@ def run_traj_data_pipeline(
 ) -> dict:
     """
     Run pipeline from trajectory data to CLEAR results.
-    
+
     This function handles the complete workflow from trajectory CSVs:
     - Convert trajectory data to CLEAR format
     - Run CLEAR analysis for each agent
     - Create comprehensive UI results
     - Save JSON results
-    
-    This is the shared function used by both:
-    - run_clear_pipeline.py (after preprocessing traces)
-    - run_unified_agentic_pipeline.py (when starting from traces_data)
-    
+
     Args:
         traces_data_dir: Directory containing trajectory CSV files
         agentic_output_dir: Base output directory for final results
         config_dict: Configuration dictionary with CLEAR params
         overwrite: Whether to overwrite existing results
-        intermediate_output_dir: Optional directory for intermediate files (if None, will create temp dir in memory-only mode)
-        
+        intermediate_output_dir: Optional directory for intermediate files
+
     Returns:
         Dictionary with JSON results
     """
@@ -383,6 +394,7 @@ def run_traj_data_pipeline(
 
     # Create output directory for final results
     os.makedirs(agentic_output_dir, exist_ok=True)
+
     # Use temporary directory for intermediate files if memory_only mode and no intermediate_output_dir provided
     if memory_only and intermediate_output_dir is None:
         temp_dir_context = tempfile.TemporaryDirectory()
@@ -395,11 +407,11 @@ def run_traj_data_pipeline(
     else:
         # intermediate_output_dir was provided (from run_full_pipeline)
         temp_dir_context = None
-    
+
     try:
         clear_data_dir = os.path.join(intermediate_output_dir, 'clear_data')
         clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
-        
+
         logger.info("Converting trajectory data to CLEAR format...")
         convert_to_clear_format(traces_data_dir, clear_data_dir)
 
@@ -417,11 +429,10 @@ def run_traj_data_pipeline(
             clear_results_dir=clear_results_dir,
             traces_data_dir=traces_data_dir,
             config_dict=config_dict,
-            output_dir = agentic_output_dir,
+            output_dir=agentic_output_dir,
         )
-        
+
         # Create UI results zip directly in final output directory
-        from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
         ui_results_path = create_ui_input_zip(
             output_dir=Path(agentic_output_dir),
             traces_data_dir=Path(traces_data_dir),
@@ -435,7 +446,7 @@ def run_traj_data_pipeline(
 
         logger.info("Pipeline complete!")
         return json_results
-        
+
     finally:
         # Clean up temporary directory if used
         if temp_dir_context is not None:
@@ -443,42 +454,157 @@ def run_traj_data_pipeline(
             logger.info("Temporary intermediate files cleaned up")
 
 
+# Backward compatibility alias
+run_traj_data_pipeline = run_step_analysis_pipeline
+
+
+def run_full_pipeline(config_dict: dict) -> dict:
+    """
+    Complete pipeline: raw traces -> trajectory data -> CLEAR results.
+
+    Args:
+        config_dict: Configuration dictionary with agentic and CLEAR params (all top-level)
+
+    Returns:
+        Dictionary with JSON results
+    """
+    # Extract agentic-specific parameters
+    traces_input_dir = config_dict.get('agentic_input_dir')
+    agentic_output_dir = config_dict.get('agentic_output_dir')
+    agent_framework = config_dict.get('agent_framework', 'langgraph')
+    observability_framework = config_dict.get('observability_framework', 'mlflow')
+    separate_tools = config_dict.get('separate_tools', False)
+    overwrite = config_dict.get('overwrite', True)
+    memory_only = config_dict.get('memory_only', False)
+
+    if not traces_input_dir:
+        raise ValueError("agentic_input_dir is required")
+    if not agentic_output_dir:
+        raise ValueError("agentic_output_dir is required")
+
+    # Use temporary directory for intermediate files if memory_only mode
+    if memory_only:
+        temp_dir_context = tempfile.TemporaryDirectory()
+        temp_dir = temp_dir_context.__enter__()
+        intermediate_output_dir = temp_dir
+        logger.info("=" * 80)
+        logger.info("CLEAR STEP ANALYSIS: MEMORY-ONLY MODE (FROM RAW TRACES)")
+        logger.info("=" * 80)
+        logger.info("Using temporary directory for intermediate files")
+        logger.info(f"Final JSON results will be saved to: {agentic_output_dir}")
+    else:
+        temp_dir_context = None
+        intermediate_output_dir = agentic_output_dir
+        logger.info("=" * 80)
+        logger.info("CLEAR STEP ANALYSIS: FROM RAW TRACES")
+        logger.info("=" * 80)
+
+    try:
+        # Intermediate files go to temp dir (memory-only) or agentic_output_dir (normal)
+        traces_data_dir = os.path.join(intermediate_output_dir, 'traces_data')
+
+        logger.info(f"Input traces: {traces_input_dir}")
+        logger.info(f"Agent framework: {agent_framework}")
+        logger.info(f"Observability: {observability_framework}")
+        logger.info(f"Separate tools: {separate_tools}")
+        logger.info(f"Output: {agentic_output_dir}")
+        if memory_only:
+            logger.info("  ├── clear_results/  (CLEAR analysis results)")
+            logger.info("  └──── clear_results.json  (Final JSON results only)")
+        else:
+            logger.info("  ├── traces_data/    (Trajectory CSVs)")
+            logger.info("  ├── clear_data/     (CLEAR format by agent)")
+            logger.info("  ├── clear_results/  (CLEAR analysis results)")
+            logger.info("  └──── clear_results.json  (Final JSON results)")
+        logger.info("=" * 80)
+
+        logger.info("Processing traces to trajectory data")
+        process_traces_to_traj_data(
+            traces_input_dir,
+            traces_data_dir,
+            agent_framework=agent_framework,
+            observability_framework=observability_framework,
+            separate_tools=separate_tools
+        )
+
+        # Call the step analysis pipeline
+        json_results = run_step_analysis_pipeline(
+            traces_data_dir=traces_data_dir,
+            agentic_output_dir=agentic_output_dir,
+            config_dict=config_dict,
+            overwrite=overwrite,
+            intermediate_output_dir=intermediate_output_dir
+        )
+
+        logger.info("=" * 80)
+
+    finally:
+        # Clean up temporary directory if used
+        if temp_dir_context is not None:
+            temp_dir_context.__exit__(None, None, None)
+            logger.info("Temporary intermediate files cleaned up")
+
+    return json_results
+
+
 def main():
-    """CLI entry point for running CLEAR analysis on preprocessed trajectory data."""
+    """CLI entry point for running CLEAR step-by-step analysis."""
     parser = argparse.ArgumentParser(
-        description="Run CLEAR Analysis on Preprocessed Trajectory Data",
+        description="CLEAR Step-by-Step Analysis Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Using config file (recommended) - supports JSON or YAML
-  python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
+  # From preprocessed trajectory CSVs (default)
+  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
+      --agentic-input-dir data/trajectory_csvs \\
+      --agentic-output-dir output/analysis \\
+      --provider openai \\
+      --eval-model-name gpt-4o
+
+  # From raw traces (with preprocessing)
+  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
+      --agentic-input-dir data/raw_traces \\
+      --agentic-output-dir output/analysis \\
+      --from-raw-traces true \\
+      --agent-framework langgraph \\
+      --observability-framework langfuse \\
+      --provider openai \\
+      --eval-model-name gpt-4o
+
+  # Using config file (recommended)
+  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
       --agentic-config-path my_config.yaml
 
-  # Using JSON config file
-  python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
-      --agentic-config-path my_config.json
-
   # Config file with CLI overrides
-  python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
+  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
       --agentic-config-path my_config.yaml \\
       --eval-model-name meta-llama/llama-3-1-70b-instruct
 
-  # CLI only (all parameters)
-  python -m clear_eval.agentic.pipeline.run_clear_on_traj_data \\
-      --traces-data-dir output/traces_data \\
+  # Memory-only mode (no intermediate files saved)
+  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
+      --agentic-input-dir data/traces \\
       --agentic-output-dir output/analysis \\
-      --provider watsonx \\
-      --eval-model-name meta-llama/llama-3-3-70b-instruct
+      --from-raw-traces true \\
+      --memory-only true
 
 Config file structure (YAML format - see setup/default_config.yaml):
-  # Agentic pipeline arguments
-  traces_data_dir: output/traces_data
+  # Input/Output
+  agentic_input_dir: data/traces
   agentic_output_dir: output/analysis
+  from_raw_traces: false  # Set to true to preprocess raw traces first
+
+  # Preprocessing options (only used when from_raw_traces=true)
+  agent_framework: langgraph
+  observability_framework: langfuse
+  separate_tools: false
+
+  # Execution options
   overwrite: true
+  memory_only: false
 
   # CLEAR arguments
-  provider: watsonx
-  eval_model_name: meta-llama/llama-3-3-70b-instruct
+  provider: openai
+  eval_model_name: gpt-4o
   agent_mode: true
   # ... other CLEAR parameters
 
@@ -507,41 +633,43 @@ Argument Precedence (lowest to highest):
         **cli_overrides
     )
 
-    # Extract memory_only flag
-    memory_only = config_dict.get('memory_only', False)
-    
     # Validate required parameters
-    if not config_dict.get('traces_data_dir'):
-        parser.error("traces_data_dir is required (set in config or use --traces-data-dir)")
+    if not config_dict.get('agentic_input_dir'):
+        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
     if not config_dict.get('agentic_output_dir'):
         parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 
     # Extract parameters
-    traces_data_dir = config_dict['traces_data_dir']
+    from_raw_traces = config_dict.get('from_raw_traces', False)
+    agentic_input_dir = config_dict['agentic_input_dir']
     agentic_output_dir = config_dict['agentic_output_dir']
     overwrite = config_dict.get('overwrite', True)
+    memory_only = config_dict.get('memory_only', False)
 
-    logger.info("=" * 80)
-    logger.info("CLEAR PIPELINE: TRAJECTORY DATA ANALYSIS")
-    logger.info("=" * 80)
-    logger.info(f"Trajectory data: {traces_data_dir}")
-    logger.info(f"Output: {agentic_output_dir}")
-    if memory_only:
-        logger.info("  └── Memory-only mode: Only ui_results.zip and clear_results.json will be saved")
+    if from_raw_traces:
+        # Run full pipeline: raw traces -> trajectory data -> CLEAR
+        run_full_pipeline(config_dict)
     else:
-        logger.info("  ├── clear_data/     (CLEAR format by agent)")
-        logger.info("  └── clear_results/  (CLEAR analysis results)")
-    logger.info("=" * 80)
+        # Run from trajectory data directly
+        logger.info("=" * 80)
+        logger.info("CLEAR STEP ANALYSIS: FROM TRAJECTORY DATA")
+        logger.info("=" * 80)
+        logger.info(f"Trajectory data: {agentic_input_dir}")
+        logger.info(f"Output: {agentic_output_dir}")
+        if memory_only:
+            logger.info("  └── Memory-only mode: Only ui_results.zip and clear_results.json will be saved")
+        else:
+            logger.info("  ├── clear_data/     (CLEAR format by agent)")
+            logger.info("  └── clear_results/  (CLEAR analysis results)")
+        logger.info("=" * 80)
 
-    # Call the shared pipeline function
-    json_results = run_traj_data_pipeline(
-        traces_data_dir=traces_data_dir,
-        agentic_output_dir=agentic_output_dir,
-        config_dict=config_dict,
-        overwrite=overwrite
-    )
+        run_step_analysis_pipeline(
+            traces_data_dir=agentic_input_dir,
+            agentic_output_dir=agentic_output_dir,
+            config_dict=config_dict,
+            overwrite=overwrite
+        )
 
 
 if __name__ == "__main__":
     main()
-

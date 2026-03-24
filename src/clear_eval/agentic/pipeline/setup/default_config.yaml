@@ -1,7 +1,12 @@
-# Agentic pipeline configuration
-agentic_input_dir: null       # For run_clear_pipeline.py (full pipeline from raw traces)
-traces_data_dir: null        # For run_clear_on_traj_data.py (from preprocessed trajectory data)
-agentic_output_dir: null
+# Agentic step-by-step analysis pipeline configuration
+# Use with: python -m clear_eval.agentic.pipeline.run_clear_step_analysis
+
+# Input/Output
+agentic_input_dir: null       # Input directory: raw traces (if from_raw_traces=true) or trajectory CSVs
+agentic_output_dir: null      # Output directory for pipeline results
+from_raw_traces: false        # If true, preprocess raw traces first; if false, use trajectory CSVs directly
+
+# Preprocessing options (only used when from_raw_traces=true)
 agent_framework: langgraph
 observability_framework: langfuse
 separate_tools: false

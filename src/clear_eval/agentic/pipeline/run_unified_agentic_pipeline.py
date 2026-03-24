@@ -56,8 +56,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
-    run_traj_data_pipeline,
+from clear_eval.agentic.pipeline.run_clear_step_analysis import (
+    run_step_analysis_pipeline,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.utils import build_cli_overrides
@@ -142,11 +142,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         "--overwrite",
         type=str2bool,
         help="Overwrite existing results (default: true)"
-    )
-    group.add_argument(
-        "--concurrency",
-        type=int,
-        help="Number of parallel workers (default: 10)"
     )
     group.add_argument(
         "--max-files",
@@ -278,9 +273,9 @@ def run_step_by_step_pipeline(
     logger.info(f"Using traces_data from: {traces_data_dir}")
     
     try:
-        # Call run_traj_data_pipeline for steps 2-4
-        logger.info("Calling run_traj_data_pipeline")
-        run_traj_data_pipeline(
+        # Call run_step_analysis_pipeline for steps 2-4
+        logger.info("Calling run_step_analysis_pipeline")
+        run_step_analysis_pipeline(
             traces_data_dir=str(traces_data_dir),
             agentic_output_dir=str(output_dir),
             config_dict=config,
@@ -333,14 +328,15 @@ def run_full_trajectory_pipeline(
             traj_input_dir=traces_data_dir,
             output_dir=output_dir,
             model_id=config.get('eval_model_name', 'openai/gpt-oss-120b'),
-            provider=config.get('provider', 'watsonx'),
+            provider=config.get('provider'),
+            inference_backend=config.get('inference_backend'),
             eval_types=config.get('eval_types', ['all']),
             generate_rubrics=config.get('generate_rubrics', False),
             rubric_dir=rubric_dir,
             clear_analysis_types=config.get('clear_analysis_types', ['all']),
             context_tokens=config.get('context_tokens'),
             overwrite=config.get('overwrite', True),
-            concurrency=config.get('concurrency', 10),
+            max_workers=config.get('max_workers'),
             eval_model_params=config.get('eval_model_params', {}),
             max_files=config.get('max_files'),
         )
@@ -436,10 +432,6 @@ def main():
     # Create output structure
     output_paths = create_output_structure(output_dir, run_name)
     logger.info(f"Output base directory: {output_paths['base']}")
-    
-    # Map concurrency to max_workers for CLEAR compatibility
-    if 'concurrency' in config:
-        config['max_workers'] = config['concurrency']
     
     # Prepare centralized traces_data directory
     traces_data_dir = prepare_traces_data(
