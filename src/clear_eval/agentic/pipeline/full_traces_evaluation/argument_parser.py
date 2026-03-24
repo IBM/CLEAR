@@ -118,7 +118,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         help="Max files to evaluate per dataset/model combo",
     )
     parser.add_argument(
-        "--concurrency",
+        "--max-workers",
         type=int,
         default=None,
         help="Number of concurrent API requests (default: 10)",

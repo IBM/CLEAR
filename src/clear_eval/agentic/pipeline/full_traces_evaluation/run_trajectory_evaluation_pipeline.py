@@ -15,7 +15,7 @@ Features:
 - Single model/provider configuration for all inference
 - Automatic rubric generation
 - Selective CLEAR analysis (root_cause, issues, all, or none)
-- Parallel execution with configurable concurrency
+- Parallel execution with configurable max_workers
 - Comprehensive error handling and logging
 
 Usage Examples:
@@ -97,7 +97,7 @@ Arguments:
         --context-tokens: Override auto-detected context window
         --eval-model-params: JSON dict of model parameters
         --overwrite: Re-run even if results exist
-        --concurrency: Number of parallel workers (default: 7)
+        --max-workers: Number of parallel workers (default: 7)
         --max-files: Limit files to process (for testing)
 
 Output Structure:
@@ -278,7 +278,7 @@ def run_task_success_evaluation(
     inference_backend: str,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
+    max_workers: int,
     eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
@@ -296,7 +296,7 @@ def run_task_success_evaluation(
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
+            max_workers=max_workers,
             eval_model_params=eval_model_params,
             max_files=max_files,
         )
@@ -316,7 +316,7 @@ def run_full_trajectory_evaluation(
     inference_backend: str,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
+    max_workers: int,
     eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
@@ -334,7 +334,7 @@ def run_full_trajectory_evaluation(
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
+            max_workers=max_workers,
             eval_model_params=eval_model_params,
             max_files=max_files,
         )
@@ -354,7 +354,7 @@ def run_rubric_generation(
     inference_backend: str,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
+    max_workers: int,
     eval_model_params: dict,
     max_files: Optional[int],
 ) -> tuple[bool, Optional[Path]]:
@@ -377,7 +377,7 @@ def run_rubric_generation(
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
+            max_workers=max_workers,
             eval_model_params=eval_model_params,
             max_files=max_files,
         )
@@ -402,7 +402,7 @@ def run_rubric_evaluation(
     inference_backend: str,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
+    max_workers: int,
     eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
@@ -421,7 +421,7 @@ def run_rubric_evaluation(
             rubrics_dir=rubrics_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
+            max_workers=max_workers,
             eval_model_params=eval_model_params,
             max_files=max_files,
         )
@@ -587,7 +587,7 @@ def run_trajectory_evaluation_pipeline(
     clear_analysis_types: Optional[List[str]] = None,
     context_tokens: Optional[int] = None,
     overwrite: bool = False,
-    concurrency: int = 10,
+    max_workers: int = 10,
     eval_model_params: Optional[dict] = None,
     max_files: Optional[int] = None,
 ) -> tuple[List[str], List[str]]:
@@ -608,7 +608,7 @@ def run_trajectory_evaluation_pipeline(
         clear_analysis_types: CLEAR analyses to run (root_cause, issues, all, none)
         context_tokens: Model context window size
         overwrite: Re-run even if results exist
-        concurrency: Number of parallel workers
+        max_workers: Number of parallel workers
         eval_model_params: Model parameters dict
         max_files: Limit files to process
         
@@ -667,7 +667,7 @@ def run_trajectory_evaluation_pipeline(
         "inference_backend": inference_backend,
         "context_tokens": context_tokens,
         "overwrite": overwrite,
-        "concurrency": concurrency,
+        "max_workers": max_workers,
         "eval_model_params": eval_model_params,
         "max_files": max_files,
     }
@@ -821,7 +821,7 @@ def main():
         clear_analysis_types=config.get('clear_analysis_types'),
         context_tokens=config.get('context_tokens'),
         overwrite=config.get('overwrite'),
-        concurrency=config.get('concurrency'),
+        max_workers=config.get('max_workers'),
         eval_model_params=eval_model_params,
         max_files=config.get('max_files'),
     )

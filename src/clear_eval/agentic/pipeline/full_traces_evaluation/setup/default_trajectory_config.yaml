@@ -40,7 +40,7 @@ clear_analysis_types:           # CLEAR analyses to run
 # Execution Control
 # ----------------------------------------------------------------------------
 overwrite: true                 # Re-run even if results exist
-concurrency: 10                 # Number of parallel workers
+max_workers: 10                 # Number of parallel workers
 max_files: null                 # Limit files to process (for testing)
 context_tokens: null            # Model context window size
 

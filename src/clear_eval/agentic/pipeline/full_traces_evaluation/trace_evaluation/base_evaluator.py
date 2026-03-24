@@ -91,7 +91,7 @@ class TrajectoryEvaluator(ABC):
         output_dir: Path,
         context_tokens: int = None,
         overwrite: bool = False,
-        concurrency: int = 7,
+        max_workers: int = 7,
         eval_model_params: dict | None = None,
         max_files: int | None = None,
     ):
@@ -105,7 +105,7 @@ class TrajectoryEvaluator(ABC):
             output_dir: Base directory for saving evaluation results
             context_tokens: Context window size for the judge model
             overwrite: Whether to overwrite existing evaluation results
-            concurrency: Number of parallel workers
+            max_workers: Number of parallel workers
             eval_model_params: Additional parameters for LLM client
             max_files: Maximum number of files to process (for testing)
         """
@@ -116,7 +116,7 @@ class TrajectoryEvaluator(ABC):
         self.context_tokens = context_tokens
         self.max_traj_chars = self.get_max_trajectory_chars() if self.context_tokens else None
         self.overwrite = overwrite
-        self.concurrency = concurrency
+        self.max_workers = max_workers
         self.eval_model_params = eval_model_params or {}
         self.max_files = max_files
 
@@ -186,7 +186,7 @@ class TrajectoryEvaluator(ABC):
         entries: list[dict],
         data_dir: Path,
         overwrite: bool,
-        concurrency: int,
+        max_workers: int,
         extra_info: dict | None = None,
     ):
         """
@@ -196,7 +196,7 @@ class TrajectoryEvaluator(ABC):
             entries: List of trajectory entries to evaluate
             data_dir: Data directory path
             overwrite: Overwrite setting
-            concurrency: Concurrency level
+            max_workers: max_workers level
             extra_info: Optional dict with additional info to display
         """
         
@@ -217,7 +217,7 @@ class TrajectoryEvaluator(ABC):
                 logger.info(f"{key}:  {value}")
         
         logger.info(f"Overwrite:    {overwrite}")
-        logger.info(f"Concurrency:  {concurrency}")
+        logger.info(f"max_workers:  {max_workers}")
         logger.info(f"Total files:  {len(entries)}")
         logger.info("=" * 70)
 
@@ -505,7 +505,7 @@ class TrajectoryEvaluator(ABC):
     def run_batch(
         self,
         entries: list[dict],
-        concurrency: int = 2,
+        max_workers: int = 2,
         eval_model_params: dict | None = None,
     ) -> list[ParallelResult]:
         """
@@ -513,7 +513,7 @@ class TrajectoryEvaluator(ABC):
         
         Args:
             entries: List of entry dicts (from discover_trajectories)
-            concurrency: Number of parallel workers
+            max_workers: Number of parallel workers
             eval_model_params: Additional parameters for LLM client
         
         Returns:
@@ -540,7 +540,7 @@ class TrajectoryEvaluator(ABC):
             func=self.evaluate_single,
             inputs=inputs,
             use_async=True,
-            max_workers=concurrency,
+            max_workers=max_workers,
             progress_desc=f"Evaluating trajectories ({self.__class__.__name__})"
         )
         elapsed = time.time() - start
@@ -636,14 +636,14 @@ class TrajectoryEvaluator(ABC):
             entries=entries,
             data_dir=self.traj_input_dir,
             overwrite=self.overwrite,
-            concurrency=self.concurrency,
+            max_workers=self.max_workers,
             extra_info=self.get_extra_info(),
         )
 
         # Run evaluation
         parallel_results = self.run_batch(
             entries=entries,
-            concurrency=self.concurrency,
+            max_workers=self.max_workers,
             eval_model_params=self.eval_model_params,
         )
 

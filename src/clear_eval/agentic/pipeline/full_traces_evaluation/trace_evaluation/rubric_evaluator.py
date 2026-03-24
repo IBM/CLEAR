@@ -39,7 +39,7 @@ class RubricEvaluator(TrajectoryEvaluator):
         rubrics_dir: Path,
         context_tokens: int = None,
         overwrite: bool = False,
-        concurrency: int = 7,
+        max_workers: int = 7,
         eval_model_params: dict | None = None,
         max_files: int | None = None,
     ):
@@ -54,7 +54,7 @@ class RubricEvaluator(TrajectoryEvaluator):
             rubrics_dir: Directory containing pre-generated rubric files
             context_tokens: Context window size for the judge model
             overwrite: Whether to overwrite existing evaluation results
-            concurrency: Number of parallel workers
+            max_workers: Number of parallel workers
             eval_model_params: Additional parameters for LLM client
             max_files: Maximum number of files to process (for testing)
         """
@@ -66,7 +66,7 @@ class RubricEvaluator(TrajectoryEvaluator):
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
+            max_workers=max_workers,
             eval_model_params=eval_model_params,
             max_files=max_files,
         )

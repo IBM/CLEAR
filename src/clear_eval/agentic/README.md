@@ -250,7 +250,7 @@ For the complete list of options, see [`pipeline/setup/default_unified_config.ya
 | Parameter | CLI Flag | Default | Description |
 |-----------|----------|---------|-------------|
 | `overwrite` | `--overwrite` | `true` | Overwrite existing results |
-| `concurrency` | `--concurrency` | `10` | Parallel workers |
+| `max_workers` | `--max_workers` | `10` | Parallel workers |
 
 ### Configuration Precedence
 
