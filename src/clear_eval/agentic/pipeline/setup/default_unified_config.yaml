@@ -40,7 +40,8 @@ clear_analysis_types:           # CLEAR analyses to run on full trajectory resul
 # Execution Control
 # ----------------------------------------------------------------------------
 overwrite: true                 # Overwrite existing results
-concurrency: 10                 # Number of parallel workers
+memory_only: false                  # If true, use temp directories and return only JSON results (no files saved)
+max_workers: 10                 # Number of parallel workers
 max_files: null                 # Limit files to process (for testing)
 context_tokens: null            # Model context window; if set, long trajectories are truncated to avoid inference errors
 
@@ -48,6 +49,7 @@ context_tokens: null            # Model context window; if set, long trajectorie
 # CLEAR Configuration (all standard CLEAR arguments)
 # ----------------------------------------------------------------------------
 inference_backend: litellm
+inference_url: null # required for inference_backend endpoint
 provider: openai
 eval_model_name: gpt-4o
 eval_model_params:
@@ -76,14 +78,13 @@ evaluation_criteria: null
 predefined_issues: null
 
 
-# CLEAR analysis settings: don't change
-perform_generation: false
-resume_enabled: false
-high_score_threshold: 0.9
-max_examples_to_analyze: null
-max_shortcomings: 15
-min_shortcomings: 3
-max_eval_text_for_synthesis: 1000
+# External judge configuration (only used when task is "external")
+# Path to Python file containing external judge function
+external_judge_path: null
+# Name of the function to call in the external judge file (default: "evaluate")
+external_judge_function: evaluate
+# Additional configuration passed to the external judge
+external_judge_config: {}
 
 # Agent mode configuration
 agent_mode: true
@@ -96,17 +97,3 @@ input_columns:
   - step_in_trace_node
   - id
   - traj_score
-
-# Additional CLEAR settings
-is_reference_based: false
-use_general_prompt: true
-perform_clustering: true
-task: general
-question_column: question
-model_output_column: response
-reference_column: ground_truth
-model_input_column: model_input
-qid_column: id
-documents_column: documents
-use_full_text_for_analysis: false
-

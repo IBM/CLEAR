@@ -5,6 +5,8 @@ agentic_output_dir: null
 agent_framework: langgraph
 observability_framework: langfuse
 separate_tools: false
+
+# Execution options
 overwrite: true
 memory_only: false           # If true, use temp directories and return only JSON results (no files saved)
 
@@ -45,14 +47,6 @@ evaluation_criteria: null
 #   - "Wrong output format"
 predefined_issues: null
 
-## internal clear params
-#use cached results if available
-resume_enabled: false
-
-max_examples_to_analyze: null # for debugging
-
-# Threshold for issue analysis: records with score >= this are excluded from issue synthesis
-high_score_threshold: 0.9
 
 
 # unique run_ identifier (to appear in file name)
@@ -66,32 +60,6 @@ external_judge_function: evaluate
 # Additional configuration passed to the external judge
 external_judge_config: {}
 
-
-# whether to perform generation or take existing ones from data
-perform_generation: false
-
-# whether to use reference in the evaluations.
-is_reference_based: false
-
-
-use_general_prompt: true
-perform_clustering: true
-
-#general, rag, math
-task: general
-
-question_column: question
-model_output_column: response
-reference_column: ground_truth # required when is_reference_based is true
-model_input_column: model_input # optional
-qid_column: id # optional
-documents_column: documents # required for rag
-
-use_full_text_for_analysis: false
-#max_workers: 20
-max_shortcomings: 15
-min_shortcomings: 3
-max_eval_text_for_synthesis: 1000
 
 # agentic params:
 
