@@ -100,6 +100,7 @@ class TrajectoryEvaluator(ABC):
         
         Args:
             judge_model_id: Model identifier for the judge LLM
+            inference_backend: Name of the inference backend
             provider: LLM provider (e.g., 'rits', 'openai')
             traj_input_dir: Directory containing trajectory JSON files
             output_dir: Base directory for saving evaluation results

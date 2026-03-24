@@ -43,6 +43,7 @@ class BaseClearRunner(ABC):
         eval_results_dir: Path,
         output_dir: Path,
         clear_model_id: str,
+        inference_backend: str,
         provider: str = "watsonx",
         overwrite: bool = False,
         eval_model_params: dict | None = None,
@@ -54,6 +55,7 @@ class BaseClearRunner(ABC):
             eval_results_dir: Directory containing evaluation results
             output_dir: Base directory for CLEAR analysis outputs
             clear_model_id: Model ID for CLEAR analysis
+            inference_backend: Inference backend to use for CLEAR analysis
             provider: LLM provider for CLEAR
             overwrite: Whether to overwrite existing CLEAR results
             eval_model_params: Additional parameters for CLEAR model
@@ -61,6 +63,7 @@ class BaseClearRunner(ABC):
         self.eval_results_dir = Path(eval_results_dir)
         self.output_dir = Path(output_dir)
         self.clear_model_id = clear_model_id
+        self.inference_backend = inference_backend
         self.provider = provider
         self.overwrite = overwrite
         self.eval_model_params = eval_model_params or {}
@@ -224,7 +227,8 @@ class BaseClearRunner(ABC):
                 "input_columns": self.get_input_columns(),
                 "agent_mode": True,
                 "eval_model_params": self.eval_model_params,
-                "resume_enabled": not self.overwrite
+                "resume_enabled": not self.overwrite,
+                "inference_backend": self.inference_backend
             }
 
             run_clear_eval_aggregation(**analysis_kwargs)
