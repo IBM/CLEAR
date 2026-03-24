@@ -55,7 +55,25 @@ eval_model_params:
   max_tokens: 8096
 
 run_name: test_unified
+
+# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge.
+# These criteria will not be used directly, but will affect the discovered issues
+# Example for agentic workflows (3 reasoning + 2 tool-related):
+# evaluation_criteria:
+#   reasoning_clarity: "Agent provides clear step-by-step reasoning for decisions"
+#   reasoning_correctness: "Agent's logical reasoning is sound and leads to correct conclusions"
+#   tool_selection: "Agent selects appropriate tools for the given task"
 evaluation_criteria: null
+
+# list of predefined issues (strings) to be mapped to the individual records.
+# if this parameter is set, no issue discovery will be performed.
+# Example for agentic workflows (3 reasoning + 2 tool-related):
+# predefined_issues:
+#   - "Incomplete reasoning - jumps to conclusions without considering alternatives"
+#   - "Flawed logical reasoning leading to incorrect decisions"
+#   - "Incorrect tool selection for the task requirements"
+#   - "Wrong output format"
+predefined_issues: null
 
 
 # CLEAR analysis settings: don't change
