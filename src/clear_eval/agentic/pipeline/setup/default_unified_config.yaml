@@ -85,10 +85,6 @@ max_shortcomings: 15
 min_shortcomings: 3
 max_eval_text_for_synthesis: 1000
 
-# Pass/fail analysis
-success_threshold: 0.7
-pass_criteria: avg              # "avg" or "min"
-
 # Agent mode configuration
 agent_mode: true
 input_columns:

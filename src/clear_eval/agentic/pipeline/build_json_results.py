@@ -100,7 +100,7 @@ def build_comprehensive_json_results(
       - issues_catalog: issues discovered for this agent
       - issues: list of issues with their occurrences
       - no_issues: spans that had no issues mapped
-    - pass_fail_summary: pass/fail metrics per trace and agent
+    - fail_summary: pass/fail metrics per trace and agent
 
     Args:
         clear_results_dir: Directory containing agent CLEAR result subdirectories
@@ -112,9 +112,6 @@ def build_comprehensive_json_results(
     Returns:
         Comprehensive results dictionary
     """
-    # Extract pass/fail config from config_dict
-    success_threshold = config_dict.get("success_threshold", 0.7)
-    pass_criteria = config_dict.get("pass_criteria", "avg")
     clear_results_path = Path(clear_results_dir)
     traces_data_path = Path(traces_data_dir)
 
@@ -366,9 +363,7 @@ def build_comprehensive_json_results(
     results["metadata"]["statistics"]["total_interactions_no_issues"] = total_no_issues
 
     # Build pass/fail summary
-    pass_fail_summary = {
-        "threshold": success_threshold,
-        "pass_criteria": pass_criteria,
+    result_summary = {
         "traces": {},
         "agents": {}
     }
@@ -386,12 +381,7 @@ def build_comprehensive_json_results(
         issue_free_count = sum(1 for h in has_issues if not h)
         issue_free_ratio = issue_free_count / len(has_issues) if has_issues else 1.0
 
-        # Determine pass based on criteria
-        check_score = avg_score if pass_criteria == "avg" else min_score
-        passed = check_score >= success_threshold
-
-        pass_fail_summary["traces"][trace_id] = {
-            "pass": passed,
+        result_summary["traces"][trace_id] = {
             "avg_score": round(avg_score, 4),
             "min_score": round(min_score, 4),
             "issue_free_ratio": round(issue_free_ratio, 4)
@@ -415,12 +405,7 @@ def build_comprehensive_json_results(
         no_issues = summary.get("interactions_no_issues", 0)
         issue_free_ratio = no_issues / total if total > 0 else 1.0
 
-        # Determine pass based on criteria
-        check_score = avg_score if pass_criteria == "avg" else min_score
-        passed = check_score >= success_threshold
-
-        pass_fail_summary["agents"][agent_name] = {
-            "pass": passed,
+        result_summary["agents"][agent_name] = {
             "avg_score": round(avg_score, 4),
             "min_score": round(min_score, 4),
             "issue_free_ratio": round(issue_free_ratio, 4),
@@ -428,7 +413,7 @@ def build_comprehensive_json_results(
        #     "weighted_severity": round(weighted_severity, 4)
         }
 
-    results["pass_fail_summary"] = pass_fail_summary
+    results["fail_summary"] = result_summary
 
     return results
 
