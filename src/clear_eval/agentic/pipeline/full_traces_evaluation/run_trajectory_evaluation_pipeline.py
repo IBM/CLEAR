@@ -22,23 +22,23 @@ Usage Examples:
 
     # Run all evaluations with all CLEAR analyses (default)
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai
 
     # Run specific evaluations
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success full_trajectory
 
     # Generate rubrics and run rubric evaluation
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -46,8 +46,8 @@ Usage Examples:
 
     # Use existing rubrics
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -55,8 +55,8 @@ Usage Examples:
 
     # Run with selective CLEAR analysis
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success \\
@@ -64,16 +64,16 @@ Usage Examples:
 
     # Skip CLEAR analysis entirely
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dirr ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --clear-analysis-types none
 
 Arguments:
     Required:
-        --agentic-input-dir: Directory containing trajectory JSON files
-        --agentic-output-dir: Base directory for saving results
+        --data-dir: Directory containing trajectory JSON files
+        --results-dirr: Base directory for saving results
         --eval-model-name: Model identifier (e.g., gpt-4o, llama-3.3-70b)
         --provider: LLM provider (openai, watsonx, anthropic, etc.)
 
@@ -727,16 +727,16 @@ def main():
     config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     # Validate required parameters
-    validate_required_config(config, ['agentic_input_dir', 'agentic_output_dir'], parser)
+    validate_required_config(config, ['data_dir', 'results_dir'], parser)
 
     # Get run output directory
     output_dir, run_name = get_run_output_dir(
-        config['agentic_output_dir'],
+        config['results_dir'],
         config.get('run_name')
     )
 
     # Convert paths
-    traj_input_dir = Path(config['agentic_input_dir'])
+    traj_input_dir = Path(config['data_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
 
     # Create inference config

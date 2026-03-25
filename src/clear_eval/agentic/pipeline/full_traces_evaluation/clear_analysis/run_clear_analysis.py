@@ -14,24 +14,24 @@ Two analysis sources (--source flag):
 Usage:
     python run_clear_analysis.py --source issues \\
         --eval-results-dir results/evals \\
-        --agentic-output-dir results/clear_analysis \\
+        --results-dirr results/clear_analysis \\
         --eval-model-name gpt-4o \\
         --provider openai
 
     python run_clear_analysis.py --source root_cause \\
         --eval-results-dir results/evals \\
-        --agentic-output-dir results/clear_analysis \\
+        --results-dirr results/clear_analysis \\
         --eval-model-name gpt-4o \\
         --provider openai
 
 Example workflow:
     1. Run trajectory evaluation:
-       python run_full_traj_evaluation.py --agentic-input-dir data \\
-           --agentic-output-dir results/evals --eval-model-name gpt-4o --provider openai
+       python run_full_traj_evaluation.py --data-dir data \\
+           --results-dirr results/evals --eval-model-name gpt-4o --provider openai
     
     2. Run CLEAR analysis on results:
        python run_clear_analysis.py --source issues \\
-           --eval-results-dir results/evals --agentic-output-dir results/clear \\
+           --eval-results-dir results/evals --results-dirr results/clear \\
            --eval-model-name gpt-4o --provider openai
 """
 import logging
@@ -87,14 +87,14 @@ def main():
     if args.source == "issues":
         runner = IssuesClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
-            output_dir=Path(args.agentic_output_dir),
+            output_dir=Path(args.results_dir),
             inference_config=inference_config,
             overwrite=args.overwrite,
         )
     elif args.source == "root_cause":
         runner = RootCauseClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
-            output_dir=Path(args.agentic_output_dir),
+            output_dir=Path(args.results_dir),
             inference_config=inference_config,
             overwrite=args.overwrite,
         )
@@ -107,7 +107,7 @@ def main():
     logging.info("=" * 70)
     logging.info(f"  Source:             {args.source}")
     logging.info(f"  Eval Results Dir:   {args.eval_results_dir}")
-    logging.info(f"  Output Dir:         {args.agentic_output_dir}")
+    logging.info(f"  Output Dir:         {args.results_dir}")
     logging.info(f"  CLEAR Model:        {inference_config.model_id}")
     logging.info(f"  Provider:           {inference_config.provider}")
     logging.info(f"  Inference Backend:  {inference_config.inference_backend}")

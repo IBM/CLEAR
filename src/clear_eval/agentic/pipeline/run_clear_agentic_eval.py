@@ -22,8 +22,8 @@ Usage Examples:
 
     # Run only step-by-step from raw traces
     python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
-        --agentic-input-dir data/experiment_001 \\
-        --agentic-output-dir results \\
+        --data-dir data/experiment_001 \\
+        --results-dirr results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces true \\
@@ -32,8 +32,8 @@ Usage Examples:
 
     # Run only step-by-step from preprocessed CSVs
     python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
-        --agentic-input-dir data/experiment_001 \\
-        --agentic-output-dir results \\
+        --data-dir data/experiment_001 \\
+        --results-dirr results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces false \\
@@ -85,7 +85,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to unified config file (JSON or YAML)"
     )
     group.add_argument(
-        "--agentic-input-dir",
+        "--data-dir",
         help="Input directory (JSON traces if from-raw-traces=True, else CSV files)"
     )
     group.add_argument(
@@ -94,7 +94,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="If True, process JSON traces; if False, use CSV files directly (default: false)"
     )
     group.add_argument(
-        "--agentic-output-dir",
+        "--results-dirr",
         help="Base output directory (required)"
     )
     
@@ -155,7 +155,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--memory-only",
         type=str2bool,
-        help="If true, use temporary directories and save only ui_input and json_result to agentic_output_dir (default: false)"
+        help="If true, use temporary directories and save only ui_input and json_result to results_dir (default: false)"
     )
 
 
@@ -189,7 +189,7 @@ def create_output_structure(
 
 
 def prepare_traces_data(
-    agentic_input_dir: Path,
+    data_dir: Path,
     from_raw_traces: bool,
     output_paths: Dict[str, Path],
     config: dict
@@ -202,7 +202,7 @@ def prepare_traces_data(
     2. Copying existing CSV files if from_raw_traces=False
     
     Args:
-        agentic_input_dir: Input directory (JSON traces or CSV files)
+        data_dir: Input directory (JSON traces or CSV files)
         from_raw_traces: If True, process JSON traces; if False, use CSV files
         output_paths: Output directory structure
         config: Configuration dict
@@ -218,12 +218,12 @@ def prepare_traces_data(
     
     if from_raw_traces:
         # Process raw JSON traces
-        logger.info(f"Processing raw JSON traces from: {agentic_input_dir}")
+        logger.info(f"Processing raw JSON traces from: {data_dir}")
         logger.info(f"Output directory: {traces_data_dir}")
         
         try:
             process_traces_to_traj_data(
-                input_dir=str(agentic_input_dir),
+                input_dir=str(data_dir),
                 output_dir=str(traces_data_dir),
                 agent_framework=config.get('agent_framework'),
                 observability_framework=config.get('observability_framework'),
@@ -236,13 +236,13 @@ def prepare_traces_data(
             return None
     else:
         # Copy existing CSV files
-        logger.info(f"Using existing CSV files from: {agentic_input_dir}")
+        logger.info(f"Using existing CSV files from: {data_dir}")
         logger.info(f"Copying to: {traces_data_dir}")
         
         try:
             if traces_data_dir.exists():
                 shutil.rmtree(traces_data_dir)
-            shutil.copytree(agentic_input_dir, traces_data_dir)
+            shutil.copytree(data_dir, traces_data_dir)
             logger.info(f"✓ Copied CSV files successfully")
             return traces_data_dir
         except Exception as e:
@@ -276,7 +276,7 @@ def run_step_by_step_pipeline(
         logger.info("Calling run_step_analysis_pipeline")
         run_step_analysis_pipeline(
             traces_data_dir=str(traces_data_dir),
-            agentic_output_dir=str(output_dir),
+            results_dir=str(output_dir),
             config_dict=config,
             overwrite=config.get('overwrite', True)
         )
@@ -399,27 +399,27 @@ def main():
     config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     # Validate required parameters
-    validate_required_config(config, ['agentic_input_dir', 'agentic_output_dir'], parser)
+    validate_required_config(config, ['data_dir', 'results_dir'], parser)
 
     # Get run output directory
     output_dir, run_name = get_run_output_dir(
-        config['agentic_output_dir'],
+        config['results_dir'],
         config.get('run_name')
     )
 
     # Extract parameters
-    agentic_input_dir = Path(config['agentic_input_dir'])
+    data_dir = Path(config['data_dir'])
     from_raw_traces = config.get('from_raw_traces', False)
     
     # Validate input directory exists
-    if not agentic_input_dir.exists():
-        parser.error(f"Input directory does not exist: {agentic_input_dir}")
+    if not data_dir.exists():
+        parser.error(f"Input directory does not exist: {data_dir}")
     
     # Log configuration
     logger.info("=" * 80)
     logger.info("UNIFIED AGENTIC PIPELINE")
     logger.info("=" * 80)
-    logger.info(f"Input directory: {agentic_input_dir}")
+    logger.info(f"Input directory: {data_dir}")
     logger.info(f"From raw traces: {from_raw_traces}")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Run name: {run_name}")
@@ -430,7 +430,7 @@ def main():
     
     # Prepare centralized traces_data directory
     traces_data_dir = prepare_traces_data(
-        agentic_input_dir,
+        data_dir,
         from_raw_traces,
         output_paths,
         config

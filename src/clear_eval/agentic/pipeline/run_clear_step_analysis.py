@@ -11,7 +11,7 @@ Configuration Precedence (lowest to highest):
     3. CLI arguments (override both config files)
 
 Arguments are split into two groups:
-    - Agentic Pipeline Arguments: Pipeline-specific (agentic_input_dir, etc.)
+    - Agentic Pipeline Arguments: Pipeline-specific (data_dir, etc.)
     - CLEAR Configuration: Evaluation args from clear_eval.args (provider, eval_model_name, etc.)
 """
 
@@ -59,11 +59,11 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to config file (JSON or YAML) that overrides defaults"
     )
     group.add_argument(
-        "--agentic-input-dir",
+        "--data-dir",
         help="Input directory: raw traces (if from-raw-traces=true) or trajectory CSVs (if from-raw-traces=false)"
     )
     group.add_argument(
-        "--agentic-output-dir",
+        "--results-dirr",
         help="Output directory for pipeline results (required)"
     )
     group.add_argument(
@@ -366,7 +366,7 @@ def create_comprehensive_ui_results(
 
 def run_step_analysis_pipeline(
     traces_data_dir: str,
-    agentic_output_dir: str,
+    results_dir: str,
     config_dict: dict,
     overwrite: bool = True,
     intermediate_output_dir: Optional[str] = None
@@ -382,7 +382,7 @@ def run_step_analysis_pipeline(
 
     Args:
         traces_data_dir: Directory containing trajectory CSV files
-        agentic_output_dir: Base output directory for final results
+        results_dir: Base output directory for final results
         config_dict: Configuration dictionary with CLEAR params
         overwrite: Whether to overwrite existing results
         intermediate_output_dir: Optional directory for intermediate files
@@ -393,7 +393,7 @@ def run_step_analysis_pipeline(
     memory_only = config_dict.get('memory_only', False)
 
     # Create output directory for final results
-    os.makedirs(agentic_output_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
 
     # Use temporary directory for intermediate files if memory_only mode and no intermediate_output_dir provided
     if memory_only and intermediate_output_dir is None:
@@ -403,7 +403,7 @@ def run_step_analysis_pipeline(
         logger.info("Memory-only mode: Using temporary directory for intermediate files")
     elif intermediate_output_dir is None:
         temp_dir_context = None
-        intermediate_output_dir = agentic_output_dir
+        intermediate_output_dir = results_dir
     else:
         # intermediate_output_dir was provided (from run_full_pipeline)
         temp_dir_context = None
@@ -429,12 +429,12 @@ def run_step_analysis_pipeline(
             clear_results_dir=clear_results_dir,
             traces_data_dir=traces_data_dir,
             config_dict=config_dict,
-            output_dir=agentic_output_dir,
+            output_dir=results_dir,
         )
 
         # Create UI results zip directly in final output directory
         ui_results_path = create_ui_input_zip(
-            output_dir=Path(agentic_output_dir),
+            output_dir=Path(results_dir),
             traces_data_dir=Path(traces_data_dir),
             clear_results_dir=Path(clear_results_dir),
             output_zip_name="ui_results.zip"
@@ -469,8 +469,8 @@ def run_full_pipeline(config_dict: dict) -> dict:
         Dictionary with JSON results
     """
     # Extract agentic-specific parameters
-    traces_input_dir = config_dict.get('agentic_input_dir')
-    agentic_output_dir = config_dict.get('agentic_output_dir')
+    traces_input_dir = config_dict.get('data_dir')
+    results_dir = config_dict.get('results_dir')
     agent_framework = config_dict.get('agent_framework', 'langgraph')
     observability_framework = config_dict.get('observability_framework', 'mlflow')
     separate_tools = config_dict.get('separate_tools', False)
@@ -478,9 +478,9 @@ def run_full_pipeline(config_dict: dict) -> dict:
     memory_only = config_dict.get('memory_only', False)
 
     if not traces_input_dir:
-        raise ValueError("agentic_input_dir is required")
-    if not agentic_output_dir:
-        raise ValueError("agentic_output_dir is required")
+        raise ValueError("data_dir is required")
+    if not results_dir:
+        raise ValueError("results_dir is required")
 
     # Use temporary directory for intermediate files if memory_only mode
     if memory_only:
@@ -490,10 +490,10 @@ def run_full_pipeline(config_dict: dict) -> dict:
         logger.info("Using temporary directory for intermediate files")
     else:
         temp_dir_context = None
-        intermediate_output_dir = agentic_output_dir
+        intermediate_output_dir = results_dir
 
     try:
-        # Intermediate files go to temp dir (memory-only) or agentic_output_dir (normal)
+        # Intermediate files go to temp dir (memory-only) or results_dir (normal)
         traces_data_dir = os.path.join(intermediate_output_dir, 'traces_data')
 
         logger.info("Processing traces to trajectory data")
@@ -508,7 +508,7 @@ def run_full_pipeline(config_dict: dict) -> dict:
         # Call the step analysis pipeline
         json_results = run_step_analysis_pipeline(
             traces_data_dir=traces_data_dir,
-            agentic_output_dir=agentic_output_dir,
+            results_dir=results_dir,
             config_dict=config_dict,
             overwrite=overwrite,
             intermediate_output_dir=intermediate_output_dir
@@ -534,15 +534,15 @@ def main():
 Examples:
   # From preprocessed trajectory CSVs (default)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
-      --agentic-input-dir data/trajectory_csvs \\
-      --agentic-output-dir output/analysis \\
+      --data-dir data/trajectory_csvs \\
+      --results-dirr output/analysis \\
       --provider openai \\
       --eval-model-name gpt-4o
 
   # From raw traces (with preprocessing)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
-      --agentic-input-dir data/raw_traces \\
-      --agentic-output-dir output/analysis \\
+      --data-dir data/raw_traces \\
+      --results-dirr output/analysis \\
       --from-raw-traces true \\
       --agent-framework langgraph \\
       --observability-framework langfuse \\
@@ -560,15 +560,15 @@ Examples:
 
   # Memory-only mode (no intermediate files saved)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
-      --agentic-input-dir data/traces \\
-      --agentic-output-dir output/analysis \\
+      --data-dir data/traces \\
+      --results-dirr output/analysis \\
       --from-raw-traces true \\
       --memory-only true
 
 Config file structure (YAML format - see setup/default_agentic_config.yaml):
   # Input/Output
-  agentic_input_dir: data/traces
-  agentic_output_dir: output/analysis
+  data_dir: data/traces
+  results_dir: output/analysis
   from_raw_traces: false  # Set to true to preprocess raw traces first
 
   # Preprocessing options (only used when from_raw_traces=true)
@@ -608,21 +608,21 @@ Argument Precedence (lowest to highest):
     config_dict = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     # Validate required parameters
-    validate_required_config(config_dict, ['agentic_input_dir', 'agentic_output_dir'], parser)
+    validate_required_config(config_dict, ['data_dir', 'results_dir'], parser)
 
     # Get run output directory
-    agentic_output_dir, run_name = get_run_output_dir(
-        config_dict['agentic_output_dir'],
+    results_dir, run_name = get_run_output_dir(
+        config_dict['results_dir'],
         config_dict.get('run_name')
     )
 
     # Update config with resolved values
-    config_dict['agentic_output_dir'] = str(agentic_output_dir)
+    config_dict['results_dir'] = str(results_dir)
     config_dict['run_name'] = run_name
 
     # Extract parameters
     from_raw_traces = config_dict.get('from_raw_traces', False)
-    agentic_input_dir = config_dict['agentic_input_dir']
+    data_dir = config_dict['data_dir']
     overwrite = config_dict.get('overwrite', True)
     memory_only = config_dict.get('memory_only', False)
 
@@ -632,9 +632,9 @@ Argument Precedence (lowest to highest):
     else:
         logger.info("CLEAR STEP ANALYSIS: FROM TRAJECTORY DATA")
     logger.info("=" * 80)
-    logger.info(f"Input: {agentic_input_dir}")
+    logger.info(f"Input: {data_dir}")
     logger.info(f"Run name: {run_name}")
-    logger.info(f"Output: {agentic_output_dir}")
+    logger.info(f"Output: {results_dir}")
     if memory_only:
         logger.info("  └── Memory-only mode: Only ui_results.zip and clear_results.json will be saved")
     else:
@@ -650,8 +650,8 @@ Argument Precedence (lowest to highest):
     else:
         # Run from trajectory data directly
         run_step_analysis_pipeline(
-            traces_data_dir=agentic_input_dir,
-            agentic_output_dir=agentic_output_dir,
+            traces_data_dir=data_dir,
+            results_dir=results_dir,
             config_dict=config_dict,
             overwrite=overwrite
         )

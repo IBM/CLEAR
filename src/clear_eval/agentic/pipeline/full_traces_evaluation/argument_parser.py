@@ -72,7 +72,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     
     # Input/Output directories (unified names)
     parser.add_argument(
-        "--agentic-input-dir",
+        "--data-dir",
         type=str,
         required=True,
         help="Input directory (JSON traces if from-raw-traces=True, else CSV files)",
@@ -84,7 +84,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         help="If True, process JSON traces; if False, use CSV files directly (default: false)",
     )
     parser.add_argument(
-        "--agentic-output-dir",
+        "--results-dirr",
         type=str,
         required=True,
         help="Base directory for saving evaluation results",

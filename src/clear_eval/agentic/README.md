@@ -59,8 +59,8 @@ Configure your LLM provider credentials. See the main [README](../../README.md#s
 **Using Python module:**
 ```bash
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/my_traces \
-    --agentic-output-dir results \
+    --data-dir data/my_traces \
+    --results-dirr results \
     --from-raw-traces true \
     --eval-model-name gpt-4o \
     --provider openai
@@ -69,8 +69,8 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 **Using CLI command:**
 ```bash
 run-agentic-clear-analysis \
-    --agentic-input-dir data/my_traces \
-    --agentic-output-dir results \
+    --data-dir data/my_traces \
+    --results-dirr results \
     --from-raw-traces true \
     --eval-model-name gpt-4o \
     --provider openai
@@ -170,8 +170,8 @@ See the default configuration file for all available options:
 
 ```bash
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/my_traces \
-    --agentic-output-dir results \
+    --data-dir data/my_traces \
+    --results-dirr results \
     --from-raw-traces true \
     --run-step-by-step true \
     --run-full-trajectory false \
@@ -183,8 +183,8 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 
 ```bash
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/my_traces \
-    --agentic-output-dir results \
+    --data-dir data/my_traces \
+    --results-dirr results \
     --from-raw-traces true \
     --run-step-by-step false \
     --run-full-trajectory true \
@@ -201,11 +201,11 @@ For the complete list of options, see [`pipeline/setup/default_unified_config.ya
 
 ### Required Parameters
 
-| Parameter           | CLI Flag | Description                                     |
-|---------------------|----------|-------------------------------------------------|
-| `agentic_input_dir` | `--agentic-input-dir` | Input directory containing traces (JSON or CSV) |
-| `agentic_output_dir` | `--agentic-output-dir` | Output directory for results                    |
-| `eval_model_name`   | `--eval-model-name` | Model identifier (e.g., `gpt-4o`)               |
+| Parameter         | CLI Flag           | Description                                     |
+|-------------------|--------------------|-------------------------------------------------|
+| `data_dir`        | `--data-dir`       | Input directory containing traces (JSON or CSV) |
+| `results_dir`     | `--results-dir`    | Output directory for results                    |
+| `eval_model_name` | `--eval-model-name` | Model identifier (e.g., `gpt-4o`)               |
 
 ### Pipeline Control
 
@@ -343,8 +343,8 @@ Then upload `unified_ui_results.zip` from your results directory.
 ```bash
 # Run pipeline
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/mlflow_traces \
-    --agentic-output-dir results \
+    --data-dir data/mlflow_traces \
+    --results-dirr results \
     --from-raw-traces true \
     --agent-framework langgraph \
     --observability-framework mlflow \
@@ -361,8 +361,8 @@ python -m clear_eval.agentic.dashboard.launch_dashboard
 
 ```bash
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/traces \
-    --agentic-output-dir results \
+    --data-dir data/traces \
+    --results-dirr results \
     --from-raw-traces true \
     --run-step-by-step false \
     --run-full-trajectory true \
@@ -376,8 +376,8 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 
 ```bash
 python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
-    --agentic-input-dir data/traces \
-    --agentic-output-dir results \
+    --data-dir data/traces \
+    --results-dirr results \
     --from-raw-traces true \
     --eval-types rubric \
     --rubric-dir path/to/rubrics \
