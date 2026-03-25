@@ -1,16 +1,20 @@
-# Built-in providers: rits, azure, watsonx, openai, endpoint
-# With use_litellm=true: any litellm provider works (anthropic, bedrock, groq, etc.)
-# See https://docs.litellm.ai/docs/providers for full list
-# Use provider: endpoint for custom OpenAI-compatible endpoints
+# Choose inference backend: "langchain" (default), "litellm", or "endpoint"
+# - inference_backend: "langchain" (default) - Use LangChain for built-in providers
+# - inference_backend: "litellm" - Use LiteLLM (supports many providers: anthropic, bedrock, groq, etc.)
+#   See https://docs.litellm.ai/docs/providers for full list
+# - inference_backend: "endpoint" - Use direct HTTP endpoint backend for custom APIs
+# Backward compatible: use_litellm: true maps to inference_backend: "litellm"
+inference_backend: litellm
+
+# Endpoint-specific configuration (only used when inference_backend: "endpoint")
+endpoint_url: null # e.g. "https://api.example.com/v1"
+
+# Built-in providers: rits, watsonx, openai (for langchain, litellm)
 provider: watsonx
 provider_defaults:
   openai:
     gen_model_name: gpt-4o
     eval_model_name: gpt-3.5-turbo
-    max_workers: 20
-  azure:
-    gen_model_name: gpt-4o-mini-2024-07-18
-    eval_model_name: gpt-4o-2024-08-06
     max_workers: 20
   watsonx:
     gen_model_name: ibm/granite-3-3-8b-instruct
@@ -20,16 +24,6 @@ provider_defaults:
     gen_model_name: ibm-granite/granite-3.3-8b-instruct
     eval_model_name: meta-llama/llama-3-3-70b-instruct
     max_workers: 20
-  endpoint:
-    # For endpoint provider, specify model as dict with url and name
-    # gen_model_name:
-    #   url: "http://127.0.0.1:8000/v1"
-    #   name: "your-model-name"
-    # eval_model_name:
-    #   url: "http://127.0.0.1:8000/v1"
-    #   name: "your-model-name"
-    use_litellm: true
-    max_workers: 10
 
 eval_model_params:
   temperature: 0.0  # Default for deterministic evaluation

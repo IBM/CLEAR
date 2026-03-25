@@ -41,9 +41,9 @@ def run_dashboard_cli():
 
     stcli.main()
 
-def run_agentic_clear_analysis():
+def run_clear_agentic_eval():
     """Run the unified agentic pipeline for step-by-step and/or full trajectory analysis."""
-    from clear_eval.agentic.pipeline.run_unified_agentic_pipeline import main as agentic_main
+    from clear_eval.agentic.pipeline.run_clear_agentic_eval import main as agentic_main
     agentic_main()
 
 def run_clear_agentic_dashboard():

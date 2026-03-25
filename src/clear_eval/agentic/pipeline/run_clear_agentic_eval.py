@@ -10,20 +10,20 @@ This script provides a unified interface to run both:
 All results are organized under: clear_results/<judge-model>/<run-name>/
 
 Configuration Precedence (lowest to highest):
-    1. Default config: setup/default_unified_config.yaml
+    1. Default config: setup/default_agentic_config.yaml
     2. User config file: --agentic-config-path (if provided)
     3. CLI arguments (override both config files)
 
 Usage Examples:
 
     # Run both pipelines with config file
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-config-path my_config.yaml
 
     # Run only step-by-step from raw traces
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
-        --agentic-input-dir data/experiment_001 \\
-        --agentic-output-dir results \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
+        --data-dir data/experiment_001 \\
+        --results-dir results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces true \\
@@ -31,16 +31,16 @@ Usage Examples:
         --provider watsonx
 
     # Run only step-by-step from preprocessed CSVs
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
-        --agentic-input-dir data/experiment_001 \\
-        --agentic-output-dir results \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
+        --data-dir data/experiment_001 \\
+        --results-dir results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces false \\
         --eval-model-name openai/gpt-oss-120b
 
     # Run both with custom run name
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-config-path my_config.yaml \\
         --run-name experiment_gpt4_001 \\
         --eval-model-name gpt-4o
@@ -56,14 +56,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-from clear_eval.agentic.pipeline.run_clear_on_traj_data import (
-    run_traj_data_pipeline,
+from clear_eval.agentic.pipeline.run_clear_step_analysis import (
+    run_step_analysis_pipeline,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import (
+    build_cli_overrides,
+    load_pipeline_config,
+    get_run_output_dir,
+    validate_required_config,
+    InferenceConfig,
+)
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
-from clear_eval.pipeline.config_loader import load_config
 from clear_eval.agentic.pipeline.full_traces_evaluation.run_trajectory_evaluation_pipeline import run_trajectory_evaluation_pipeline
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 FULL_TRAJ_AVAILABLE = True
@@ -71,10 +76,6 @@ FULL_TRAJ_AVAILABLE = True
 # Initialize logging
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Path to unified default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-UNIFIED_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_unified_config.yaml")
 
 
 def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
@@ -86,7 +87,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to unified config file (JSON or YAML)"
     )
     group.add_argument(
-        "--agentic-input-dir",
+        "--data-dir",
         help="Input directory (JSON traces if from-raw-traces=True, else CSV files)"
     )
     group.add_argument(
@@ -95,7 +96,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="If True, process JSON traces; if False, use CSV files directly (default: false)"
     )
     group.add_argument(
-        "--agentic-output-dir",
+        "--results-dir",
         help="Base output directory (required)"
     )
     
@@ -144,11 +145,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Overwrite existing results (default: true)"
     )
     group.add_argument(
-        "--concurrency",
-        type=int,
-        help="Number of parallel workers (default: 10)"
-    )
-    group.add_argument(
         "--max-files",
         type=int,
         help="Limit files to process (for testing)"
@@ -158,28 +154,33 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         type=int,
         help="Model context window (for full trajectory)"
     )
+    group.add_argument(
+        "--memory-only",
+        type=str2bool,
+        help="If true, use temporary directories and save only ui_input and json_result to results_dir (default: false)"
+    )
 
 
 def create_output_structure(
     output_dir: Path,
-    run_name: str
 ) -> Dict[str, Path]:
     """
     Create organized output directory structure.
-    
+
+    Args:
+        output_dir: Base output directory (already includes run_name)
+
     Returns paths:
         {
-            'base': output_dir/clear_results/<judge-model>/<run-name>/,
-            'step_by_step': .../step_by_step/,
-            'full_trajectory': .../full_trajectory/,
+            'base': output_dir/,
+            'step_by_step': output_dir/step_by_step/,
+            'full_trajectory': output_dir/full_trajectory/,
         }
     """
-    base_dir = output_dir / 'clear_results' / run_name
-    
     paths = {
-        'base': base_dir,
-        'step_by_step': base_dir / 'step_by_step',
-        'full_trajectory': base_dir / 'full_trajectory',
+        'base': output_dir,
+        'step_by_step': output_dir / 'step_by_step',
+        'full_trajectory': output_dir / 'full_trajectory',
     }
     
     # Create directories
@@ -190,7 +191,7 @@ def create_output_structure(
 
 
 def prepare_traces_data(
-    agentic_input_dir: Path,
+    data_dir: Path,
     from_raw_traces: bool,
     output_paths: Dict[str, Path],
     config: dict
@@ -203,7 +204,7 @@ def prepare_traces_data(
     2. Copying existing CSV files if from_raw_traces=False
     
     Args:
-        agentic_input_dir: Input directory (JSON traces or CSV files)
+        data_dir: Input directory (JSON traces or CSV files)
         from_raw_traces: If True, process JSON traces; if False, use CSV files
         output_paths: Output directory structure
         config: Configuration dict
@@ -214,21 +215,22 @@ def prepare_traces_data(
     traces_data_dir = output_paths['base'] / 'traces_data'
     
     logger.info("=" * 80)
-    logger.info("PREPARING CENTRALIZED TRACES_DATA")
+    logger.info("PREPROCESSING TRACES")
     logger.info("=" * 80)
     
     if from_raw_traces:
         # Process raw JSON traces
-        logger.info(f"Processing raw JSON traces from: {agentic_input_dir}")
+        logger.info(f"Processing raw JSON traces from: {data_dir}")
         logger.info(f"Output directory: {traces_data_dir}")
         
         try:
             process_traces_to_traj_data(
-                input_dir=str(agentic_input_dir),
+                input_dir=str(data_dir),
                 output_dir=str(traces_data_dir),
                 agent_framework=config.get('agent_framework'),
                 observability_framework=config.get('observability_framework'),
-                separate_tools=config.get('separate_tools', False)
+                separate_tools=config.get('separate_tools'),
+                overwrite=config.get('overwrite', True),
             )
             logger.info(f"✓ Processed traces successfully")
             return traces_data_dir
@@ -237,13 +239,13 @@ def prepare_traces_data(
             return None
     else:
         # Copy existing CSV files
-        logger.info(f"Using existing CSV files from: {agentic_input_dir}")
+        logger.info(f"Using existing CSV files from: {data_dir}")
         logger.info(f"Copying to: {traces_data_dir}")
         
         try:
             if traces_data_dir.exists():
                 shutil.rmtree(traces_data_dir)
-            shutil.copytree(agentic_input_dir, traces_data_dir)
+            shutil.copytree(data_dir, traces_data_dir)
             logger.info(f"✓ Copied CSV files successfully")
             return traces_data_dir
         except Exception as e:
@@ -273,13 +275,13 @@ def run_step_by_step_pipeline(
     logger.info(f"Using traces_data from: {traces_data_dir}")
     
     try:
-        # Call run_traj_data_pipeline for steps 2-4
-        logger.info("Calling run_traj_data_pipeline")
-        run_traj_data_pipeline(
+        # Call run_step_analysis_pipeline for steps 2-4
+        logger.info("Calling run_step_analysis_pipeline")
+        run_step_analysis_pipeline(
             traces_data_dir=str(traces_data_dir),
-            agentic_output_dir=str(output_dir),
+            results_dir=str(output_dir),
             config_dict=config,
-            overwrite=config.get('overwrite', True)
+            overwrite=config.get('overwrite')
         )
         
         logger.info("Step-by-step pipeline completed successfully")
@@ -327,16 +329,13 @@ def run_full_trajectory_pipeline(
         completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
             traj_input_dir=traces_data_dir,
             output_dir=output_dir,
-            model_id=config.get('eval_model_name', 'openai/gpt-oss-120b'),
-            provider=config.get('provider', 'watsonx'),
+            inference_config=InferenceConfig.from_config(config),
             eval_types=config.get('eval_types', ['all']),
-            generate_rubrics=config.get('generate_rubrics', False),
+            generate_rubrics=config.get('generate_rubrics'),
             rubric_dir=rubric_dir,
-            clear_analysis_types=config.get('clear_analysis_types', ['all']),
             context_tokens=config.get('context_tokens'),
-            overwrite=config.get('overwrite', True),
-            concurrency=config.get('concurrency', 10),
-            eval_model_params=config.get('eval_model_params', {}),
+            overwrite=config.get('overwrite'),
+            max_workers=config.get('max_workers'),
             max_files=config.get('max_files'),
         )
         
@@ -361,8 +360,8 @@ def create_pipeline_summary(base_dir: Path, config: dict, results: dict):
             "run_name": config.get('run_name'),
             "eval_model_name": config.get('eval_model_name'),
             "provider": config.get('provider'),
-            "run_step_by_step": config.get('run_step_by_step', True),
-            "run_full_trajectory": config.get('run_full_trajectory', True),
+            "run_step_by_step": config.get('run_step_by_step'),
+            "run_full_trajectory": config.get('run_full_trajectory'),
         },
         "results": results,
         "output_structure": {
@@ -394,51 +393,42 @@ def main():
     args = parser.parse_args()
 
     cli_overrides = build_cli_overrides(args)
-    
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config = load_config(
-        UNIFIED_DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
-    
+
+    # Load configuration
+    config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
+
     # Validate required parameters
-    if not config.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
-    
-    if not config.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
-    
+    validate_required_config(config, ['data_dir', 'results_dir'], parser)
+
+    # Get run output directory
+    output_dir, run_name = get_run_output_dir(
+        config['results_dir'],
+        config.get('run_name')
+    )
+
     # Extract parameters
-    agentic_input_dir = Path(config['agentic_input_dir'])
-    output_dir = Path(config['agentic_output_dir'])
-    from_raw_traces = config.get('from_raw_traces', False)
-    run_name = config.get('run_name') or datetime.now().strftime("%Y%m%d_%H%M%S")
+    data_dir = Path(config['data_dir'])
+    from_raw_traces = config.get('from_raw_traces')
     
     # Validate input directory exists
-    if not agentic_input_dir.exists():
-        parser.error(f"Input directory does not exist: {agentic_input_dir}")
+    if not data_dir.exists():
+        parser.error(f"Input directory does not exist: {data_dir}")
     
     # Log configuration
     logger.info("=" * 80)
     logger.info("UNIFIED AGENTIC PIPELINE")
     logger.info("=" * 80)
-    logger.info(f"Input directory: {agentic_input_dir}")
+    logger.info(f"Input directory: {data_dir}")
     logger.info(f"From raw traces: {from_raw_traces}")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Run name: {run_name}")
     
     # Create output structure
-    output_paths = create_output_structure(output_dir, run_name)
-    logger.info(f"Output base directory: {output_paths['base']}")
-    
-    # Map concurrency to max_workers for CLEAR compatibility
-    if 'concurrency' in config:
-        config['max_workers'] = config['concurrency']
+    output_paths = create_output_structure(output_dir)
     
     # Prepare centralized traces_data directory
     traces_data_dir = prepare_traces_data(
-        agentic_input_dir,
+        data_dir,
         from_raw_traces,
         output_paths,
         config
@@ -454,7 +444,7 @@ def main():
     results = {}
     
     # Run step-by-step if enabled
-    if config.get('run_step_by_step', True):
+    if config.get('run_step_by_step'):
         results['step_by_step_success'] = run_step_by_step_pipeline(
             traces_data_dir,
             output_paths['step_by_step'],
@@ -465,7 +455,7 @@ def main():
         results['step_by_step_success'] = None
     
     # Run full trajectory if enabled
-    if config.get('run_full_trajectory', True):
+    if config.get('run_full_trajectory'):
         results['full_trajectory_success'] = run_full_trajectory_pipeline(
             traces_data_dir,
             output_paths['full_trajectory'],

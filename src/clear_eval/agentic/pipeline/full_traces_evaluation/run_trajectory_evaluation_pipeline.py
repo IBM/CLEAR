@@ -15,30 +15,30 @@ Features:
 - Single model/provider configuration for all inference
 - Automatic rubric generation
 - Selective CLEAR analysis (root_cause, issues, all, or none)
-- Parallel execution with configurable concurrency
+- Parallel execution with configurable max_workers
 - Comprehensive error handling and logging
 
 Usage Examples:
 
     # Run all evaluations with all CLEAR analyses (default)
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai
 
     # Run specific evaluations
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success full_trajectory
 
     # Generate rubrics and run rubric evaluation
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -46,8 +46,8 @@ Usage Examples:
 
     # Use existing rubrics
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -55,8 +55,8 @@ Usage Examples:
 
     # Run with selective CLEAR analysis
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success \\
@@ -64,16 +64,16 @@ Usage Examples:
 
     # Skip CLEAR analysis entirely
     python run_trajectory_evaluation_pipeline.py \\
-        --agentic-input-dir ./trajectories \\
-        --agentic-output-dir ./results \\
+        --data-dir ./trajectories \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --clear-analysis-types none
 
 Arguments:
     Required:
-        --agentic-input-dir: Directory containing trajectory JSON files
-        --agentic-output-dir: Base directory for saving results
+        --data-dir: Directory containing trajectory JSON files
+        --results-dir: Base directory for saving results
         --eval-model-name: Model identifier (e.g., gpt-4o, llama-3.3-70b)
         --provider: LLM provider (openai, watsonx, anthropic, etc.)
 
@@ -97,7 +97,7 @@ Arguments:
         --context-tokens: Override auto-detected context window
         --eval-model-params: JSON dict of model parameters
         --overwrite: Re-run even if results exist
-        --concurrency: Number of parallel workers (default: 7)
+        --max-workers: Number of parallel workers (default: 7)
         --max-files: Limit files to process (for testing)
 
 Output Structure:
@@ -114,15 +114,19 @@ Output Structure:
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import List, Optional
 import pandas as pd
 
 from clear_eval.logging_config import setup_logging
-from clear_eval.pipeline.config_loader import load_config
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import (
+    build_cli_overrides,
+    load_pipeline_config,
+    get_run_output_dir,
+    validate_required_config,
+    InferenceConfig,
+)
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.task_success_evaluator import TaskSuccessEvaluator
@@ -135,10 +139,6 @@ from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_cl
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Path to default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_TRAJECTORY_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_trajectory_config.yaml")
 
 
 # Evaluation type constants
@@ -273,12 +273,10 @@ def resolve_clear_analysis_types(
 def run_task_success_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
-    eval_model_params: dict,
+    max_workers: int,
     max_files: Optional[int],
 ) -> bool:
     """Run task success evaluation."""
@@ -288,14 +286,12 @@ def run_task_success_evaluation(
 
     try:
         evaluator = TaskSuccessEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
-            eval_model_params=eval_model_params,
+            max_workers=max_workers,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -309,12 +305,10 @@ def run_task_success_evaluation(
 def run_full_trajectory_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
-    eval_model_params: dict,
+    max_workers: int,
     max_files: Optional[int],
 ) -> bool:
     """Run full trajectory evaluation."""
@@ -324,14 +318,12 @@ def run_full_trajectory_evaluation(
 
     try:
         evaluator = FullTrajectoryEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
-            eval_model_params=eval_model_params,
+            max_workers=max_workers,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -345,17 +337,15 @@ def run_full_trajectory_evaluation(
 def run_rubric_generation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
-    eval_model_params: dict,
+    max_workers: int,
     max_files: Optional[int],
 ) -> tuple[bool, Optional[Path]]:
     """
     Run rubric generation.
-    
+
     Returns:
         Tuple of (success, rubrics_dir_path)
     """
@@ -365,14 +355,12 @@ def run_rubric_generation(
 
     try:
         generator = RubricGenerator(
-            judge_model_id=judge_model_id,
-            provider=provider,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
-            eval_model_params=eval_model_params,
+            max_workers=max_workers,
             max_files=max_files,
         )
         generator.run_pipeline()
@@ -391,12 +379,10 @@ def run_rubric_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
     rubrics_dir: Path,
-    judge_model_id: str,
-    provider: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
-    concurrency: int,
-    eval_model_params: dict,
+    max_workers: int,
     max_files: Optional[int],
 ) -> bool:
     """Run rubric-based evaluation."""
@@ -406,15 +392,13 @@ def run_rubric_evaluation(
 
     try:
         evaluator = RubricEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             rubrics_dir=rubrics_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
-            concurrency=concurrency,
-            eval_model_params=eval_model_params,
+            max_workers=max_workers,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -429,16 +413,14 @@ def run_clear_analysis(
     eval_results_dir: Path,
     clear_output_dir: Path,
     clear_types: List[str],
-    model_id: str,
-    provider: str,
-    eval_model_params: dict,
+    inference_config: InferenceConfig,
     overwrite: bool,
 ) -> bool:
     """Run CLEAR analysis on evaluation results."""
     if not clear_types:
         logger.info("Skipping CLEAR analysis (none requested)")
         return True
-    
+
     logger.info("=" * 80)
     logger.info("RUNNING CLEAR ANALYSIS")
     logger.info("=" * 80)
@@ -453,10 +435,8 @@ def run_clear_analysis(
             runner = RootCauseClearRunner(
                 eval_results_dir=eval_results_dir,
                 output_dir=clear_output_dir,
-                clear_model_id=model_id,
-                provider=provider,
+                inference_config=inference_config,
                 overwrite=overwrite,
-                eval_model_params=eval_model_params,
             )
             runner.run_analysis()
             logger.info("Root cause CLEAR analysis completed successfully")
@@ -471,10 +451,8 @@ def run_clear_analysis(
             runner = IssuesClearRunner(
                 eval_results_dir=eval_results_dir,
                 output_dir=clear_output_dir,
-                clear_model_id=model_id,
-                provider=provider,
+                inference_config=inference_config,
                 overwrite=overwrite,
-                eval_model_params=eval_model_params,
             )
             runner.run_analysis()
             logger.info("Issues CLEAR analysis completed successfully")
@@ -570,47 +548,41 @@ def check_intent_availability(traj_input_dir: Path) -> tuple[bool, int, int]:
 def run_trajectory_evaluation_pipeline(
     traj_input_dir: Path,
     output_dir: Path,
-    model_id: str,
-    provider: str,
+    inference_config: InferenceConfig,
     eval_types: List[str],
     generate_rubrics: bool = False,
     rubric_dir: Optional[Path] = None,
     clear_analysis_types: Optional[List[str]] = None,
     context_tokens: Optional[int] = None,
     overwrite: bool = False,
-    concurrency: int = 10,
-    eval_model_params: Optional[dict] = None,
+    max_workers: int = 10,
     max_files: Optional[int] = None,
 ) -> tuple[List[str], List[str]]:
     """
     Run trajectory evaluation pipeline on CSV trajectory data.
-    
+
     This function expects CSV files to already be available in traj_input_dir.
     For preprocessing raw traces, use the main() function or call process_traces_to_traj_data() first.
-    
+
     Args:
         traj_input_dir: Directory containing CSV trajectory files
         output_dir: Base directory for saving results
-        model_id: Model identifier for the judge
-        provider: LLM provider
+        inference_config: LLM inference configuration
         eval_types: Evaluations to run (task_success, full_trajectory, rubric, all)
         generate_rubrics: Generate rubrics before evaluation
         rubric_dir: Path to existing rubrics
         clear_analysis_types: CLEAR analyses to run (root_cause, issues, all, none)
         context_tokens: Model context window size
         overwrite: Re-run even if results exist
-        concurrency: Number of parallel workers
-        eval_model_params: Model parameters dict
+        max_workers: Number of parallel workers
         max_files: Limit files to process
-        
+
     Returns:
         Tuple of (completed_evals, failed_evals)
     """
-    if eval_model_params is None:
-        eval_model_params = {}
     if clear_analysis_types is None:
         clear_analysis_types = ["all"]
-    
+
     logger.info(f"Using CSV trajectory files from: {traj_input_dir}")
     
     # Resolve evaluation types
@@ -653,12 +625,10 @@ def run_trajectory_evaluation_pipeline(
     eval_kwargs = {
         "traj_input_dir": traj_input_dir,
         "output_dir": output_dir,
-        "judge_model_id": model_id,
-        "provider": provider,
+        "inference_config": inference_config,
         "context_tokens": context_tokens,
         "overwrite": overwrite,
-        "concurrency": concurrency,
-        "eval_model_params": eval_model_params,
+        "max_workers": max_workers,
         "max_files": max_files,
     }
 
@@ -730,9 +700,7 @@ def run_trajectory_evaluation_pipeline(
                 eval_results_dir=output_dir,
                 clear_output_dir=clear_output_dir,
                 clear_types=clear_types,
-                model_id=model_id,
-                provider=provider,
-                eval_model_params=eval_model_params,
+                inference_config=inference_config,
                 overwrite=overwrite,
             )
 
@@ -751,39 +719,34 @@ def main():
     """Main pipeline orchestration (CLI entry point)."""
     parser = create_parser()
     args = parser.parse_args()
-    
+
     # Build CLI overrides (only include non-None arguments)
     cli_overrides = build_cli_overrides(args)
-    
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config = load_config(
-        DEFAULT_TRAJECTORY_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
-    
-    # Validate required parameters
-    if not config.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
-    
-    if not config.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
 
-    # Convert paths (using unified argument names)
-    traj_input_dir = Path(config['agentic_input_dir'])
-    output_dir = Path(config['agentic_output_dir'])
+    # Load configuration
+    config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
+
+    # Validate required parameters
+    validate_required_config(config, ['data_dir', 'results_dir'], parser)
+
+    # Get run output directory
+    output_dir, run_name = get_run_output_dir(
+        config['results_dir'],
+        config.get('run_name')
+    )
+
+    # Convert paths
+    traj_input_dir = Path(config['data_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
 
-    # Get model configuration from config
-    model_id = config['eval_model_name']
-    provider = config['provider']
-    eval_model_params = config.get('eval_model_params', {})
+    # Create inference config
+    inference_config = InferenceConfig.from_config(config)
 
     # Validate input directory
     if not traj_input_dir.exists():
         logger.error(f"Input directory does not exist: {traj_input_dir}")
         sys.exit(1)
-    
+
     # Preprocess traces if needed
     csv_input_dir = preprocess_traces_if_needed(
         input_dir=traj_input_dir,
@@ -791,27 +754,29 @@ def main():
         from_raw_traces=config.get('from_raw_traces'),
         agent_framework=config.get('agent_framework'),
         observability_framework=config.get('observability_framework'),
-        separate_tools=config.get('separate_tools', False)
+        separate_tools=config.get('separate_tools')
     )
-    
+
     # Run the evaluation pipeline
     logger.info("=" * 80)
-    logger.info("RUNNING TRAJECTORY EVALUATION PIPELINE")
+    logger.info("TRAJECTORY EVALUATION PIPELINE")
     logger.info("=" * 80)
-    
+    logger.info(f"Input: {traj_input_dir}")
+    logger.info(f"Run name: {run_name}")
+    logger.info(f"Output: {output_dir}")
+    logger.info(f"Model: {inference_config.model_id} ({inference_config.provider})")
+
     completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
         traj_input_dir=csv_input_dir,
         output_dir=output_dir,
-        model_id=model_id,
-        provider=provider,
+        inference_config=inference_config,
         eval_types=config.get('eval_types'),
         generate_rubrics=config.get('generate_rubrics'),
         rubric_dir=rubric_dir,
         clear_analysis_types=config.get('clear_analysis_types'),
         context_tokens=config.get('context_tokens'),
         overwrite=config.get('overwrite'),
-        concurrency=config.get('concurrency'),
-        eval_model_params=eval_model_params,
+        max_workers=config.get('max_workers'),
         max_files=config.get('max_files'),
     )
 

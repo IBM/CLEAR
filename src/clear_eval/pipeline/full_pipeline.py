@@ -16,9 +16,10 @@ from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FI
 from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
     ensure_dir, \
     load_json_from_cache, resolve_data_path
-from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, get_llm, \
+from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, \
     load_inputs, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
+from clear_eval.pipeline.inference_utils.llm_client import get_llm_client
 from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -175,14 +176,41 @@ def run_aggregation_pipeline(config):
     eval_df = pd.read_csv(eval_file)
     run_aggregation_from_df(config, eval_df, run_info)
 
-def get_llm_from_config(config):
-    use_litellm = config.get("use_litellm", False)
-    return get_llm(config["provider"], config["eval_model_name"], parameters=config.get('eval_model_params'),
-                       use_litellm=use_litellm)
+def get_eval_llm_from_config(config):
+    """
+    Get LLM client from configuration.
+    
+    Supports three inference backends:
+    1. langchain: Use LangChain (default for built-in providers)
+    2. litellm: Use LiteLLM (supports many providers)
+    3. endpoint: Use direct HTTP endpoint backend
+    
+    Backward compatible with use_litellm boolean field.
+    """
+    # Get inference_backend, with backward compatibility for use_litellm
+    if config.get("use_litellm", False):
+        inference_backend = "litellm"
+    else:
+        inference_backend = config.get("inference_backend")
+
+    # Build arguments for get_llm_client
+    client_args = {
+        "provider": config["provider"],
+        "model": config["eval_model_name"],
+        "inference_backend": inference_backend,
+        "parameters": config.get('eval_model_params'),
+        "eval_mode": True
+    }
+    
+    # Add endpoint_url if using endpoint backend
+    if inference_backend == "endpoint":
+        client_args["endpoint_url"] = config.get("endpoint_url")
+    
+    return get_llm_client(**client_args)
 
 
 def run_evaluation_from_df(config, response_df, ):
-    eval_llm = get_llm_from_config(config)
+    eval_llm = get_eval_llm_from_config(config)
     task_data = get_task_data_obj(config["task"])
     eval_df = task_data.eval_records(response_df, eval_llm, config)
     if not config.get("use_full_text_for_analysis"):
@@ -195,7 +223,7 @@ def run_aggregation_from_df(config, eval_df, file_name_info):
     if not task:
         raise ValueError(f"task config not specified")
 
-    eval_llm = get_llm_from_config(config)
+    eval_llm = get_eval_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
@@ -219,7 +247,7 @@ def run_eval_pipeline(config):
     if not task:
         raise ValueError(f"task config not specified")
 
-    eval_llm = get_llm_from_config(config)
+    eval_llm = get_eval_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']

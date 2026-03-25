@@ -1,5 +1,4 @@
 import json
-import os
 from tqdm import tqdm
 from importlib.resources import files
 from typing import Tuple, List
@@ -14,7 +13,8 @@ from altk.core.llm import get_llm, BaseLLMClient
 import logging
 
 from clear_eval.pipeline.config_loader import load_config
-from clear_eval.pipeline.llm_client import run_async, get_llm_client, LiteLLMClient, LangChainClient
+from clear_eval.pipeline.inference_utils.llm_client import run_async, LiteLLMClient, LangChainClient
+from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             return MetricsClientCls(**kwargs)
         else:
             raise ValueError(f"Unsupported provider '{provider}' for tool_call task. "
-                           f"Supported providers: openai, watsonx, azure, or use_litellm=True.")
+                           f"Supported providers: openai, watsonx, or use_litellm=True.")
 
 
     @staticmethod
@@ -177,11 +177,7 @@ if __name__ == "__main__":
     spec_free = True
     if spec_free:
         df.drop(columns=["api_spec"], inplace=True)
-    use_litellm = True #config.get("use_litellm", False)
-    llm = get_llm_client(config["provider"], config["eval_model_name"],
-                         use_litellm=use_litellm,
-                         parameters=config["eval_model_params"],
-                         eval_mode=True)
+    llm = get_eval_llm_from_config(config)
 
     tool_call_use_case = ToolCallEvalUseCase()
     evaluated_df = tool_call_use_case.eval_records(df, llm, config)

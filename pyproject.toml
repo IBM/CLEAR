@@ -34,7 +34,6 @@ dependencies = [
     "langchain_community",
     "numpy",
     "pyarrow>=15.0.0",
-    # Async litellm backend (use_litellm=true)
     "litellm>=1.0.0",
     "nest-asyncio",
     "nicegui>=2.0.0",
@@ -71,6 +70,6 @@ run-clear-eval-generation = "clear_eval.cli:run_generation_cli"
 run-clear-eval-evaluation = "clear_eval.cli:run_evaluation_cli"
 run-clear-eval-aggregation = "clear_eval.cli:run_aggregation_cli"
 run-clear-eval-dashboard = "clear_eval.cli:run_dashboard_cli"
-run-agentic-clear-analysis = "clear_eval.cli:run_agentic_clear_analysis"
+run-clear-agentic-eval = "clear_eval.cli:run_clear_agentic_eval"
 launch-agentic-dashboard = "clear_eval.cli:run_clear_agentic_dashboard"
 run-clear-agentic-dashboard = "clear_eval.cli:run_clear_agentic_dashboard"

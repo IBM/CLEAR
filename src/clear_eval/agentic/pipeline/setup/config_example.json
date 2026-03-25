@@ -1,18 +1,19 @@
 {
-  "traces_input_dir": "../data/log_monitor_agent",
-  "agentic_output_dir": "../output/mlflow_log_monitor_example",
+  "data_dir": "../data/log_monitor_agent",
+  "results_dir": "../output/mlflow_log_monitor_example",
   "agent_framework": "langgraph",
+  "observability_framework": "mlflow",
   "separate_tools": false,
   "overwrite": true,
+  "inference_backend": "litellm",
+  "inference_url": null,
   "provider": "openai",
   "eval_model_name": "Azure/gpt-4.1",
   "eval_model_params": {
     "temperature": 0.0,
     "max_tokens": 8096
   },
-  "resume_enabled": false,
-  "evaluation_criteria": null,
   "run_name": null,
-  "success_threshold": 0.7,
-  "pass_criteria": "avg"
+  "predefined_issues": null,
+  "memory_only": true
 }

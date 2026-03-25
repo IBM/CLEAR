@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import build_cli_overrides, load_pipeline_config
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def _parse_issues_list(recurring_issues_str):
 
 
 def build_comprehensive_json_results(
-    judge_results_dir: str | Path,
+    clear_results_dir: str | Path,
     traces_data_dir: str | Path,
     config_dict: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -100,10 +100,10 @@ def build_comprehensive_json_results(
       - issues_catalog: issues discovered for this agent
       - issues: list of issues with their occurrences
       - no_issues: spans that had no issues mapped
-    - pass_fail_summary: pass/fail metrics per trace and agent
+    - fail_summary: pass/fail metrics per trace and agent
 
     Args:
-        judge_results_dir: Directory containing agent CLEAR result subdirectories
+        clear_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
         config_dict: Pipeline configuration containing:
             - success_threshold: Threshold for pass/fail (default: 0.7)
@@ -112,10 +112,7 @@ def build_comprehensive_json_results(
     Returns:
         Comprehensive results dictionary
     """
-    # Extract pass/fail config from config_dict
-    success_threshold = config_dict.get("success_threshold", 0.7)
-    pass_criteria = config_dict.get("pass_criteria", "avg")
-    judge_results_path = Path(judge_results_dir)
+    clear_results_path = Path(clear_results_dir)
     traces_data_path = Path(traces_data_dir)
 
     # Filter config for JSON output (exclude internal params)
@@ -168,7 +165,7 @@ def build_comprehensive_json_results(
     agent_weighted_severity = {}  # {agent_name: sum(freq * severity)}
 
     # Process each agent's results
-    agent_dirs = [d for d in judge_results_path.iterdir() if d.is_dir()]
+    agent_dirs = [d for d in clear_results_path.iterdir() if d.is_dir()]
 
     for agent_dir in sorted(agent_dirs):
         agent_name = agent_dir.name
@@ -180,8 +177,8 @@ def build_comprehensive_json_results(
             continue
 
         # Load shortcoming list from dedup.json files
-        shortcoming_files = list(agent_dir.glob("*_dedup.json"))
         agent_shortcomings = []
+        shortcoming_files = list(agent_dir.glob("*_dedup.json"))
         if shortcoming_files:
             try:
                 with open(shortcoming_files[0], 'r', encoding='utf-8') as f:
@@ -189,6 +186,10 @@ def build_comprehensive_json_results(
                 logger.info(f"Loaded {len(agent_shortcomings)} shortcomings for {agent_name}")
             except Exception as e:
                 logger.warning(f"Could not load shortcomings for {agent_name}: {e}")
+        else:
+            agent_shortcomings = config_dict.get("predefined_issues", [])
+            if agent_shortcomings:
+                logger.info(f"Used {len(agent_shortcomings)} predefined shortcomings for {agent_name}")
 
         # Load results from CSV
         results_df = None
@@ -362,9 +363,7 @@ def build_comprehensive_json_results(
     results["metadata"]["statistics"]["total_interactions_no_issues"] = total_no_issues
 
     # Build pass/fail summary
-    pass_fail_summary = {
-        "threshold": success_threshold,
-        "pass_criteria": pass_criteria,
+    result_summary = {
         "traces": {},
         "agents": {}
     }
@@ -382,12 +381,7 @@ def build_comprehensive_json_results(
         issue_free_count = sum(1 for h in has_issues if not h)
         issue_free_ratio = issue_free_count / len(has_issues) if has_issues else 1.0
 
-        # Determine pass based on criteria
-        check_score = avg_score if pass_criteria == "avg" else min_score
-        passed = check_score >= success_threshold
-
-        pass_fail_summary["traces"][trace_id] = {
-            "pass": passed,
+        result_summary["traces"][trace_id] = {
             "avg_score": round(avg_score, 4),
             "min_score": round(min_score, 4),
             "issue_free_ratio": round(issue_free_ratio, 4)
@@ -411,12 +405,7 @@ def build_comprehensive_json_results(
         no_issues = summary.get("interactions_no_issues", 0)
         issue_free_ratio = no_issues / total if total > 0 else 1.0
 
-        # Determine pass based on criteria
-        check_score = avg_score if pass_criteria == "avg" else min_score
-        passed = check_score >= success_threshold
-
-        pass_fail_summary["agents"][agent_name] = {
-            "pass": passed,
+        result_summary["agents"][agent_name] = {
             "avg_score": round(avg_score, 4),
             "min_score": round(min_score, 4),
             "issue_free_ratio": round(issue_free_ratio, 4),
@@ -424,44 +413,27 @@ def build_comprehensive_json_results(
        #     "weighted_severity": round(weighted_severity, 4)
         }
 
-    results["pass_fail_summary"] = pass_fail_summary
+    results["fail_summary"] = result_summary
 
     return results
 
 
-def save_comprehensive_json_results(
-    judge_results_dir: str | Path,
-    traces_data_dir: str | Path,
-    config_dict: Dict[str, Any],
-    output_dir: str | Path = None,
+def save_json_to_file(
+    results: Dict[str, Any],
+    output_dir: str | Path,
     output_filename: str = "clear_results.json"
 ) -> Path:
     """
-    Build and save comprehensive JSON results.
+    Save JSON results dictionary to a file.
 
     Args:
-        judge_results_dir: Directory containing agent CLEAR result subdirectories
-        traces_data_dir: Directory containing trajectory CSV files
-        config_dict: Pipeline configuration containing success_threshold and pass_criteria
-        output_dir: Directory to save the JSON output (defaults to judge_results_dir)
+        results: JSON results dictionary to save
+        output_dir: Directory to save the JSON output
         output_filename: Name of the output JSON file
 
     Returns:
         Path to the saved JSON file
     """
-    logger.info("=" * 80)
-    logger.info("BUILDING COMPREHENSIVE JSON RESULTS")
-    logger.info("=" * 80)
-
-    results = build_comprehensive_json_results(
-        judge_results_dir=judge_results_dir,
-        traces_data_dir=traces_data_dir,
-        config_dict=config_dict
-    )
-
-    if not output_dir:
-        output_dir = judge_results_dir
-
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     json_output_path = output_path / output_filename
@@ -482,23 +454,55 @@ def save_comprehensive_json_results(
     return json_output_path
 
 
-# Path to agentic pipeline default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_config.yaml")
+def save_comprehensive_json_results(
+    clear_results_dir: str | Path,
+    traces_data_dir: str | Path,
+    config_dict: Dict[str, Any],
+    output_dir: Optional[str | Path] = None,
+    output_filename: str = "clear_results.json"
+) -> Path:
+    """
+    Build and save comprehensive JSON results (wrapper function).
 
+    This is a convenience wrapper that calls build_comprehensive_json_results()
+    followed by save_json_to_file().
+
+    Args:
+        clear_results_dir: Directory containing agent CLEAR result subdirectories
+        traces_data_dir: Directory containing trajectory CSV files
+        config_dict: Pipeline configuration containing success_threshold and pass_criteria
+        output_dir: Directory to save the JSON output (defaults to clear_results_dir)
+        output_filename: Name of the output JSON file
+
+    Returns:
+        Path to the saved JSON file
+    """
+    logger.info("=" * 80)
+    logger.info("BUILDING COMPREHENSIVE JSON RESULTS")
+    logger.info("=" * 80)
+
+    results = build_comprehensive_json_results(
+        clear_results_dir=clear_results_dir,
+        traces_data_dir=traces_data_dir,
+        config_dict=config_dict
+    )
+
+    if not output_dir:
+        output_dir = clear_results_dir
+
+    return save_json_to_file(results, output_dir, output_filename)
 
 
 def main():
     """CLI entry point for building JSON results."""
     import argparse
-    from clear_eval.pipeline.config_loader import load_config
 
     parser = argparse.ArgumentParser(
         description="Build comprehensive JSON results from CLEAR pipeline output",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Configuration Precedence (lowest to highest):
-  1. Default config (setup/default_config.yaml)
+  1. Default config (setup/default_agentic_config.yaml)
   2. User config file (--agentic-config-path)
   3. CLI arguments
 
@@ -529,7 +533,7 @@ Examples:
         help="Path to config file (JSON or YAML) that overrides defaults"
     )
     parser.add_argument(
-        "--judge-results-dir",
+        "--clear-results-dir",
         type=str,
         required=True,
         help="Directory containing agent CLEAR result subdirectories"
@@ -573,15 +577,11 @@ Examples:
     # Build CLI overrides from non-None args
     cli_overrides = build_cli_overrides(args)
 
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config_dict = load_config(
-        AGENTIC_DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
+    # Load configuration
+    config_dict = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     save_comprehensive_json_results(
-        judge_results_dir=args.judge_results_dir,
+        clear_results_dir=args.clear_results_dir,
         traces_data_dir=args.traces_data_dir,
         config_dict=config_dict,
         output_dir=args.output_dir,

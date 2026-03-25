@@ -65,7 +65,7 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
 
         )
     raise ValueError(f"Unknown provider '{provider}'. Built-in providers: openai, watsonx, rits. "
-                     f"For other providers, set use_litellm=True to use LiteLLM backend.")
+                     f"For other providers, set inference_provider=litellm to use litellm.")
 
 model_name_to_rits_base = {
     "microsoft/phi-4": "microsoft-phi-4",
