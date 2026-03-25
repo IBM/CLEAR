@@ -62,14 +62,14 @@ Supports traces from LangGraph, CrewAI, and other frameworks via MLflow or Langf
 
 ## ✨ Key Features
 
-| | |
-|---|---|
-| 🧑‍⚖️ **LLM-as-a-Judge** | Automated evaluation for any text generation task |
-| 🤖 **Agentic Workflows** | Evaluate multi-agent trajectories, tool usage, and task completion |
+| |                                                               |
+|---|---------------------------------------------------------------|
+| 🧑‍⚖️ **LLM-as-a-Judge** | Automated evaluation for any text generation task             |
+| 🤖 **Agentic Workflows** | Evaluate agent trajectories - step by step and as a whole     |
 | 🔌 **Multiple Backends** | LangChain, LiteLLM (100+ providers), or direct HTTP endpoints |
-| 🧩 **External Judges** | Plug in custom evaluation functions |
-| 📊 **Interactive Dashboards** | Standard and agentic-specific visualizations |
-| 🛠️ **Flexible Configuration** | YAML config files, CLI flags, or Python API |
+| 🧩 **External Judges** | Plug in custom evaluation functions                           |
+| 📊 **Interactive Dashboards** | Standard and agentic-specific visualizations                  |
+| 🛠️ **Flexible Configuration** | YAML config files, CLI flags, or Python API                   |
 
 ---
 

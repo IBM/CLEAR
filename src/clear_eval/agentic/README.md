@@ -1,6 +1,6 @@
 # CLEAR for Agentic Workflows
 
-This module provides evaluation pipelines for multi-agent systems, from raw traces to interactive analysis dashboards.
+Evaluate agentic workflows component by component — agents, tools, nodes, or any span grouping you define — from raw traces to interactive dashboards.
 
 ## Table of Contents
 
