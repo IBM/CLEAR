@@ -11,11 +11,11 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
 from clear_eval.analysis_runner import run_clear_eval_aggregation
+from clear_eval.agentic.pipeline.utils import InferenceConfig
 from clear_eval.logging_config import setup_logging
 
 setup_logging()
@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 class BaseClearRunner(ABC):
     """
     Abstract base class for running CLEAR analysis on evaluation results.
-    
+
     Centralizes common logic:
         - Result file discovery
         - DataFrame creation and grouping
         - CLEAR analysis execution
         - Output organization
-    
+
     Subclasses implement source-specific extraction:
         - extract_records_from_file: Extract relevant data from eval JSON
         - get_source_name: Return source identifier
@@ -42,31 +42,22 @@ class BaseClearRunner(ABC):
         self,
         eval_results_dir: Path,
         output_dir: Path,
-        clear_model_id: str,
-        inference_backend: str,
-        provider: str = "watsonx",
+        inference_config: InferenceConfig,
         overwrite: bool = False,
-        eval_model_params: dict | None = None,
     ):
         """
         Initialize CLEAR runner.
-        
+
         Args:
             eval_results_dir: Directory containing evaluation results
             output_dir: Base directory for CLEAR analysis outputs
-            clear_model_id: Model ID for CLEAR analysis
-            inference_backend: Inference backend to use for CLEAR analysis
-            provider: LLM provider for CLEAR
+            inference_config: LLM inference configuration
             overwrite: Whether to overwrite existing CLEAR results
-            eval_model_params: Additional parameters for CLEAR model
         """
         self.eval_results_dir = Path(eval_results_dir)
         self.output_dir = Path(output_dir)
-        self.clear_model_id = clear_model_id
-        self.inference_backend = inference_backend
-        self.provider = provider
+        self.inference_config = inference_config
         self.overwrite = overwrite
-        self.eval_model_params = eval_model_params or {}
 
     @abstractmethod
     def get_source_name(self) -> str:
@@ -218,17 +209,18 @@ class BaseClearRunner(ABC):
 
         try:
             analysis_kwargs = {
-                "provider": self.provider,
+                "provider": self.inference_config.provider,
                 "data_path": str(csv_path),
                 "gen_model_name": None,
-                "eval_model_name": self.clear_model_id,
+                "eval_model_name": self.inference_config.model_id,
                 "output_dir": str(output_dir),
                 "perform_generation": False,
                 "input_columns": self.get_input_columns(),
                 "agent_mode": True,
-                "eval_model_params": self.eval_model_params,
+                "eval_model_params": self.inference_config.model_params,
                 "resume_enabled": not self.overwrite,
-                "inference_backend": self.inference_backend
+                "inference_backend": self.inference_config.inference_backend,
+                "endpoint_url": self.inference_config.endpoint_url,
             }
 
             run_clear_eval_aggregation(**analysis_kwargs)
@@ -282,7 +274,7 @@ class BaseClearRunner(ABC):
         logger.info("CLEAR Analysis Summary")
         logger.info("=" * 70)
         logger.info(f"  Source:         {self.get_source_name()}")
-        logger.info(f"  CLEAR Model:    {self.clear_model_id}")
+        logger.info(f"  CLEAR Model:    {self.inference_config.model_id}")
         logger.info(f"  Total Records:  {summary['total_records']}")
         logger.info(f"  Processed:      {summary['groups_processed']}")
         logger.info(f"  Skipped:        {summary['groups_skipped']}")

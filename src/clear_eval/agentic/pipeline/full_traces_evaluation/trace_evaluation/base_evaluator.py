@@ -19,6 +19,7 @@ import pandas as pd
 
 from clear_eval.logging_config import setup_logging
 from clear_eval.agentic.pipeline.preprocess_traces.compact_trace_formatter import format_compact_trace
+from clear_eval.agentic.pipeline.utils import InferenceConfig
 from clear_eval.pipeline.inference_utils.llm_client import get_llm_client, run_parallel, ParallelResult
 
 setup_logging()
@@ -84,52 +85,43 @@ class TrajectoryEvaluator(ABC):
 
     def __init__(
         self,
-        judge_model_id: str,
-        inference_backend: str,
-        provider: str,
+        inference_config: InferenceConfig,
         traj_input_dir: Path,
         output_dir: Path,
         context_tokens: int = None,
         overwrite: bool = False,
         max_workers: int = 7,
-        eval_model_params: dict | None = None,
         max_files: int | None = None,
     ):
         """
         Initialize evaluator with common configuration.
-        
+
         Args:
-            judge_model_id: Model identifier for the judge LLM
-            inference_backend: Name of the inference backend
-            provider: LLM provider (e.g., 'rits', 'openai')
+            inference_config: LLM inference configuration
             traj_input_dir: Directory containing trajectory JSON files
             output_dir: Base directory for saving evaluation results
             context_tokens: Context window size for the judge model
             overwrite: Whether to overwrite existing evaluation results
             max_workers: Number of parallel workers
-            eval_model_params: Additional parameters for LLM client
             max_files: Maximum number of files to process (for testing)
         """
-        self.judge_model_id = judge_model_id
-        self.inference_backend = inference_backend
-        self.provider = provider
+        self.inference_config = inference_config
         self.traj_input_dir = Path(traj_input_dir)
         self.context_tokens = context_tokens
         self.max_traj_chars = self.get_max_trajectory_chars() if self.context_tokens else None
         self.overwrite = overwrite
         self.max_workers = max_workers
-        self.eval_model_params = eval_model_params or {}
         self.max_files = max_files
 
         # Create results directory: output_dir/evaluation_type[/model_subdir]
         eval_type = self.get_evaluation_type().replace(" ", "_").replace("/", "_")
         self.results_dir = output_dir / eval_type
-        
+
         # Allow subclasses to add model-specific subdirectory
         model_subdir = self.get_model_subdirectory()
         if model_subdir:
             self.results_dir = self.results_dir / model_subdir
-            
+
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
@@ -204,8 +196,8 @@ class TrajectoryEvaluator(ABC):
         logger.info("=" * 70)
         logger.info(self.get_evaluation_type())
         logger.info("=" * 70)
-        logger.info(f"Provider:     {self.provider}")
-        logger.info(f"Judge Model:  {self.judge_model_id}")
+        logger.info(f"Provider:     {self.inference_config.provider}")
+        logger.info(f"Judge Model:  {self.inference_config.model_id}")
         if self.context_tokens:
             logger.info(f"Context Win:  {self.context_tokens:,} tokens → "
                        f"max trajectory ~{int(self.max_traj_chars):,} chars")
@@ -483,7 +475,7 @@ class TrajectoryEvaluator(ABC):
             # Common fields
             "trajectory_name": traj_name,
             "source_file": str(file_path),
-            "judge_model": self.judge_model_id,
+            "judge_model": self.inference_config.model_id,
             "evaluation_timestamp": datetime.now().isoformat(),
             "evaluation_time_seconds": round(elapsed, 2),
             "raw_response": response_text,
@@ -506,8 +498,6 @@ class TrajectoryEvaluator(ABC):
     def run_batch(
         self,
         entries: list[dict],
-        max_workers: int = 2,
-        eval_model_params: dict | None = None,
     ) -> list[ParallelResult]:
         """
         Run batch evaluation using pipeline's run_parallel.
@@ -522,11 +512,12 @@ class TrajectoryEvaluator(ABC):
         """
         # Get LLM client once (will be reused for all evaluations)
         llm_client = get_llm_client(
-            provider=self.provider,
-            model=self.judge_model_id,
-            inference_backend=self.inference_backend,
+            provider=self.inference_config.provider,
+            model=self.inference_config.model_id,
+            inference_backend=self.inference_config.inference_backend,
+            endpoint_url=self.inference_config.endpoint_url,
             eval_mode=True,
-            parameters=eval_model_params or {},
+            parameters=self.inference_config.model_params
         )
 
         # Prepare inputs as tuples for each entry
@@ -541,7 +532,7 @@ class TrajectoryEvaluator(ABC):
             func=self.evaluate_single,
             inputs=inputs,
             use_async=True,
-            max_workers=max_workers,
+            max_workers=self.max_workers,
             progress_desc=f"Evaluating trajectories ({self.__class__.__name__})"
         )
         elapsed = time.time() - start
@@ -644,8 +635,6 @@ class TrajectoryEvaluator(ABC):
         # Run evaluation
         parallel_results = self.run_batch(
             entries=entries,
-            max_workers=self.max_workers,
-            eval_model_params=self.eval_model_params,
         )
 
         self.save_summary(len(entries))

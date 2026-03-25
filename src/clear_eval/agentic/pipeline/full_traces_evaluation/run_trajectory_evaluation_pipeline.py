@@ -114,7 +114,6 @@ Output Structure:
 
 import argparse
 import logging
-import os
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -126,6 +125,7 @@ from clear_eval.agentic.pipeline.utils import (
     load_pipeline_config,
     get_run_output_dir,
     validate_required_config,
+    InferenceConfig,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
@@ -273,13 +273,10 @@ def resolve_clear_analysis_types(
 def run_task_success_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
-    inference_backend: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
     max_workers: int,
-    eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
     """Run task success evaluation."""
@@ -289,15 +286,12 @@ def run_task_success_evaluation(
 
     try:
         evaluator = TaskSuccessEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
-            inference_backend=inference_backend,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
             max_workers=max_workers,
-            eval_model_params=eval_model_params,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -311,13 +305,10 @@ def run_task_success_evaluation(
 def run_full_trajectory_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
-    inference_backend: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
     max_workers: int,
-    eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
     """Run full trajectory evaluation."""
@@ -327,15 +318,12 @@ def run_full_trajectory_evaluation(
 
     try:
         evaluator = FullTrajectoryEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
-            inference_backend=inference_backend,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
             max_workers=max_workers,
-            eval_model_params=eval_model_params,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -349,18 +337,15 @@ def run_full_trajectory_evaluation(
 def run_rubric_generation(
     traj_input_dir: Path,
     output_dir: Path,
-    judge_model_id: str,
-    provider: str,
-    inference_backend: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
     max_workers: int,
-    eval_model_params: dict,
     max_files: Optional[int],
 ) -> tuple[bool, Optional[Path]]:
     """
     Run rubric generation.
-    
+
     Returns:
         Tuple of (success, rubrics_dir_path)
     """
@@ -370,15 +355,12 @@ def run_rubric_generation(
 
     try:
         generator = RubricGenerator(
-            judge_model_id=judge_model_id,
-            provider=provider,
-            inference_backend=inference_backend,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
             max_workers=max_workers,
-            eval_model_params=eval_model_params,
             max_files=max_files,
         )
         generator.run_pipeline()
@@ -397,13 +379,10 @@ def run_rubric_evaluation(
     traj_input_dir: Path,
     output_dir: Path,
     rubrics_dir: Path,
-    judge_model_id: str,
-    provider: str,
-    inference_backend: str,
+    inference_config: InferenceConfig,
     context_tokens: Optional[int],
     overwrite: bool,
     max_workers: int,
-    eval_model_params: dict,
     max_files: Optional[int],
 ) -> bool:
     """Run rubric-based evaluation."""
@@ -413,16 +392,13 @@ def run_rubric_evaluation(
 
     try:
         evaluator = RubricEvaluator(
-            judge_model_id=judge_model_id,
-            provider=provider,
-            inference_backend=inference_backend,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             rubrics_dir=rubrics_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
             max_workers=max_workers,
-            eval_model_params=eval_model_params,
             max_files=max_files,
         )
         evaluator.run_pipeline()
@@ -437,17 +413,14 @@ def run_clear_analysis(
     eval_results_dir: Path,
     clear_output_dir: Path,
     clear_types: List[str],
-    model_id: str,
-    inference_backend: str,
-    provider: str,
-    eval_model_params: dict,
+    inference_config: InferenceConfig,
     overwrite: bool,
 ) -> bool:
     """Run CLEAR analysis on evaluation results."""
     if not clear_types:
         logger.info("Skipping CLEAR analysis (none requested)")
         return True
-    
+
     logger.info("=" * 80)
     logger.info("RUNNING CLEAR ANALYSIS")
     logger.info("=" * 80)
@@ -462,11 +435,8 @@ def run_clear_analysis(
             runner = RootCauseClearRunner(
                 eval_results_dir=eval_results_dir,
                 output_dir=clear_output_dir,
-                clear_model_id=model_id,
-                inference_backend=inference_backend,
-                provider=provider,
+                inference_config=inference_config,
                 overwrite=overwrite,
-                eval_model_params=eval_model_params,
             )
             runner.run_analysis()
             logger.info("Root cause CLEAR analysis completed successfully")
@@ -481,11 +451,8 @@ def run_clear_analysis(
             runner = IssuesClearRunner(
                 eval_results_dir=eval_results_dir,
                 output_dir=clear_output_dir,
-                clear_model_id=model_id,
-                inference_backend=inference_backend,
-                provider=provider,
+                inference_config=inference_config,
                 overwrite=overwrite,
-                eval_model_params=eval_model_params,
             )
             runner.run_analysis()
             logger.info("Issues CLEAR analysis completed successfully")
@@ -581,9 +548,7 @@ def check_intent_availability(traj_input_dir: Path) -> tuple[bool, int, int]:
 def run_trajectory_evaluation_pipeline(
     traj_input_dir: Path,
     output_dir: Path,
-    model_id: str,
-    provider: str,
-    inference_backend: str,
+    inference_config: InferenceConfig,
     eval_types: List[str],
     generate_rubrics: bool = False,
     rubric_dir: Optional[Path] = None,
@@ -591,21 +556,18 @@ def run_trajectory_evaluation_pipeline(
     context_tokens: Optional[int] = None,
     overwrite: bool = False,
     max_workers: int = 10,
-    eval_model_params: Optional[dict] = None,
     max_files: Optional[int] = None,
 ) -> tuple[List[str], List[str]]:
     """
     Run trajectory evaluation pipeline on CSV trajectory data.
-    
+
     This function expects CSV files to already be available in traj_input_dir.
     For preprocessing raw traces, use the main() function or call process_traces_to_traj_data() first.
-    
+
     Args:
         traj_input_dir: Directory containing CSV trajectory files
         output_dir: Base directory for saving results
-        model_id: Model identifier for the judge
-        provider: LLM provider
-        inference_backend: Inference backend: litellm, langchain or endpoint
+        inference_config: LLM inference configuration
         eval_types: Evaluations to run (task_success, full_trajectory, rubric, all)
         generate_rubrics: Generate rubrics before evaluation
         rubric_dir: Path to existing rubrics
@@ -613,17 +575,14 @@ def run_trajectory_evaluation_pipeline(
         context_tokens: Model context window size
         overwrite: Re-run even if results exist
         max_workers: Number of parallel workers
-        eval_model_params: Model parameters dict
         max_files: Limit files to process
-        
+
     Returns:
         Tuple of (completed_evals, failed_evals)
     """
-    if eval_model_params is None:
-        eval_model_params = {}
     if clear_analysis_types is None:
         clear_analysis_types = ["all"]
-    
+
     logger.info(f"Using CSV trajectory files from: {traj_input_dir}")
     
     # Resolve evaluation types
@@ -666,13 +625,10 @@ def run_trajectory_evaluation_pipeline(
     eval_kwargs = {
         "traj_input_dir": traj_input_dir,
         "output_dir": output_dir,
-        "judge_model_id": model_id,
-        "provider": provider,
-        "inference_backend": inference_backend,
+        "inference_config": inference_config,
         "context_tokens": context_tokens,
         "overwrite": overwrite,
         "max_workers": max_workers,
-        "eval_model_params": eval_model_params,
         "max_files": max_files,
     }
 
@@ -744,10 +700,7 @@ def run_trajectory_evaluation_pipeline(
                 eval_results_dir=output_dir,
                 clear_output_dir=clear_output_dir,
                 clear_types=clear_types,
-                model_id=model_id,
-                inference_backend=inference_backend,
-                provider=provider,
-                eval_model_params=eval_model_params,
+                inference_config=inference_config,
                 overwrite=overwrite,
             )
 
@@ -786,10 +739,8 @@ def main():
     traj_input_dir = Path(config['agentic_input_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
 
-    # Get model configuration from config
-    model_id = config['eval_model_name']
-    provider = config['provider']
-    eval_model_params = config.get('eval_model_params', {})
+    # Create inference config
+    inference_config = InferenceConfig.from_config(config)
 
     # Validate input directory
     if not traj_input_dir.exists():
@@ -813,13 +764,12 @@ def main():
     logger.info(f"Input: {traj_input_dir}")
     logger.info(f"Run name: {run_name}")
     logger.info(f"Output: {output_dir}")
-    
+    logger.info(f"Model: {inference_config.model_id} ({inference_config.provider})")
+
     completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
         traj_input_dir=csv_input_dir,
         output_dir=output_dir,
-        model_id=model_id,
-        provider=provider,
-        inference_backend = config['inference_backend'],
+        inference_config=inference_config,
         eval_types=config.get('eval_types'),
         generate_rubrics=config.get('generate_rubrics'),
         rubric_dir=rubric_dir,
@@ -827,7 +777,6 @@ def main():
         context_tokens=config.get('context_tokens'),
         overwrite=config.get('overwrite'),
         max_workers=config.get('max_workers'),
-        eval_model_params=eval_model_params,
         max_files=config.get('max_files'),
     )
 

@@ -3,11 +3,33 @@ Shared utilities for agentic pipelines.
 """
 
 import os
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from clear_eval.pipeline.config_loader import load_config
+
+
+@dataclass
+class InferenceConfig:
+    """Configuration for LLM inference in trajectory evaluation."""
+    model_id: str
+    provider: str
+    inference_backend: str = "litellm"
+    endpoint_url: Optional[str] = None
+    model_params: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_config(cls, config: dict) -> "InferenceConfig":
+        """Create InferenceConfig from pipeline config dict."""
+        return cls(
+            model_id=config.get('eval_model_name'),
+            provider=config.get('provider'),
+            inference_backend=config.get('inference_backend', 'litellm'),
+            endpoint_url=config.get('endpoint_url'),
+            model_params=config.get('eval_model_params', {}),
+        )
 
 
 # Path to shared default config

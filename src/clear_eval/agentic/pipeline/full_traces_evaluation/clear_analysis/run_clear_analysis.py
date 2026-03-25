@@ -39,7 +39,8 @@ from pathlib import Path
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_clear_runner import IssuesClearRunner
 from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.root_cause_clear_runner import RootCauseClearRunner
-from logging_config import setup_logging
+from clear_eval.agentic.pipeline.utils import InferenceConfig
+from clear_eval.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -72,25 +73,30 @@ def main():
     )
     
     args = parser.parse_args()
-    
-    # Create appropriate runner based on source (using unified argument names)
+
+    # Create inference config
+    inference_config = InferenceConfig(
+        model_id=args.eval_model_name,
+        provider=args.provider,
+        inference_backend=getattr(args, 'inference_backend', None) or 'litellm',
+        endpoint_url=getattr(args, 'endpoint_url', None),
+        model_params=args.eval_model_params or {},
+    )
+
+    # Create appropriate runner based on source
     if args.source == "issues":
         runner = IssuesClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
             output_dir=Path(args.agentic_output_dir),
-            clear_model_id=args.eval_model_name,
-            provider=args.provider,
+            inference_config=inference_config,
             overwrite=args.overwrite,
-            eval_model_params=args.eval_model_params,
         )
     elif args.source == "root_cause":
         runner = RootCauseClearRunner(
             eval_results_dir=Path(args.eval_results_dir),
             output_dir=Path(args.agentic_output_dir),
-            clear_model_id=args.eval_model_name,
-            provider=args.provider,
+            inference_config=inference_config,
             overwrite=args.overwrite,
-            eval_model_params=args.eval_model_params,
         )
     else:
         raise ValueError(f"Unknown source: {args.source}")
@@ -102,8 +108,9 @@ def main():
     logging.info(f"  Source:             {args.source}")
     logging.info(f"  Eval Results Dir:   {args.eval_results_dir}")
     logging.info(f"  Output Dir:         {args.agentic_output_dir}")
-    logging.info(f"  CLEAR Model:        {args.eval_model_name}")
-    logging.info(f"  Provider:           {args.provider}")
+    logging.info(f"  CLEAR Model:        {inference_config.model_id}")
+    logging.info(f"  Provider:           {inference_config.provider}")
+    logging.info(f"  Inference Backend:  {inference_config.inference_backend}")
     logging.info(f"  Overwrite:          {args.overwrite}")
     logging.info("=" * 70)
     

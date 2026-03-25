@@ -47,7 +47,7 @@ class RubricGenerator(TrajectoryEvaluator):
         different rubrics for the same task.
         """
         # Clean model ID for use as directory name
-        model_dir = self.judge_model_id.replace("/", "_").replace(":", "_")
+        model_dir = self.inference_config.model_id.replace("/", "_").replace(":", "_")
         return model_dir
 
     def get_output_suffix(self) -> str:

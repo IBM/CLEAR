@@ -15,7 +15,9 @@ import re
 import logging
 from pathlib import Path
 from typing import Any
+
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.base_evaluator import TrajectoryEvaluator
+from clear_eval.agentic.pipeline.utils import InferenceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ logger = logging.getLogger(__name__)
 class RubricEvaluator(TrajectoryEvaluator):
     """
     Evaluates trajectories against pre-generated rubrics.
-    
+
     For each trajectory, loads its rubrics and evaluates whether each rubric
     was fulfilled based on the execution trace. Produces per-rubric assessments
     with reasoning, plus an overall score (fraction of rubrics fulfilled).
@@ -31,43 +33,35 @@ class RubricEvaluator(TrajectoryEvaluator):
 
     def __init__(
         self,
-        judge_model_id: str,
-        provider: str,
-        inference_backend: str,
+        inference_config: InferenceConfig,
         traj_input_dir: Path,
         output_dir: Path,
         rubrics_dir: Path,
         context_tokens: int = None,
         overwrite: bool = False,
         max_workers: int = 7,
-        eval_model_params: dict | None = None,
         max_files: int | None = None,
     ):
         """
         Initialize rubric evaluator.
-        
+
         Args:
-            judge_model_id: Model identifier for the judge LLM
-            provider: LLM provider (e.g., 'rits', 'openai')
+            inference_config: LLM inference configuration
             traj_input_dir: Directory containing trajectory JSON files
             output_dir: Base directory for saving evaluation results
             rubrics_dir: Directory containing pre-generated rubric files
             context_tokens: Context window size for the judge model
             overwrite: Whether to overwrite existing evaluation results
             max_workers: Number of parallel workers
-            eval_model_params: Additional parameters for LLM client
             max_files: Maximum number of files to process (for testing)
         """
         super().__init__(
-            judge_model_id=judge_model_id,
-            provider=provider,
-            inference_backend=inference_backend,
+            inference_config=inference_config,
             traj_input_dir=traj_input_dir,
             output_dir=output_dir,
             context_tokens=context_tokens,
             overwrite=overwrite,
             max_workers=max_workers,
-            eval_model_params=eval_model_params,
             max_files=max_files,
         )
         self.rubrics_dir = Path(rubrics_dir)
