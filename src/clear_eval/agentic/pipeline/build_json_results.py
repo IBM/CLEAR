@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 
 import pandas as pd
 
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import build_cli_overrides, load_pipeline_config
 
 logger = logging.getLogger(__name__)
 
@@ -493,16 +493,9 @@ def save_comprehensive_json_results(
     return save_json_to_file(results, output_dir, output_filename)
 
 
-# Path to agentic pipeline default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_agentic_config.yaml")
-
-
-
 def main():
     """CLI entry point for building JSON results."""
     import argparse
-    from clear_eval.pipeline.config_loader import load_config
 
     parser = argparse.ArgumentParser(
         description="Build comprehensive JSON results from CLEAR pipeline output",
@@ -584,12 +577,8 @@ Examples:
     # Build CLI overrides from non-None args
     cli_overrides = build_cli_overrides(args)
 
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config_dict = load_config(
-        AGENTIC_DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
+    # Load configuration
+    config_dict = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     save_comprehensive_json_results(
         clear_results_dir=args.clear_results_dir,
