@@ -268,10 +268,6 @@ def run_clear_analysis(
         return ""
 
     eval_model_name = config_dict.get("eval_model_name", "unknown")
-
-    logger.info("=" * 80)
-    logger.info(f"CLEAR Analysis - {input_data_path.name}")
-    logger.info("=" * 80)
     logger.info("Configuration:")
     logger.info(f"  Results directory: {results_dir}")
     logger.info(f"  Eval model: {eval_model_name}")

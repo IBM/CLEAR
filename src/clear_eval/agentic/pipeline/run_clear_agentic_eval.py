@@ -215,7 +215,7 @@ def prepare_traces_data(
     traces_data_dir = output_paths['base'] / 'traces_data'
     
     logger.info("=" * 80)
-    logger.info("PREPARING CENTRALIZED TRACES_DATA")
+    logger.info("PREPROCESSING TRACES")
     logger.info("=" * 80)
     
     if from_raw_traces:
@@ -425,7 +425,6 @@ def main():
     
     # Create output structure
     output_paths = create_output_structure(output_dir)
-    logger.info(f"Output base directory: {output_paths['base']}")
     
     # Prepare centralized traces_data directory
     traces_data_dir = prepare_traces_data(
