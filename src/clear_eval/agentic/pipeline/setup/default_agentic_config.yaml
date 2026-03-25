@@ -14,8 +14,8 @@
 # ============================================================================
 
 # Input/Output
-agentic_input_dir: null         # Input directory (raw traces or trajectory CSVs)
-agentic_output_dir: null        # Output directory for results
+data_dir: null         # Input directory (raw traces or trajectory CSVs)
+results_dir: null        # Output directory for results
 
 # Preprocessing (when from_raw_traces=true)
 from_raw_traces: false          # If true, preprocess raw traces first
@@ -82,7 +82,8 @@ input_columns:
 
 # Evaluation types to run
 eval_types:                     # Options: task_success, full_trajectory, rubric, all
-  - all
+  - full_trajectory
+  - rubric
 
 # Rubric options
 generate_rubrics: true          # Generate rubrics before evaluation
@@ -90,7 +91,7 @@ rubric_dir: null                # Path to existing rubrics (if not generating)
 
 # CLEAR analysis on trajectory results
 clear_analysis_types:           # Options: root_cause, issues, all, none
-  - all
+  - issues
 
 # Trajectory-specific execution
 max_files: null                 # Limit files to process (for testing)

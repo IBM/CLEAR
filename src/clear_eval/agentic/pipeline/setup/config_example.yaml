@@ -5,8 +5,8 @@
 # SHARED: All Pipelines
 # ============================================================================
 
-agentic_input_dir: ../data/log_monitor_agent
-agentic_output_dir: ../output/analysis_results
+data_dir: ../data/log_monitor_agent
+results_dir: ../output/analysis_results
 
 # Set to true if input contains raw traces that need preprocessing
 from_raw_traces: true
@@ -20,6 +20,7 @@ run_name: my_experiment
 
 # Model Configuration
 inference_backend: litellm
+endpoint_url: null
 provider: openai
 eval_model_name: gpt-4o
 eval_model_params:
