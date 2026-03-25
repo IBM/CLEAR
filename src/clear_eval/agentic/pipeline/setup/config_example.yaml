@@ -1,35 +1,53 @@
-# Agentic pipeline configuration
-agentic_input_dir: ../data/log_monitor_agent       # For run_clear_pipeline.py (full pipeline from raw traces)
-agentic_output_dir: ../output/mlflow_log_monitor_example
+# Example configuration for agentic pipelines
+# Copy and modify this file for your use case
+
+# ============================================================================
+# SHARED: All Pipelines
+# ============================================================================
+
+agentic_input_dir: ../data/log_monitor_agent
+agentic_output_dir: ../output/analysis_results
+
+# Set to true if input contains raw traces that need preprocessing
+from_raw_traces: true
 agent_framework: langgraph
 observability_framework: mlflow
 separate_tools: false
+
 overwrite: true
+max_workers: 10
+run_name: my_experiment
 
-# CLEAR evaluation configuration
-
-# inference params
+# Model Configuration
 inference_backend: litellm
 provider: openai
-eval_model_name: gpt-4o  # LiteLLM model name (e.g., gpt-4o, claude-3-opus, gemini/gemini-pro)
+eval_model_name: gpt-4o
 eval_model_params:
-  temperature: 0.0  # Default for deterministic evaluation
+  temperature: 0.0
   max_tokens: 8096
 
-#use cached results if available
-resume_enabled: false
+# ============================================================================
+# STEP-BY-STEP + UNIFIED
+# ============================================================================
 
-# dict {criteria_name: criteria_desc}, to be embedded in the prompt of the llm judge.
-# These criteria will not be used directly, but will affect the discovered issues
 evaluation_criteria: null
-
-# list of predefined issues (strings) to be mapped to the individual records.
-# if this parameter is set, no issue discovery will be performed.
 predefined_issues: null
 
-# Pass/fail analysis
-success_threshold: 0.7  # Threshold for pass/fail determination
-pass_criteria: avg      # "avg" or "min" - which score to compare against threshold
+# ============================================================================
+# TRAJECTORY + UNIFIED
+# ============================================================================
 
-# unique run_ identifier (to appear in file name)
-run_name: null
+eval_types:
+  - full_trajectory
+  - rubric
+
+generate_rubrics: true
+clear_analysis_types:
+  - issues
+
+# ============================================================================
+# UNIFIED ONLY
+# ============================================================================
+
+run_step_by_step: true
+run_full_trajectory: true

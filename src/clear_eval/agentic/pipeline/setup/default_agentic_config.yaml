@@ -1,0 +1,104 @@
+# ============================================================================
+# AGENTIC PIPELINE CONFIGURATION
+# ============================================================================
+# Single config for all agentic pipelines:
+#   - run_clear_step_analysis.py (step-by-step CLEAR analysis)
+#   - run_trajectory_evaluation_pipeline.py (full trajectory evaluation)
+#   - run_unified_agentic_pipeline.py (both pipelines)
+#
+# Each pipeline reads only the sections it needs.
+# ============================================================================
+
+# ============================================================================
+# SHARED: All Pipelines
+# ============================================================================
+
+# Input/Output
+agentic_input_dir: null         # Input directory (raw traces or trajectory CSVs)
+agentic_output_dir: null        # Output directory for results
+
+# Preprocessing (when from_raw_traces=true)
+from_raw_traces: false          # If true, preprocess raw traces first
+agent_framework: langgraph      # langgraph | crewai
+observability_framework: langfuse # mlflow | langfuse
+separate_tools: false           # Separate tool calls from text responses
+
+# Execution
+overwrite: true                 # Overwrite existing results
+max_workers: 10                 # Number of parallel workers
+run_name: null                  # Unique identifier for this run (used in output path)
+
+# Model Configuration
+inference_backend: litellm      # litellm | langchain | endpoint
+inference_url: null             # Required for inference_backend=endpoint
+provider: openai                # openai | watsonx | anthropic | etc.
+eval_model_name: gpt-4o         # Model identifier
+eval_model_params:
+  temperature: 0.0
+  max_tokens: 8096
+
+# ============================================================================
+# STEP-BY-STEP + UNIFIED: CLEAR Analysis Settings
+# ============================================================================
+
+memory_only: false              # If true, use temp dirs and return only JSON
+
+# Custom evaluation criteria (affects discovered issues)
+# Example:
+#   evaluation_criteria:
+#     reasoning_clarity: "Agent provides clear step-by-step reasoning"
+#     tool_selection: "Agent selects appropriate tools for the task"
+evaluation_criteria: null
+
+# Predefined issues (skips issue discovery if set)
+# Example:
+#   predefined_issues:
+#     - "Incomplete reasoning - jumps to conclusions"
+#     - "Incorrect tool selection for the task"
+predefined_issues: null
+
+# External judge (only used when task is "external")
+external_judge_path: null       # Path to Python file with judge function
+external_judge_function: evaluate # Function name to call
+external_judge_config: {}       # Additional config for external judge
+
+
+# Agent mode
+agent_mode: true
+input_columns:
+  - agent_name
+  - Name
+  - intent
+  - task_id
+  - step_in_trace_general
+  - step_in_trace_node
+  - id
+  - traj_score
+
+
+# ============================================================================
+# TRAJECTORY + UNIFIED: Full Trajectory Evaluation
+# ============================================================================
+
+# Evaluation types to run
+eval_types:                     # Options: task_success, full_trajectory, rubric, all
+  - all
+
+# Rubric options
+generate_rubrics: true          # Generate rubrics before evaluation
+rubric_dir: null                # Path to existing rubrics (if not generating)
+
+# CLEAR analysis on trajectory results
+clear_analysis_types:           # Options: root_cause, issues, all, none
+  - all
+
+# Trajectory-specific execution
+max_files: null                 # Limit files to process (for testing)
+context_tokens: null            # Model context window (truncate long trajectories)
+
+# ============================================================================
+# UNIFIED ONLY: Pipeline Selection
+# ============================================================================
+
+run_step_by_step: true          # Run step-by-step CLEAR analysis
+run_full_trajectory: true       # Run full trajectory evaluation

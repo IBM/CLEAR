@@ -495,7 +495,7 @@ def save_comprehensive_json_results(
 
 # Path to agentic pipeline default config
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_config.yaml")
+AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_agentic_config.yaml")
 
 
 
@@ -509,7 +509,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Configuration Precedence (lowest to highest):
-  1. Default config (setup/default_config.yaml)
+  1. Default config (setup/default_agentic_config.yaml)
   2. User config file (--agentic-config-path)
   3. CLI arguments
 

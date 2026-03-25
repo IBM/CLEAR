@@ -10,7 +10,7 @@ This script provides a unified interface to run both:
 All results are organized under: clear_results/<judge-model>/<run-name>/
 
 Configuration Precedence (lowest to highest):
-    1. Default config: setup/default_unified_config.yaml
+    1. Default config: setup/default_agentic_config.yaml
     2. User config file: --agentic-config-path (if provided)
     3. CLI arguments (override both config files)
 
@@ -74,7 +74,7 @@ logger = logging.getLogger(__name__)
 
 # Path to unified default config
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-UNIFIED_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_unified_config.yaml")
+DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_agentic_config.yaml")
 
 
 def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
@@ -398,7 +398,7 @@ def main():
     
     # Load configuration with precedence: default -> user config -> CLI overrides
     config = load_config(
-        UNIFIED_DEFAULT_CONFIG_PATH,
+        DEFAULT_CONFIG_PATH,
         args.agentic_config_path,
         **cli_overrides
     )

@@ -116,6 +116,7 @@ import argparse
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 import pandas as pd
@@ -136,9 +137,10 @@ from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_cl
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# Path to default config
+# Path to default config (shared config in parent setup directory)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_TRAJECTORY_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_trajectory_config.yaml")
+PIPELINE_DIR = os.path.dirname(SCRIPT_DIR)
+DEFAULT_CONFIG_PATH = os.path.join(PIPELINE_DIR, "setup", "default_agentic_config.yaml")
 
 
 # Evaluation type constants
@@ -772,7 +774,7 @@ def main():
     
     # Load configuration with precedence: default -> user config -> CLI overrides
     config = load_config(
-        DEFAULT_TRAJECTORY_CONFIG_PATH,
+        DEFAULT_CONFIG_PATH,
         args.agentic_config_path,
         **cli_overrides
     )
@@ -786,8 +788,14 @@ def main():
 
     # Convert paths (using unified argument names)
     traj_input_dir = Path(config['agentic_input_dir'])
-    output_dir = Path(config['agentic_output_dir'])
+    base_output_dir = Path(config['agentic_output_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
+
+    # Get or generate run_name
+    run_name = config.get('run_name') or datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Create output path under run_name
+    output_dir = base_output_dir / run_name
 
     # Get model configuration from config
     model_id = config['eval_model_name']
@@ -798,7 +806,7 @@ def main():
     if not traj_input_dir.exists():
         logger.error(f"Input directory does not exist: {traj_input_dir}")
         sys.exit(1)
-    
+
     # Preprocess traces if needed
     csv_input_dir = preprocess_traces_if_needed(
         input_dir=traj_input_dir,
@@ -808,11 +816,14 @@ def main():
         observability_framework=config.get('observability_framework'),
         separate_tools=config.get('separate_tools', False)
     )
-    
+
     # Run the evaluation pipeline
     logger.info("=" * 80)
-    logger.info("RUNNING TRAJECTORY EVALUATION PIPELINE")
+    logger.info("TRAJECTORY EVALUATION PIPELINE")
     logger.info("=" * 80)
+    logger.info(f"Input: {traj_input_dir}")
+    logger.info(f"Run name: {run_name}")
+    logger.info(f"Output: {output_dir}")
     
     completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
         traj_input_dir=csv_input_dir,
