@@ -1,6 +1,6 @@
 {
-  "agentic_input_dir": "../data/log_monitor_agent",
-  "agentic_output_dir": "../output/mlflow_log_monitor_example",
+  "data_dir": "../data/log_monitor_agent",
+  "results_dir": "../output/mlflow_log_monitor_example",
   "agent_framework": "langgraph",
   "observability_framework": "mlflow",
   "separate_tools": false,
@@ -13,10 +13,7 @@
     "temperature": 0.0,
     "max_tokens": 8096
   },
-  "resume_enabled": false,
   "run_name": null,
-  "success_threshold": 0.7,
-  "evaluation_criteria": null,
   "predefined_issues": null,
   "memory_only": true
 }

@@ -331,7 +331,7 @@ def run_full_trajectory_pipeline(
             eval_types=config.get('eval_types', ['all']),
             generate_rubrics=config.get('generate_rubrics', False),
             rubric_dir=rubric_dir,
-            clear_analysis_types=config.get('clear_analysis_types', ['all']),
+            clear_analysis_types=config.get('clear_analysis_types'),
             context_tokens=config.get('context_tokens'),
             overwrite=config.get('overwrite', True),
             max_workers=config.get('max_workers'),
