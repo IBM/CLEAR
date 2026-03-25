@@ -52,6 +52,7 @@ import logging
 import os
 import sys
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -228,7 +229,7 @@ def prepare_traces_data(
                 output_dir=str(traces_data_dir),
                 agent_framework=config.get('agent_framework'),
                 observability_framework=config.get('observability_framework'),
-                separate_tools=config.get('separate_tools', False)
+                separate_tools=config.get('separate_tools')
             )
             logger.info(f"✓ Processed traces successfully")
             return traces_data_dir
@@ -279,7 +280,7 @@ def run_step_by_step_pipeline(
             traces_data_dir=str(traces_data_dir),
             results_dir=str(output_dir),
             config_dict=config,
-            overwrite=config.get('overwrite', True)
+            overwrite=config.get('overwrite')
         )
         
         logger.info("Step-by-step pipeline completed successfully")
@@ -329,11 +330,11 @@ def run_full_trajectory_pipeline(
             output_dir=output_dir,
             inference_config=InferenceConfig.from_config(config),
             eval_types=config.get('eval_types', ['all']),
-            generate_rubrics=config.get('generate_rubrics', False),
+            generate_rubrics=config.get('generate_rubrics'),
             rubric_dir=rubric_dir,
             clear_analysis_types=config.get('clear_analysis_types'),
             context_tokens=config.get('context_tokens'),
-            overwrite=config.get('overwrite', True),
+            overwrite=config.get('overwrite'),
             max_workers=config.get('max_workers'),
             max_files=config.get('max_files'),
         )
@@ -359,8 +360,8 @@ def create_pipeline_summary(base_dir: Path, config: dict, results: dict):
             "run_name": config.get('run_name'),
             "eval_model_name": config.get('eval_model_name'),
             "provider": config.get('provider'),
-            "run_step_by_step": config.get('run_step_by_step', True),
-            "run_full_trajectory": config.get('run_full_trajectory', True),
+            "run_step_by_step": config.get('run_step_by_step'),
+            "run_full_trajectory": config.get('run_full_trajectory'),
         },
         "results": results,
         "output_structure": {
@@ -407,7 +408,7 @@ def main():
 
     # Extract parameters
     data_dir = Path(config['data_dir'])
-    from_raw_traces = config.get('from_raw_traces', False)
+    from_raw_traces = config.get('from_raw_traces')
     
     # Validate input directory exists
     if not data_dir.exists():
@@ -444,7 +445,7 @@ def main():
     results = {}
     
     # Run step-by-step if enabled
-    if config.get('run_step_by_step', True):
+    if config.get('run_step_by_step'):
         results['step_by_step_success'] = run_step_by_step_pipeline(
             traces_data_dir,
             output_paths['step_by_step'],
@@ -455,7 +456,7 @@ def main():
         results['step_by_step_success'] = None
     
     # Run full trajectory if enabled
-    if config.get('run_full_trajectory', True):
+    if config.get('run_full_trajectory'):
         results['full_trajectory_success'] = run_full_trajectory_pipeline(
             traces_data_dir,
             output_paths['full_trajectory'],

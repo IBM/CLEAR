@@ -180,17 +180,6 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
     logger.info("=" * 80)
 
 
-def get_judge_model_folder_name(eval_model_name: str) -> str:
-    """Convert eval model name to a clean folder name."""
-    if "/" in eval_model_name:
-        judge_name = eval_model_name.split("/")[-1]
-    else:
-        judge_name = eval_model_name
-
-    judge_name = judge_name.replace(".", "-").replace("_", "-").lower()
-    return judge_name
-
-
 def run_analysis_for_agent(
     csv_path: Path,
     results_dir: str,
@@ -317,10 +306,8 @@ def run_clear_analysis(
         logger.warning(f"  Errors: {stats['errors']}")
     logger.info("=" * 80)
 
-    judge_folder = get_judge_model_folder_name(eval_model_name)
     logger.info("Results Directory Structure:")
     logger.info(f"   {results_dir}/")
-    logger.info(f"   └── {judge_folder}/")
     for csv_file in csv_files[:3]:
         logger.info(f"           ├── {csv_file.stem}/")
     if len(csv_files) > 3:
@@ -390,7 +377,7 @@ def run_step_analysis_pipeline(
     Returns:
         Dictionary with JSON results
     """
-    memory_only = config_dict.get('memory_only', False)
+    memory_only = config_dict.get('memory_only')
 
     # Create output directory for final results
     os.makedirs(results_dir, exist_ok=True)
@@ -473,9 +460,9 @@ def run_full_pipeline(config_dict: dict) -> dict:
     results_dir = config_dict.get('results_dir')
     agent_framework = config_dict.get('agent_framework', 'langgraph')
     observability_framework = config_dict.get('observability_framework', 'mlflow')
-    separate_tools = config_dict.get('separate_tools', False)
-    overwrite = config_dict.get('overwrite', True)
-    memory_only = config_dict.get('memory_only', False)
+    separate_tools = config_dict.get('separate_tools')
+    overwrite = config_dict.get('overwrite')
+    memory_only = config_dict.get('memory_only')
 
     if not traces_input_dir:
         raise ValueError("data_dir is required")
@@ -621,10 +608,10 @@ Argument Precedence (lowest to highest):
     config_dict['run_name'] = run_name
 
     # Extract parameters
-    from_raw_traces = config_dict.get('from_raw_traces', False)
+    from_raw_traces = config_dict.get('from_raw_traces')
     data_dir = config_dict['data_dir']
-    overwrite = config_dict.get('overwrite', True)
-    memory_only = config_dict.get('memory_only', False)
+    overwrite = config_dict.get('overwrite')
+    memory_only = config_dict.get('memory_only')
 
     logger.info("=" * 80)
     if from_raw_traces:

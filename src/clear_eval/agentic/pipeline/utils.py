@@ -28,7 +28,7 @@ class InferenceConfig:
             provider=config.get('provider'),
             inference_backend=config.get('inference_backend', 'litellm'),
             endpoint_url=config.get('endpoint_url'),
-            model_params=config.get('eval_model_params', {}),
+            model_params=config.get('eval_model_params'),
         )
 
 

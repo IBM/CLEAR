@@ -754,7 +754,7 @@ def main():
         from_raw_traces=config.get('from_raw_traces'),
         agent_framework=config.get('agent_framework'),
         observability_framework=config.get('observability_framework'),
-        separate_tools=config.get('separate_tools', False)
+        separate_tools=config.get('separate_tools')
     )
 
     # Run the evaluation pipeline
