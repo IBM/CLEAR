@@ -404,7 +404,9 @@ def format_compact_trace(
         lines.append("---")
         lines.append("")
 
-    return "\n".join(lines)
+    res = "\n".join(lines)
+    print(len(res)/4)
+    return res
 
 
 def format_compact_trace_from_csv(
@@ -476,13 +478,12 @@ def process_trace_directory(
 if __name__ == "__main__":
     import sys
 
-    # if len(sys.argv) < 2:
-    #     print("Usage: python compact_trace_formatter.py <trace.csv> [output.txt]")
-    #     print("\nConverts unified CSV trace to compact text format for LLM judges.")
-    #     sys.exit(1)
+    if len(sys.argv) < 2:
+        print("Usage: python compact_trace_formatter.py <trace.csv> [output.txt]")
+        print("\nConverts unified CSV trace to compact text format for LLM judges.")
+        sys.exit(1)
 
-    csv_path = "/agentic/output/db2/random_100old/clear_results/test_unified/step_by_step/traces_data/0f91ee691c6cc84e72277ab89b85d509.csv"  #sys.argv[1]
-
+    csv_path = sys.argv[1]
     compact = format_compact_trace_from_csv(csv_path)
 
     if len(sys.argv) > 2:
