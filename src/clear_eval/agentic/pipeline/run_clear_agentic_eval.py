@@ -64,6 +64,7 @@ from clear_eval.agentic.pipeline.utils import (
     load_pipeline_config,
     get_run_output_dir,
     validate_required_config,
+    InferenceConfig,
 )
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
@@ -326,9 +327,7 @@ def run_full_trajectory_pipeline(
         completed_evals, failed_evals = run_trajectory_evaluation_pipeline(
             traj_input_dir=traces_data_dir,
             output_dir=output_dir,
-            model_id=config.get('eval_model_name', 'openai/gpt-oss-120b'),
-            provider=config.get('provider'),
-            inference_backend=config.get('inference_backend'),
+            inference_config=InferenceConfig.from_config(config),
             eval_types=config.get('eval_types', ['all']),
             generate_rubrics=config.get('generate_rubrics', False),
             rubric_dir=rubric_dir,
@@ -336,7 +335,6 @@ def run_full_trajectory_pipeline(
             context_tokens=config.get('context_tokens'),
             overwrite=config.get('overwrite', True),
             max_workers=config.get('max_workers'),
-            eval_model_params=config.get('eval_model_params', {}),
             max_files=config.get('max_files'),
         )
         
