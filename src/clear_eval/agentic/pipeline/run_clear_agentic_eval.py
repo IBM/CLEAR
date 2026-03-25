@@ -17,11 +17,11 @@ Configuration Precedence (lowest to highest):
 Usage Examples:
 
     # Run both pipelines with config file
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-config-path my_config.yaml
 
     # Run only step-by-step from raw traces
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-input-dir data/experiment_001 \\
         --agentic-output-dir results \\
         --run-step-by-step true \\
@@ -31,7 +31,7 @@ Usage Examples:
         --provider watsonx
 
     # Run only step-by-step from preprocessed CSVs
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-input-dir data/experiment_001 \\
         --agentic-output-dir results \\
         --run-step-by-step true \\
@@ -40,7 +40,7 @@ Usage Examples:
         --eval-model-name openai/gpt-oss-120b
 
     # Run both with custom run name
-    python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \\
+    python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --agentic-config-path my_config.yaml \\
         --run-name experiment_gpt4_001 \\
         --eval-model-name gpt-4o

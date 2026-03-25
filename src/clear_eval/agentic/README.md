@@ -58,7 +58,7 @@ Configure your LLM provider credentials. See the main [README](../../README.md#s
 
 **Using Python module:**
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/my_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -159,7 +159,7 @@ Each row represents a single LLM call within a trajectory. The `Name` column ide
 The unified pipeline runs both step-by-step and full trajectory analysis, creating a shared CSV intermediate representation.
 
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-config-path config.yaml
 ```
 
@@ -169,7 +169,7 @@ See the default configuration file for all available options:
 ### Step-by-Step Analysis Only
 
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/my_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -182,7 +182,7 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
 ### Full Trajectory Evaluation Only
 
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/my_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -342,7 +342,7 @@ Then upload `unified_ui_results.zip` from your results directory.
 
 ```bash
 # Run pipeline
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/mlflow_traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -360,7 +360,7 @@ python -m clear_eval.agentic.dashboard.launch_dashboard
 ### Rubric-Based Evaluation with Generated Rubrics
 
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -375,7 +375,7 @@ python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
 ### Using Existing Rubrics
 
 ```bash
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-input-dir data/traces \
     --agentic-output-dir results \
     --from-raw-traces true \
@@ -392,7 +392,7 @@ Copy and modify the default configuration:
 cp src/clear_eval/agentic/pipeline/setup/default_unified_config.yaml my_config.yaml
 # Edit my_config.yaml with your settings
 
-python -m clear_eval.agentic.pipeline.run_unified_agentic_pipeline \
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
     --agentic-config-path my_config.yaml
 ```
 

@@ -4,7 +4,7 @@
 # Single config for all agentic pipelines:
 #   - run_clear_step_analysis.py (step-by-step CLEAR analysis)
 #   - run_trajectory_evaluation_pipeline.py (full trajectory evaluation)
-#   - run_unified_agentic_pipeline.py (both pipelines)
+#   - run_clear_agentic_eval.py (both pipelines)
 #
 # Each pipeline reads only the sections it needs.
 # ============================================================================
@@ -30,7 +30,7 @@ run_name: null                  # Unique identifier for this run (used in output
 
 # Model Configuration
 inference_backend: litellm      # litellm | langchain | endpoint
-inference_url: null             # Required for inference_backend=endpoint
+endpoint_url: null              # Required for inference_backend=endpoint
 provider: openai                # openai | watsonx | anthropic | etc.
 eval_model_name: gpt-4o         # Model identifier
 eval_model_params:
