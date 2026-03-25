@@ -52,6 +52,7 @@ import logging
 import os
 import sys
 import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
@@ -203,6 +204,8 @@ def prepare_traces_data(
     1. Processing raw JSON traces if from_raw_traces=True
     2. Copying existing CSV files if from_raw_traces=False
     
+    If memory_only=True, uses a temporary directory instead of output_paths['base'].
+    
     Args:
         data_dir: Input directory (JSON traces or CSV files)
         from_raw_traces: If True, process JSON traces; if False, use CSV files
@@ -212,7 +215,16 @@ def prepare_traces_data(
     Returns:
         Path to traces_data directory, or None if preparation failed
     """
-    traces_data_dir = output_paths['base'] / 'traces_data'
+    memory_only = config.get('memory_only', False)
+    
+    # Use temporary directory if memory_only mode, otherwise use output_paths['base']
+    if memory_only:
+        # Create a temporary directory for traces_data
+        temp_dir = tempfile.mkdtemp(prefix='clear_traces_data_')
+        traces_data_dir = Path(temp_dir)
+        logger.info(f"Memory-only mode: Using temporary directory for traces_data")
+    else:
+        traces_data_dir = output_paths['base'] / 'traces_data'
     
     logger.info("=" * 80)
     logger.info("PREPROCESSING TRACES")

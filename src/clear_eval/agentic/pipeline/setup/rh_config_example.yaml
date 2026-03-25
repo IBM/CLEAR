@@ -1,7 +1,7 @@
 ########################
 ### Modify as needed ###
 ########################
-data_dir: ../data/log_monitor_agent
+data_dir: ../data/log_monitor_agent/traces
 results_dir: ../output/analysis_results
 overwrite: true
 max_workers: 10
@@ -26,3 +26,4 @@ observability_framework: mlflow
 separate_tools: false
 run_step_by_step: true
 run_full_trajectory: false
+memory_only: true
