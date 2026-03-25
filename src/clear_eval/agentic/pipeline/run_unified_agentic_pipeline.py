@@ -52,7 +52,6 @@ import logging
 import os
 import sys
 import shutil
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -60,10 +59,14 @@ from clear_eval.agentic.pipeline.run_clear_step_analysis import (
     run_step_analysis_pipeline,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import (
+    build_cli_overrides,
+    load_pipeline_config,
+    get_run_output_dir,
+    validate_required_config,
+)
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
-from clear_eval.pipeline.config_loader import load_config
 from clear_eval.agentic.pipeline.full_traces_evaluation.run_trajectory_evaluation_pipeline import run_trajectory_evaluation_pipeline
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 FULL_TRAJ_AVAILABLE = True
@@ -71,10 +74,6 @@ FULL_TRAJ_AVAILABLE = True
 # Initialize logging
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Path to unified default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_agentic_config.yaml")
 
 
 def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
@@ -162,24 +161,24 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
 
 def create_output_structure(
     output_dir: Path,
-    run_name: str
 ) -> Dict[str, Path]:
     """
     Create organized output directory structure.
-    
+
+    Args:
+        output_dir: Base output directory (already includes run_name)
+
     Returns paths:
         {
-            'base': output_dir/clear_results/<judge-model>/<run-name>/,
-            'step_by_step': .../step_by_step/,
-            'full_trajectory': .../full_trajectory/,
+            'base': output_dir/,
+            'step_by_step': output_dir/step_by_step/,
+            'full_trajectory': output_dir/full_trajectory/,
         }
     """
-    base_dir = output_dir / 'clear_results' / run_name
-    
     paths = {
-        'base': base_dir,
-        'step_by_step': base_dir / 'step_by_step',
-        'full_trajectory': base_dir / 'full_trajectory',
+        'base': output_dir,
+        'step_by_step': output_dir / 'step_by_step',
+        'full_trajectory': output_dir / 'full_trajectory',
     }
     
     # Create directories
@@ -395,26 +394,22 @@ def main():
     args = parser.parse_args()
 
     cli_overrides = build_cli_overrides(args)
-    
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config = load_config(
-        DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
-    
+
+    # Load configuration
+    config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
+
     # Validate required parameters
-    if not config.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
-    
-    if not config.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
-    
+    validate_required_config(config, ['agentic_input_dir', 'agentic_output_dir'], parser)
+
+    # Get run output directory
+    output_dir, run_name = get_run_output_dir(
+        config['agentic_output_dir'],
+        config.get('run_name')
+    )
+
     # Extract parameters
     agentic_input_dir = Path(config['agentic_input_dir'])
-    output_dir = Path(config['agentic_output_dir'])
     from_raw_traces = config.get('from_raw_traces', False)
-    run_name = config.get('run_name') or datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Validate input directory exists
     if not agentic_input_dir.exists():
@@ -430,7 +425,7 @@ def main():
     logger.info(f"Run name: {run_name}")
     
     # Create output structure
-    output_paths = create_output_structure(output_dir, run_name)
+    output_paths = create_output_structure(output_dir)
     logger.info(f"Output base directory: {output_paths['base']}")
     
     # Prepare centralized traces_data directory

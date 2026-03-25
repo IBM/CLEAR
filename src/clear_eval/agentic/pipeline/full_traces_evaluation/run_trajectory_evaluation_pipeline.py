@@ -116,14 +116,17 @@ import argparse
 import logging
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 import pandas as pd
 
 from clear_eval.logging_config import setup_logging
-from clear_eval.pipeline.config_loader import load_config
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import (
+    build_cli_overrides,
+    load_pipeline_config,
+    get_run_output_dir,
+    validate_required_config,
+)
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.task_success_evaluator import TaskSuccessEvaluator
@@ -136,11 +139,6 @@ from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_cl
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Path to default config (shared config in parent setup directory)
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PIPELINE_DIR = os.path.dirname(SCRIPT_DIR)
-DEFAULT_CONFIG_PATH = os.path.join(PIPELINE_DIR, "setup", "default_agentic_config.yaml")
 
 
 # Evaluation type constants
@@ -768,34 +766,25 @@ def main():
     """Main pipeline orchestration (CLI entry point)."""
     parser = create_parser()
     args = parser.parse_args()
-    
+
     # Build CLI overrides (only include non-None arguments)
     cli_overrides = build_cli_overrides(args)
-    
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config = load_config(
-        DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
-    
+
+    # Load configuration
+    config = load_pipeline_config(args.agentic_config_path, **cli_overrides)
+
     # Validate required parameters
-    if not config.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
-    
-    if not config.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
+    validate_required_config(config, ['agentic_input_dir', 'agentic_output_dir'], parser)
 
-    # Convert paths (using unified argument names)
+    # Get run output directory
+    output_dir, run_name = get_run_output_dir(
+        config['agentic_output_dir'],
+        config.get('run_name')
+    )
+
+    # Convert paths
     traj_input_dir = Path(config['agentic_input_dir'])
-    base_output_dir = Path(config['agentic_output_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
-
-    # Get or generate run_name
-    run_name = config.get('run_name') or datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Create output path under run_name
-    output_dir = base_output_dir / run_name
 
     # Get model configuration from config
     model_id = config['eval_model_name']

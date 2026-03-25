@@ -21,30 +21,29 @@ import logging
 import os
 import tempfile
 from collections import Counter, defaultdict
-from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
 
 import pandas as pd
 
 from clear_eval.analysis_runner import run_clear_eval_evaluation
-from clear_eval.agentic.pipeline.utils import build_cli_overrides
+from clear_eval.agentic.pipeline.utils import (
+    build_cli_overrides,
+    load_pipeline_config,
+    get_run_output_dir,
+    validate_required_config,
+)
 from clear_eval.agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
 from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 from clear_eval.args import add_clear_args_to_parser, str2bool
 from clear_eval.logging_config import setup_logging
-from clear_eval.pipeline.config_loader import load_config
 
 # Initialize logging
 setup_logging()
 
 logger = logging.getLogger(__name__)
-
-# Path to agentic pipeline default config
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTIC_DEFAULT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "setup", "default_agentic_config.yaml")
 
 
 def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
@@ -605,35 +604,27 @@ Argument Precedence (lowest to highest):
     # Build CLI overrides from non-None args
     cli_overrides = build_cli_overrides(args)
 
-    # Load configuration with precedence: default -> user config -> CLI overrides
-    config_dict = load_config(
-        AGENTIC_DEFAULT_CONFIG_PATH,
-        args.agentic_config_path,
-        **cli_overrides
-    )
+    # Load configuration
+    config_dict = load_pipeline_config(args.agentic_config_path, **cli_overrides)
 
     # Validate required parameters
-    if not config_dict.get('agentic_input_dir'):
-        parser.error("agentic_input_dir is required (set in config or use --agentic-input-dir)")
-    if not config_dict.get('agentic_output_dir'):
-        parser.error("agentic_output_dir is required (set in config or use --agentic-output-dir)")
+    validate_required_config(config_dict, ['agentic_input_dir', 'agentic_output_dir'], parser)
+
+    # Get run output directory
+    agentic_output_dir, run_name = get_run_output_dir(
+        config_dict['agentic_output_dir'],
+        config_dict.get('run_name')
+    )
+
+    # Update config with resolved values
+    config_dict['agentic_output_dir'] = str(agentic_output_dir)
+    config_dict['run_name'] = run_name
 
     # Extract parameters
     from_raw_traces = config_dict.get('from_raw_traces', False)
     agentic_input_dir = config_dict['agentic_input_dir']
-    base_output_dir = config_dict['agentic_output_dir']
     overwrite = config_dict.get('overwrite', True)
     memory_only = config_dict.get('memory_only', False)
-
-    # Get or generate run_name
-    run_name = config_dict.get('run_name') or datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Create output path under run_name
-    agentic_output_dir = os.path.join(base_output_dir, run_name)
-
-    # Update config with resolved output dir
-    config_dict['agentic_output_dir'] = agentic_output_dir
-    config_dict['run_name'] = run_name
 
     logger.info("=" * 80)
     if from_raw_traces:
