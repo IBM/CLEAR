@@ -52,7 +52,7 @@ pip install -e .
 
 ### 2. Set Up Credentials
 
-Configure your LLM provider credentials. See the main [README](../../README.md#supported-providers-and-credentials) for provider-specific setup instructions.
+Configure your LLM provider credentials. See the [Providers and Credentials Guide](../../../docs/PROVIDERS.md) for provider-specific setup instructions.
 
 ### 3. Run the Pipeline
 
@@ -223,6 +223,14 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | `run_full_trajectory` | `--run-full-trajectory` | `true` | Enable trajectory evaluation |
 | `from_raw_traces` | `--from-raw-traces` | `false` | `true` = process JSON traces, `false` = use CSV files |
 
+### Model Configuration
+
+| Parameter | CLI Flag | Default | Description                                                                |
+|-----------|----------|---------|----------------------------------------------------------------------------|
+| `provider` | `--provider` | `openai` | LLM provider                                                               |
+| `inference_backend` | `--inference-backend` | `litellm` | Backend: `litellm`, `langchain`, `endpoint`                                |
+| `eval_model_params` | `--eval-model-params` | `{}` | Model parameters (JSON)                                                    |
+
 ### Preprocessing (when `from_raw_traces=true`)
 
 | Parameter | CLI Flag | Default | Description |
@@ -238,20 +246,12 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | `generate_rubrics` | `--generate-rubrics` | `true`                       | Generate rubrics before evaluation |
 | `rubric_dir` | `--rubric-dir` | None                         | Path to existing rubrics |
 | `clear_analysis_types` | `--clear-analysis-types` | `issues`                     | CLEAR analyses: `root_cause`, `issues`, `all`, `none` |
+| `context_tokens` | `--context-tokens` | None | Context window; truncates long trajectories in full trajectory evaluation  |
 
 **Note on Rubric Evaluation:**
 - Requires trajectories to have a valid `intent` field
 - Automatically skipped if no trajectories have intent data
 - Runs only on trajectories with valid (non-empty) intent
-
-### Model Configuration
-
-| Parameter | CLI Flag | Default | Description                                                                |
-|-----------|----------|---------|----------------------------------------------------------------------------|
-| `provider` | `--provider` | `openai` | LLM provider                                                               |
-| `inference_backend` | `--inference-backend` | `litellm` | Backend: `litellm`, `langchain`, `endpoint`                                |
-| `eval_model_params` | `--eval-model-params` | `{}` | Model parameters (JSON)                                                    |
-| `context_tokens` | `--context-tokens` | None | Context window; truncates long trajectories in full trajectory evaluation  |
 
 ### Execution
 
@@ -260,6 +260,25 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | `run_name` | `--run-name` | timestamp | Unique identifier for this run |
 | `overwrite` | `--overwrite` | `true` | Overwrite existing results |
 | `max_workers` | `--max-workers` | `10` | Parallel workers |
+
+### Advanced: Custom Evaluation Criteria
+
+By default, CLEAR uses built-in criteria suited for agentic interactions (`agent_mode: true`). You can override these with custom criteria that define **how every response in the step-by-step analysis is judged**. Each criterion is a name-description pair — the judge model scores every record against all specified criteria, and the discovered issues reflect these dimensions.
+
+```yaml
+# In your config YAML
+evaluation_criteria:
+  reasoning_clarity: "Agent provides clear step-by-step reasoning"
+  tool_selection: "Agent selects appropriate tools for the task"
+  instruction_following: "Agent follows the user's instructions accurately"
+```
+
+| Parameter | CLI Flag | Default | Description |
+|-----------|----------|---------|-------------|
+| `evaluation_criteria` | `--evaluation-criteria` | `null` (uses built-in agent criteria) | Custom criteria dict: `{"name": "description", ...}` |
+| `predefined_issues` | `--predefined-issues` | `null` | List of known issues to use instead of automatic discovery |
+
+When `evaluation_criteria` is `null`, CLEAR applies default criteria appropriate for the mode (`agent_mode: true` for agentic, standard LLM criteria otherwise). When `predefined_issues` is set, CLEAR skips automatic issue discovery and uses the provided list directly.
 
 ### Configuration Precedence
 

@@ -1,42 +1,89 @@
-# CLEAR: Error Analysis via LLM-as-a-Judge Made Easy
+# CLEAR: Comprehensive LLM Error Analysis and Reporting
 
-**CLEAR (Comprehensive LLM Error Analysis and Reporting)** is an interactive, open-source package for **LLM-based error analysis**. It helps surface meaningful, recurring issues in model outputs by combining automated evaluation with powerful visualization tools.
+**CLEAR** is an open-source toolkit for **LLM error analysis** using an LLM-as-a-Judge approach.
 
-The workflow consists of two main phases:
-
-1. **Analysis**  
-    Generates textual feedback for each instance; Identifies system-level error categories from these critiques and quantifies their frequencies.
-
-2. **Interactive Dashboard**  
-   An intuitive dashboard provides a comprehensive view of model behavior. Users can:  
-   - Explore aggregate visualizations of identified issues  
-   - Apply dynamic filters to focus on specific error types or score ranges  
-   - Drill down into individual examples that illustrate specific failure patterns
-
-CLEAR makes it easier to diagnose model shortcomings and prioritize targeted improvements.
-
-You can run CLEAR as a full pipeline, or reuse specific stages (generation, evaluation, or just UI).
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/clear-eval.svg)](https://pypi.org/project/clear-eval/)
 
 ---
 
-## 🤖 CLEAR for Agentic Workflows
+## 🎯 What is CLEAR?
 
-CLEAR also supports **multi-agent system evaluation** with specialized pipelines for analyzing agent trajectories, tool usage, and task completion. This includes:
+CLEAR provides systematic error analysis for:
+- **Single LLM Responses** — Analyze quality issues in model outputs for tasks like Q&A, summarization, and generation
+- **Agentic Workflows** — Evaluate complex workflows with multiple components, tool usage, and multi-step task trajectories
 
-- **Step-by-step analysis**: Evaluate individual agent interactions using CLEAR methodology
-- **Full trajectory evaluation**: Assess complete task trajectories (success, quality, rubric-based)
-- **Interactive dashboard**: Visualize agent workflows, paths, and performance metrics
+It combines automated LLM-as-a-judge evaluation with interactive dashboards to help you:
+- Identify recurring error patterns across your dataset
+- Quantify issue frequencies and severity
+- Drill down into specific failure cases
+- Prioritize improvements based on data-driven insights
 
-📖 **[See the Agentic Workflows Documentation →](src/clear_eval/agentic/README.md)**
+## ⚙️ How It Works
+
+CLEAR operates in two phases:
+
+1. **Analysis** — Generates per-instance textual feedback, identifies system-level error categories, and quantifies their frequencies.
+2. **Interactive Dashboard** — Explore aggregate visualizations, apply dynamic filters, and drill down into individual failure examples.
 
 ---
 
-## 🚀 Quickstart
+## 🔀 Two Analysis Modes
 
-Requires Python 3.10+ and the necessary credentials for a supported provider.
+CLEAR supports two distinct analysis modes, each with its own pipeline, dashboard, and documentation:
 
-### 1. Installation 
-#### Option 1 (Recommended for development): **Clone the repo and set up a virtual environment:**
+### 📝 LLM Analysis
+
+Evaluate standard LLM outputs — generation quality, correctness, and recurring error patterns. Provide a CSV with prompts and responses, and CLEAR will score each instance, generate textual critiques, and surface system-level issues.
+
+| | |
+|---|---|
+| **Input** | CSV with model inputs and responses |
+| **Output** | Per-record scores, evaluation text, aggregated issue categories |
+| **Dashboard** | Streamlit-based interactive explorer |
+
+> 📖 **[Full LLM Analysis Guide →](docs/ANALYSIS_README.md)**
+
+### 🤖 Agentic Analysis
+
+Evaluate multi-agent system trajectories — step-by-step agent interactions and full trajectory analysis.
+Supports traces from LangGraph, CrewAI, and other frameworks via MLflow or Langfuse.
+
+| | |
+|---|---|
+| **Input** | Raw JSON traces or preprocessed trajectory CSVs |
+| **Output** | Per-step CLEAR analysis, trajectory-level scores, rubric evaluations |
+| **Dashboard** | NiceGUI-based workflow visualization with path and temporal analysis |
+
+> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](src/clear_eval/agentic/dashboard/README_DASHBOARD.md)**
+
+---
+
+## ✨ Key Features
+
+| | |
+|---|---|
+| 🧑‍⚖️ **LLM-as-a-Judge** | Automated evaluation for any text generation task |
+| 🤖 **Agentic Workflows** | Evaluate multi-agent trajectories, tool usage, and task completion |
+| 🔌 **Multiple Backends** | LangChain, LiteLLM (100+ providers), or direct HTTP endpoints |
+| 🧩 **External Judges** | Plug in custom evaluation functions |
+| 📊 **Interactive Dashboards** | Standard and agentic-specific visualizations |
+| 🛠️ **Flexible Configuration** | YAML config files, CLI flags, or Python API |
+
+---
+
+## 📦 Installation
+
+**Requires Python 3.10+**
+
+#### Option 1: pip (recommended)
+
+```bash
+pip install clear-eval
+```
+
+#### Option 2: From source (for development)
 
 ```bash
 git clone https://github.com/IBM/CLEAR.git
@@ -46,369 +93,141 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-#### 📦 Option 2: Install via pip (Latest Release)
+---
+
+## 🚀 Quick Start
+
+### 1. Set your provider credentials
+
+CLEAR requires a supported LLM provider. Set the appropriate environment variables for your provider (e.g., `OPENAI_API_KEY` for OpenAI). See the [Providers and Credentials Guide](docs/PROVIDERS.md) for all supported providers and backends.
+
+### 2. Run on sample data
+
+With no data path specified, CLEAR runs on a built-in [GSM8K sample dataset](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/gsm8k_default_predictions.csv) using [default settings](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/pipeline/setup/default_config.yaml):
 
 ```bash
-pip install clear-eval
+run-clear-eval-analysis --provider openai --eval-model-name gpt-4o
 ```
-`
- 2. ### Set provider type and credentials
-CLEAR requires a supported LLM provider and credentials to run analysis. [See supported providers ↓](#supported-providers-and-credentials)
-> ⚠️ Using a private proxy or openai deployment? You must configure your model names explicitly (see below). Otherwise, default model names will be used automatically for supported providers.
 
-3. ### **Run on sample data:**
+Results are saved to `results/gsm8k/sample_output/`.
 
-The sample dataset is a small subset of the **GSM8K math problems**.
-For running on the sample data and default configuration, you simpy have to set your provider and run
+### 3. Run on your own data
+
 ```bash
-run-clear-eval-analysis --provider=openai # or rits, watsonx
+run-clear-eval-analysis \
+    --provider openai \
+    --eval-model-name gpt-4o \
+    --data-path path/to/your_data.csv \
+    --output-dir results/my_run/ \
+    --run-name my_run
 ```
 
-This will:
-- Run the full CLEAR pipeline
-- Save results under: `results/gsm8k/sample_output/`
+Your CSV should contain at minimum `id`, `model_input`, and `response` columns. See the [LLM Analysis Guide](docs/ANALYSIS_README.md#input-data-format) for the full input format specification.
 
-The sample dataset which is used as default by the analysis can be found [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/gsm8k_default_predictions.csv).
-
-The default configuration file which uses this can be found [here](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/pipeline/setup/default_config.yaml).
-
-4. ###  **View results in the interactive dashboard:**
+### 4. View results
 
 ```bash
 run-clear-eval-dashboard
 ```
 
-Or set the port with 
-```bash
-run-clear-eval-dashboard --port <port>
-```
-Then:
-- Upload the generated ZIP file from `results/gsm8k/sample_output/`
-- Explore issues, scores, filters, and drill into examples
-
-5. ###  **To explore the dashboard without running any analysis:**
-Run the dashboard:
-```bash
-run-clear-eval-dashboard
-```
-
-Then you can load the pre-generated sample output zip.
-you can manually upload a sample `.zip` file located at:
-```
-<your-env>/site-packages/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip
-```
-
-📁 Or just download it directly from the [GitHub repo](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/analysis_results_gsm8k_default.zip).
-
+Upload the generated ZIP file from the results directory to explore issues, scores, and individual examples.
 
 ---
 
+## 🔍 Usage Overview
 
-## 📂 Analyzing your own data
-
-### 📄 Input Data Format
-
-CLEAR takes a **CSV file** as input, with each row representing a single instance to be evaluated.
-
-#### Required Columns
-
-| Column         | Used When                           | Description                                                       |
-|----------------|-------------------------------------|-------------------------------------------------------------------|
-| `id`           | Always                              | Unique identifier for the instance                                |
-| `model_input`  | Always                              | Prompt provided to the generation model                           |
-| `response`     | Using pre-generated responses       | Pre-generated model response (ignored if generation is enabled)   |
-| `ground_truth` | Performing reference based analysis | Ground-truth answer for evaluation (optional)                     |
-| _others_       | `--input_columns` is used           | Additional input columns to show in dashboard (e.g. `question`)   |
-
----
-
-### 🚀 Running the analysis
-
-CLEAR can be run via the CLI or Python API.
-
-#### Option 1: CLI commands
-
-Each stage has its own entry point:
+### 📝 LLM Analysis (CLI)
 
 ```bash
-run-clear-eval-analysis --config_path path/to/config.yaml    # run full pypeline
-run-clear-eval-generation --config_path path/to/config.yaml  # run generation only
-run-clear-eval-evaluation --config_path path/to/config.yaml  # Assume generation responses are given, run evaluation
+# Full pipeline
+run-clear-eval-analysis --provider openai --eval-model-name gpt-4o --config_path path/to/config.yaml
+
+# Evaluation only (using existing responses)
+run-clear-eval-evaluation --provider openai --eval-model-name gpt-4o --config_path path/to/config.yaml
 ```
 
-- If `--config_path` is specified, **all parameters are taken from the config** unless explicitly overridden
-- CLI flags passed directly override corresponding config values
-
-#### Option 2: Python API
-
-```python
-from clear_eval.analysis_runner import run_clear_eval_analysis, run_clear_eval_generation, run_clear_eval_evaluation
-
-run_clear_eval_analysis(
-    config_path="configs/sample_run_config.yaml"
-)
-```
-
-For an example data and configuration files, please see [Run on sample data](#run-on-sample-data).
-
-You may also pass overrides instead of using a config file:
+### 📝 LLM Analysis (Python)
 
 ```python
 from clear_eval.analysis_runner import run_clear_eval_analysis
 
 run_clear_eval_analysis(
-    run_name="my_data",
+    run_name="my_run",
     provider="openai",
     data_path="my_data.csv",
-    gen_model_name="gpt-3.5-turbo",
-    eval_model_name="gpt-4",
-    output_dir="results/gsm8k/",
-    perform_generation=False,
-    input_columns=["question"]
+    eval_model_name="gpt-4o",
+    output_dir="results/",
 )
 ```
-### 📊 Launching the Dashboard
+
+### 🤖 Agentic Analysis
 
 ```bash
-run-clear-eval-dashboard
+run-clear-agentic-eval \
+    --data-dir data/my_traces \
+    --results-dir results \
+    --from-raw-traces true \
+    --eval-model-name gpt-4o \
+    --provider openai
+
+# Launch agentic dashboard
+run-clear-agentic-dashboard
 ```
 
-Upload the ZIP file generated in your `--output-dir` when prompted.
-
-### 🎛 Supported CLI Arguments
-
-Arguments can be provided via:
-- A YAML config file (`--config_path`)
-- CLI flags
-- Python function parameters (when using the API)
-
-> ⚠️ **Boolean arguments** (`perform_generation`, `is_reference_based`, `resume_enabled`)  
-> These must be set explicitly to `true` or `false` in YAML, CLI, or Python.  
-> On the CLI, use `--flag True` or `--flag False` (case-insensitive).
-
-> ⚠️ **Naming Convention**  
-> Parameter names use `snake_case` in YAML and Python, but use `--kebab-case` in CLI.  
-> For example:  
-> - YAML: `perform_generation: true`  
-> - Python: `perform_generation=True`  
-> - CLI: `--perform-generation True`
-
-| Argument                | Description                                                                                                                               | Default        |
-|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|----------------|
-| `--config_path`         | Path to a YAML config file (all values loaded unless overridden by CLI args)                                                              |                |
-| `--run_name`            | Unique run name (used in result file names)                                                                                               |                |
-| `--data_path`           | Path to input CSV file                                                                                                                    |                |
-| `--output_dir`          | Output directory to write results                                                                                                         |                |
-| `--provider`            | Model provider: `openai`, `watsonx`, `rits`, or any LiteLLM provider                                                              |                |
-| `--inference_backend`   | Inference backend: `langchain` (default), `litellm`, or `endpoint` (direct HTTP)                                        | litellm        |
-| `--endpoint_url`        | Direct HTTP endpoint URL (required when `inference_backend` is `endpoint`)                                                               | None           |
-| `--eval_model_name`     | Name of judge model (e.g. `gpt-4o`)                                                                                                       |                |
-| `--gen_model_name`      | Name of the generator model to evaluate. If not running generations - the generator name to display.                                      |                |
-| `--perform_generation`  | Whether to generate responses or use existing `response` column                                                                           | True           |
-| `--is_reference_based`  | Use reference-based evaluation (requires `ground_truth` column in input)                                                                  | False          |
-| `--resume_enabled`      | Whether to reuse intermediate outputs from previous runs stored in output_dir                                                             | True           |
-| `--evaluation_criteria` | Custom criteria dictionary for scoring individual records: `{"criteria_name1":"criteria_desc1", ...}`supported for yaml config and python. | None           |
-| `--input_columns`       | Comma-separated list of additional input fields (other than `model_input`) to appear in the results and dashboard (e.g. `question`)       | None           |
-| `--agent_mode`          | boolean, if True - use a default evaluation criteria suited for an agentic step and not a single llm response                             | False          |
-| `--success_threshold`   | float, the minimum judge score required for a single record to be considered successful                                                   | 0.91           |
-| `--max_workers`         | Number of parallel inferences to run                                                                                                      | provider specific |
-| `--external_judge_path` | Path to Python file with external judge function (used when `task` is `external`)                                                        | None           |
-| `--external_judge_function` | Name of function in external judge file to call                                                                                       | evaluate       |
-| `--external_judge_config` | JSON dict of additional config for external judge: `{"param": "value"}`                                                                 | {}             |
+See the [Agentic Workflows Guide](src/clear_eval/agentic/README.md) for full details.
 
 ---
 
-## 🔑Supported providers and credentials
+## 📚 Documentation
 
-CLEAR supports three inference backends for maximum flexibility:
+| Guide | Description |
+|-------|-------------|
+| 📝 [**LLM Analysis Guide**](docs/ANALYSIS_README.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
+| 🤖 [**Agentic Workflows Guide**](src/clear_eval/agentic/README.md) | Multi-agent evaluation — trace preprocessing, step-by-step and trajectory analysis, configuration reference |
+| 📊 [**Agentic Dashboard Guide**](src/clear_eval/agentic/dashboard/README_DASHBOARD.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
+| 🔑 [**Providers and Credentials**](docs/PROVIDERS.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
 
-### 1. LangChain Backend (Default)
+---
 
-Use for built-in providers with LangChain integration:
+## 🔑 Supported Providers
 
-| Provider   | Required Environment Variables                                              |
-|------------|-----------------------------------------------------------------------------|
-| `openai`   | `OPENAI_API_KEY`,  [`OPENAI_API_BASE` if using proxy ]                      |
-| `watsonx`  | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_SPACE_ID` or `WATSONX_PROJECT_ID` |
-| `rits`     | `RITS_API_KEY`                                                              |
+| Provider | Backend | Credentials |
+|----------|---------|-------------|
+| OpenAI | LangChain, LiteLLM, Endpoint | `OPENAI_API_KEY` |
+| WatsonX | LangChain, LiteLLM, Endpoint | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_PROJECT_ID` |
+| Anthropic | LiteLLM | `ANTHROPIC_API_KEY` |
+| AWS Bedrock | LiteLLM | AWS credentials |
+| Google Vertex AI | LiteLLM | GCP credentials |
+| [100+ more](https://docs.litellm.ai/docs/providers) | LiteLLM | Provider-specific |
 
-**Configuration:**
-```yaml
-provider: watsonx
-inference_backend: langchain  
-eval_model_name: meta-llama/llama-3-3-70b-instruct
+See the **[Providers and Credentials Guide](docs/PROVIDERS.md)** for backend configuration details and examples.
+
+---
+
+## 🗂️ Project Structure
+
+```
+CLEAR/
+├── README.md                              # This file
+├── src/clear_eval/
+│   ├── pipeline/                          # LLM analysis pipeline
+│   ├── dashboard/                         # LLM dashboard (Streamlit)
+│   ├── agentic/
+│   │   ├── README.md                      # Agentic Workflows Guide
+│   │   ├── pipeline/                      # Agentic pipeline
+│   │   └── dashboard/
+│   │       ├── README_DASHBOARD.md        # Agentic Dashboard Guide
+│   │       └── ...
+│   └── sample_data/                       # Sample datasets
+├── docs/
+│   ├── ANALYSIS_README.md                 # LLM Analysis Guide
+│   └── PROVIDERS.md                       # Providers and Credentials Guide
+├── examples/                              # Configuration examples
+└── tests/                                 # Test suite
 ```
 
-### 2. LiteLLM Backend
+---
 
-Use for 100+ LLM providers via [LiteLLM](https://docs.litellm.ai/docs/providers):
+## 📄 License
 
-- **Anthropic**: `anthropic` (Claude)
-- **AWS Bedrock**: `bedrock`
-- **Google**: `vertex_ai`, `gemini`
-- **Groq**: `groq`
-- **Together AI**: `together_ai`
-- **And many more**: See [LiteLLM providers](https://docs.litellm.ai/docs/providers)
-
-**Configuration (new style):**
-```yaml
-provider: anthropic 
-inference_backend: litellm # or omit (default)
-eval_model_name: claude-3-5-sonnet-20241022
-```
-
-**Configuration (old style - backward compatible):**
-```yaml
-provider: anthropic
-use_litellm: true  # Maps to inference_backend: litellm
-eval_model_name: claude-3-5-sonnet-20241022
-```
-
-**Example:**
-```bash
-export ANTHROPIC_API_KEY=your_key
-run-clear-eval-analysis --config_path config.yaml
-```
-
-**Benefits:**
-- **Async execution**: Better concurrency with async I/O
-- **100+ providers**: Unified interface across providers
-- **Flexible**: Easy to switch between providers
-
-> ⚠️ **Credentials**: Set required environment variables for your provider according to [LiteLLM's documentation](https://docs.litellm.ai/docs/providers).
-
-### 3. Direct HTTP Endpoint Backend
-
-Use for custom APIs or when you need direct HTTP control. Works with any OpenAI-compatible endpoint (vLLM, Ollama, etc.):
-
-**Configuration:**
-```yaml
-provider: watsonx  # or openai, anthropic
-inference_backend: endpoint
-endpoint_url: https://us-south.ml.cloud.ibm.com/ml/v1
-eval_model_name: ibm/granite-3-8b-instruct
-```
-
-**Supported endpoint types:**
-- `openai`: OpenAI API and compatible (vLLM, Ollama, local servers)
-- `watsonx`: IBM WatsonX
-
-**Example with local vLLM:**
-```yaml
-provider: openai
-inference_backend: endpoint
-endpoint_url: http://localhost:8000/v1
-eval_model_name: your-model-name
-```
-
-## 🔌 Using External Judges
-
-CLEAR supports plugging in custom evaluation functions as an alternative to LLM-based evaluation. External judges receive the input DataFrame and must add a textual evaluation and numerical score for each record.
-
-### Quick Start
-
-1. **Create a judge function** (or use provided examples):
-
-```python
-# my_judge.py
-import pandas as pd
-
-def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """
-    Evaluate all records in the dataset.
-    
-    External judges must be standalone - no imports from clear_eval required.
-    Return DataFrame with 'evaluation_text' and 'score' columns added.
-    """
-    response_col = config.get('model_output_column', 'response')
-    reference_col = config.get('reference_column', 'ground_truth')
-    
-    # Process all records (can use vectorized ops, parallel processing, etc.)
-    evaluation_texts = []
-    scores = []
-    
-    for idx, row in df.iterrows():
-        response = row.get(response_col, '')
-        ground_truth = row.get(reference_col, '')
-        
-        # Your evaluation logic
-        match = str(response).strip() == str(ground_truth).strip()
-        score = 1.0 if match else 0.0
-        eval_text = f"Match: {match}"
-        
-        evaluation_texts.append(eval_text)
-        scores.append(score)
-    
-    # Add results using standard column names
-    df['evaluation_text'] = evaluation_texts
-    df['score'] = scores
-    
-    return df
-```
-
-2. **Configure CLEAR to use your judge**:
-
-```yaml
-# config.yaml
-task: external  # Use external judge task
-external_judge_path: my_judge.py
-external_judge_function: evaluate
-data_path: your_data.csv
-output_dir: results/
-```
-
-3. **Run the analysis**:
-
-```bash
-run-clear-eval-analysis --config-path config.yaml
-```
-
-Or via CLI:
-
-```bash
-run-clear-eval-analysis \
-  --task external \
-  --external-judge-path my_judge.py \
-  --data-path your_data.csv \
-  --output-dir results/
-```
-
-### Example Judges
-
-CLEAR includes example judges in `examples/custom_judges/`:
-
-- **`exact_match_judge.py`**: Simple string matching evaluator for reference-based evaluation
-- **`unitxt_judge.py`**: Integration with Unitxt's LLM-as-judge framework
-
-See [`examples/custom_judges/README.md`](examples/custom_judges/README.md) for detailed documentation and more examples.
-
-### Key Features
-
-- **Standalone**: External judges don't require CLEAR imports - only pandas
-- **Flexible Processing**: Process data sequentially, in parallel, or with vectorized operations
-- **Path Support**: Works with absolute paths, relative paths, and `~` expansion
-- **Batch Interface**: Receive entire dataset for maximum control over processing strategy
-
-### Judge Interface
-
-External judges must implement this signature:
-
-```python
-def evaluate(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    """
-    Args:
-        df: DataFrame with all records to evaluate
-        config: Full configuration dictionary
-    
-    Returns:
-        DataFrame with two added columns:
-        - 'evaluation_text': Textual feedback for each record
-        - 'score': Numeric score (0.0-1.0), or pd.NA for failures
-    
-    The judge receives the entire dataset and can process it using any strategy:
-    sequential iteration, vectorized operations, parallel processing, or batching.
-    """
-```
-
-### Note
-It is the user's responsibility to make sure the supplied judge fits the given input data and configuration.  
+Apache 2.0 — see [LICENSE](LICENSE) for details.
