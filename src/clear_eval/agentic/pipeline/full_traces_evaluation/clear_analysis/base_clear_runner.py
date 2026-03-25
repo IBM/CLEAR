@@ -194,10 +194,6 @@ class BaseClearRunner(ABC):
             True if successful, False otherwise
         """
         output_dir = self.get_clear_output_dir(group_key)
-        
-        if output_dir.exists() and not self.overwrite:
-            logger.info(f"Skipping (exists): {group_key}")
-            return False
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -248,7 +244,6 @@ class BaseClearRunner(ABC):
             return {
                 "total_records": 0,
                 "groups_processed": 0,
-                "groups_skipped": 0,
                 "groups_failed": 0,
             }
 
@@ -263,7 +258,6 @@ class BaseClearRunner(ABC):
         return {
             "total_records": len(df),
             "groups_processed": 1 if success else 0,
-            "groups_skipped": 0 if success else 0,
             "groups_failed": 0 if success else 1,
             "output_dir": str(self.get_clear_output_dir(group_key)),
         }
@@ -277,7 +271,6 @@ class BaseClearRunner(ABC):
         logger.info(f"  CLEAR Model:    {self.inference_config.model_id}")
         logger.info(f"  Total Records:  {summary['total_records']}")
         logger.info(f"  Processed:      {summary['groups_processed']}")
-        logger.info(f"  Skipped:        {summary['groups_skipped']}")
         logger.info(f"  Failed:         {summary['groups_failed']}")
         if summary.get('output_dir'):
             logger.info(f"  Output:         {summary['output_dir']}")

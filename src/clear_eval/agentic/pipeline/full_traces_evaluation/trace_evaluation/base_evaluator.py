@@ -539,7 +539,8 @@ class TrajectoryEvaluator(ABC):
 
         # Count successful evaluations
         successful = sum(1 for pr in parallel_results if pr.is_success and pr.result is not None)
-        logger.info(f"Evaluation complete: {successful}/{len(parallel_results)} trajectories succeeded in {elapsed:.1f}s")
+        skipped = sum(1 for pr in parallel_results if pr.is_success and pr.result is None)
+        logger.info(f"Evaluation complete: {successful}/{len(parallel_results)} trajectories succeeded, {skipped} skipped (existing) in {elapsed:.1f}s")
         
         return parallel_results
 

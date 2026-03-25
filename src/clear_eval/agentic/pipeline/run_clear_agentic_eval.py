@@ -229,7 +229,8 @@ def prepare_traces_data(
                 output_dir=str(traces_data_dir),
                 agent_framework=config.get('agent_framework'),
                 observability_framework=config.get('observability_framework'),
-                separate_tools=config.get('separate_tools')
+                separate_tools=config.get('separate_tools'),
+                overwrite=config.get('overwrite', True),
             )
             logger.info(f"✓ Processed traces successfully")
             return traces_data_dir

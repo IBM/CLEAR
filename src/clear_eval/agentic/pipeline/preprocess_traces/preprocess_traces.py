@@ -131,7 +131,8 @@ def process_traces_to_traj_data(
     output_dir: str,
     agent_framework: str = "langgraph",
     observability_framework: str = "langfuse",
-    separate_tools: bool = True
+    separate_tools: bool = True,
+    overwrite: bool = True,
 ) -> str:
     """
     Process trace JSON files into trajectory CSV files.
@@ -142,6 +143,7 @@ def process_traces_to_traj_data(
         agent_framework: Agent framework used (langgraph, crewai)
         observability_framework: Observability platform (langfuse, mlflow)
         separate_tools: For mlflow, whether to emit separate rows for tools vs agent responses
+        overwrite: Whether to overwrite existing trajectory CSV files
 
     Returns:
         Path to the trajectory data directory
@@ -170,6 +172,7 @@ def process_traces_to_traj_data(
         return str(output_path)
 
     total_traces = 0
+    total_skipped = 0
     total_llm_calls = 0
 
     for json_file in json_files:
@@ -200,6 +203,11 @@ def process_traces_to_traj_data(
                 csv_filename = f"{safe_trace_id}.csv"
                 output_csv_path = output_path / csv_filename
 
+                if output_csv_path.exists() and not overwrite:
+                    logger.debug(f"Skipping (exists): {csv_filename}")
+                    total_skipped += 1
+                    continue
+
                 with open(output_csv_path, 'w', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=CSV_FIELDNAMES)
                     writer.writeheader()
@@ -219,6 +227,7 @@ def process_traces_to_traj_data(
     logger.info("=" * 80)
     logger.info("TRACE PROCESSING COMPLETE")
     logger.info(f"Total traces processed: {total_traces}")
+    logger.info(f"Total traces skipped (existing): {total_skipped}")
     logger.info(f"Total LLM calls extracted: {total_llm_calls}")
     logger.info("=" * 80)
 
