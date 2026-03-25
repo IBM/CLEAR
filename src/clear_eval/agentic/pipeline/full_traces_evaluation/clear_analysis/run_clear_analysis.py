@@ -14,24 +14,24 @@ Two analysis sources (--source flag):
 Usage:
     python run_clear_analysis.py --source issues \\
         --eval-results-dir results/evals \\
-        --results-dirr results/clear_analysis \\
+        --results-dir results/clear_analysis \\
         --eval-model-name gpt-4o \\
         --provider openai
 
     python run_clear_analysis.py --source root_cause \\
         --eval-results-dir results/evals \\
-        --results-dirr results/clear_analysis \\
+        --results-dir results/clear_analysis \\
         --eval-model-name gpt-4o \\
         --provider openai
 
 Example workflow:
     1. Run trajectory evaluation:
        python run_full_traj_evaluation.py --data-dir data \\
-           --results-dirr results/evals --eval-model-name gpt-4o --provider openai
+           --results-dir results/evals --eval-model-name gpt-4o --provider openai
     
     2. Run CLEAR analysis on results:
        python run_clear_analysis.py --source issues \\
-           --eval-results-dir results/evals --results-dirr results/clear \\
+           --eval-results-dir results/evals --results-dir results/clear \\
            --eval-model-name gpt-4o --provider openai
 """
 import logging

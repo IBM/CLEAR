@@ -84,7 +84,7 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
         help="If True, process JSON traces; if False, use CSV files directly (default: false)",
     )
     parser.add_argument(
-        "--results-dirr",
+        "--results-dir",
         type=str,
         required=True,
         help="Base directory for saving evaluation results",

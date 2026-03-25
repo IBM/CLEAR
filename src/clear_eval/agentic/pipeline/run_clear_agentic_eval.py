@@ -23,7 +23,7 @@ Usage Examples:
     # Run only step-by-step from raw traces
     python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --data-dir data/experiment_001 \\
-        --results-dirr results \\
+        --results-dir results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces true \\
@@ -33,7 +33,7 @@ Usage Examples:
     # Run only step-by-step from preprocessed CSVs
     python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \\
         --data-dir data/experiment_001 \\
-        --results-dirr results \\
+        --results-dir results \\
         --run-step-by-step true \\
         --run-full-trajectory false \\
         --from-raw-traces false \\
@@ -96,7 +96,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="If True, process JSON traces; if False, use CSV files directly (default: false)"
     )
     group.add_argument(
-        "--results-dirr",
+        "--results-dir",
         help="Base output directory (required)"
     )
     
@@ -332,7 +332,6 @@ def run_full_trajectory_pipeline(
             eval_types=config.get('eval_types', ['all']),
             generate_rubrics=config.get('generate_rubrics'),
             rubric_dir=rubric_dir,
-            clear_analysis_types=config.get('clear_analysis_types'),
             context_tokens=config.get('context_tokens'),
             overwrite=config.get('overwrite'),
             max_workers=config.get('max_workers'),

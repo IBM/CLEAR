@@ -23,14 +23,14 @@ Usage Examples:
     # Run all evaluations with all CLEAR analyses (default)
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai
 
     # Run specific evaluations
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success full_trajectory
@@ -38,7 +38,7 @@ Usage Examples:
     # Generate rubrics and run rubric evaluation
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -47,7 +47,7 @@ Usage Examples:
     # Use existing rubrics
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types rubric \\
@@ -56,7 +56,7 @@ Usage Examples:
     # Run with selective CLEAR analysis
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --eval-types task_success \\
@@ -65,7 +65,7 @@ Usage Examples:
     # Skip CLEAR analysis entirely
     python run_trajectory_evaluation_pipeline.py \\
         --data-dir ./trajectories \\
-        --results-dirr ./results \\
+        --results-dir ./results \\
         --eval-model-name gpt-4o \\
         --provider openai \\
         --clear-analysis-types none
@@ -73,7 +73,7 @@ Usage Examples:
 Arguments:
     Required:
         --data-dir: Directory containing trajectory JSON files
-        --results-dirr: Base directory for saving results
+        --results-dir: Base directory for saving results
         --eval-model-name: Model identifier (e.g., gpt-4o, llama-3.3-70b)
         --provider: LLM provider (openai, watsonx, anthropic, etc.)
 

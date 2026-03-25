@@ -63,7 +63,7 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Input directory: raw traces (if from-raw-traces=true) or trajectory CSVs (if from-raw-traces=false)"
     )
     group.add_argument(
-        "--results-dirr",
+        "--results-dir",
         help="Output directory for pipeline results (required)"
     )
     group.add_argument(
@@ -518,14 +518,14 @@ Examples:
   # From preprocessed trajectory CSVs (default)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
       --data-dir data/trajectory_csvs \\
-      --results-dirr output/analysis \\
+      --results-dir output/analysis \\
       --provider openai \\
       --eval-model-name gpt-4o
 
   # From raw traces (with preprocessing)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
       --data-dir data/raw_traces \\
-      --results-dirr output/analysis \\
+      --results-dir output/analysis \\
       --from-raw-traces true \\
       --agent-framework langgraph \\
       --observability-framework langfuse \\
@@ -544,7 +544,7 @@ Examples:
   # Memory-only mode (no intermediate files saved)
   python -m clear_eval.agentic.pipeline.run_clear_step_analysis \\
       --data-dir data/traces \\
-      --results-dirr output/analysis \\
+      --results-dir output/analysis \\
       --from-raw-traces true \\
       --memory-only true
 
