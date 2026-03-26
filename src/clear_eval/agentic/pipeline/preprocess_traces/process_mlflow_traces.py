@@ -38,6 +38,20 @@ def _get(d: Dict[str, Any], path: List[Any], default=None):
             return default
     return cur
 
+def get_by_any_key(s: Dict[str, Any], keys: list[str]):
+    for k in keys:
+        if k in s:
+            return s[k]
+    return None
+
+def get_parent_id(s):
+     return get_by_any_key(s, ["parent_id", "parent_span_id"])
+
+def get_start_time(s):
+    return get_by_any_key(s, ["start_time_unix_nano", "start_time_ns"])
+
+def get_end_time(s):
+    return get_by_any_key(s, ["end_time_unix_nano", "end_time_ns"])
 
 # ----------------- span semantics -----------------
 
@@ -192,8 +206,8 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
     # Calculate duration if timestamps available
     duration_ms = s.get("duration_ms")
     if duration_ms is None:
-        start_ns = s.get("start_time_unix_nano")
-        end_ns = s.get("end_time_unix_nano")
+        start_ns = get_start_time(s)
+        end_ns = get_end_time(s)
         if start_ns is not None and end_ns is not None:
             duration_ms = (end_ns - start_ns) / 1_000_000
 
@@ -201,7 +215,7 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
         "span_id": s.get("span_id"),
         "span_name": s.get("name"),
         "span_type": _span_type(s),
-        "parent_span_id": s.get("parent_span_id"),
+        "parent_span_id": get_parent_id(s),
         "duration_ms": duration_ms,
         "status": s.get("status", {}).get("status_code"),
     }
@@ -254,7 +268,7 @@ def extract_llm_calls_from_mlflow_trace(
 
     def get_parent(s: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Get parent span if exists."""
-        pid = s.get("parent_span_id")
+        pid = get_parent_id(s)
         return by_id.get(pid) if pid else None
 
     def find_calling_node_name(s: Dict[str, Any]) -> str:
@@ -301,7 +315,7 @@ def extract_llm_calls_from_mlflow_trace(
 
     # Sort by start_time if available, otherwise by original order
     def sort_key(s: Dict[str, Any]) -> tuple:
-        start_time = s.get("start_time_unix_nano")
+        start_time = get_start_time(s)
         if start_time is not None:
             return (0, start_time)
         return (1, spans.index(s) if s in spans else 0)
