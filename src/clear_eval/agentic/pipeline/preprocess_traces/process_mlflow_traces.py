@@ -48,13 +48,13 @@ def get_by_any_key(s: Dict[str, Any], keys: list[str]):
     return None
 
 def get_parent_id(s):
-     return get_by_any_key(s, ["parent_id", "parent_span_id"])
+     return get_by_any_key(s, ["parent_id", "parent_span_id", "parentSpanId"])
 
 def get_start_time(s):
-    return get_by_any_key(s, ["start_time_unix_nano", "start_time_ns"])
+    return get_by_any_key(s, ["start_time_unix_nano", "start_time_ns", "start_time"])
 
 def get_end_time(s):
-    return get_by_any_key(s, ["end_time_unix_nano", "end_time_ns"])
+    return get_by_any_key(s, ["end_time_unix_nano", "end_time_ns", "end_time"])
 
 # ----------------- span semantics -----------------
 
@@ -67,7 +67,7 @@ _MODEL_TYPES = {"CHAT_MODEL", "MODEL", "GENERATION"}
 
 
 def _is_wrapper_span(s: Dict[str, Any]) -> bool:
-    return (_span_type(s) in _WRAPPER_TYPES) or bool(_get(s, ["attributes", "langgraph.node"]))
+    return (_span_type(s) in _WRAPPER_TYPES)# or bool(_get(s, ["attributes", "langgraph.node"]))
 
 
 def _is_model_call_span(s: Dict[str, Any]) -> bool:
@@ -86,7 +86,7 @@ def _is_model_call_span(s: Dict[str, Any]) -> bool:
 
 def _get_span_name(s: Dict[str, Any]) -> Optional[str]:
     return (
-        _get(s, ["attributes", "langgraph.node"]) or
+      #  _get(s, ["attributes", "langgraph.node"]) or
         _get(s, ["attributes", "mlflow.spanFunctionName"]) or
         s.get("name")
     )
@@ -121,10 +121,11 @@ def _extract_input_output_from_span(
     # Extract bound tools (API spec)
     api_spec = extract_api_spec(inputs)
 
-    # Extract input messages (OpenAI: messages, Gemini: contents)
+    # Extract input messages (OpenAI: messages, Gemini: contents, Anthropic: messages with system)
     messages = (
         inputs.get("messages") or
         inputs.get("contents") or
+        inputs.get("prompt") or
         _get(attrs, ["gen_ai.input.messages"]) or
         _get(attrs, ["gen_ai.prompt"]) or
         inputs.get("input")
@@ -193,6 +194,16 @@ def _extract_input_output_from_span(
     return model_input_str, response_text, tool_calls, api_spec, meta_data
 
 
+def _extract_status(s: Dict[str, Any]) -> Optional[str]:
+    """Extract span status, handling both OTel nested and MLflow flat formats."""
+    status = s.get("status")
+    if isinstance(status, dict):
+        return status.get("status_code") or status.get("code")
+    if isinstance(status, str):
+        return status
+    return None
+
+
 def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[str, Any]:
     """
     Build complete metadata including span-level information.
@@ -220,7 +231,7 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
         "span_type": _span_type(s),
         "parent_span_id": get_parent_id(s),
         "duration_ms": duration_ms,
-        "status": s.get("status", {}).get("status_code"),
+        "status": _extract_status(s),
     }
 
     # Merge span metadata with model metadata
