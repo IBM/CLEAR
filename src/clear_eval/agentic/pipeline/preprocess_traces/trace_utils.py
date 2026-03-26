@@ -307,3 +307,100 @@ def safe_json(value: Any) -> Any:
         except json.JSONDecodeError:
             return value
     return value
+
+
+# ----- intent extraction (shared by MLflow & Langfuse processors) -----
+
+_INTENT_LIMIT = 500  # max chars for extracted intent
+
+
+def first_user_message(messages: Any) -> str:
+    """
+    Return the content of the first user/human message in a message list.
+
+    Supports:
+      - list of dicts with role/content keys (OpenAI / Anthropic / Gemini)
+      - JSON-encoded string of the above
+      - LangGraph tuple format: [["human", "text"], ...]
+    """
+    if messages is None:
+        return ""
+
+    if isinstance(messages, str):
+        try:
+            messages = json.loads(messages)
+        except (json.JSONDecodeError, TypeError):
+            return messages.strip()
+
+    if not isinstance(messages, list) or not messages:
+        return ""
+
+    # Standard dict messages: [{role: "user", content: "..."}, ...]
+    for msg in messages:
+        if isinstance(msg, dict):
+            role = (msg.get("role") or msg.get("type") or "").lower()
+            if role in ("user", "human"):
+                content = msg.get("content") or msg.get("text") or ""
+                if isinstance(content, list):
+                    text_parts = [
+                        p.get("text", "") for p in content
+                        if isinstance(p, dict) and p.get("type") == "text"
+                    ]
+                    content = " ".join(text_parts)
+                if isinstance(content, str) and content.strip():
+                    return content.strip()
+
+    # LangGraph tuple format: [["human", "hello"], ...]
+    for msg in messages:
+        if isinstance(msg, (list, tuple)) and len(msg) >= 2:
+            role = str(msg[0]).lower()
+            if role in ("user", "human", "humanmessage"):
+                content = str(msg[1]).strip()
+                if content:
+                    return content
+
+    return ""
+
+
+def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] = None) -> str:
+    """
+    Try to extract the user's query / intent from a span/observation's input.
+
+    Handles common patterns across MLflow and Langfuse:
+      - Plain string input (e.g. CrewAI kickoff, simple chains)
+      - Dict with scalar fields: input, query, question, task, goal, etc.
+      - OpenAI-style messages with role=user
+      - Gemini-style contents with role=user
+      - LangGraph tuple format [["human", "text"], ...]
+      - gen_ai.input.messages / mlflow.chat.messages in attributes
+    """
+    attributes = attributes or {}
+
+    # Plain string input
+    if isinstance(input_data, str) and input_data.strip():
+        return truncate_middle(input_data.strip(), _INTENT_LIMIT)
+
+    if isinstance(input_data, dict):
+        # Direct scalar fields
+        for key in ("input", "query", "question", "task", "goal",
+                     "description", "user_input", "human_input", "prompt"):
+            val = input_data.get(key)
+            if isinstance(val, str) and val.strip():
+                return truncate_middle(val.strip(), _INTENT_LIMIT)
+
+        # OpenAI / Gemini style message lists
+        messages = input_data.get("messages") or input_data.get("contents")
+        intent = first_user_message(messages)
+        if intent:
+            return truncate_middle(intent, _INTENT_LIMIT)
+
+    # Attributes: gen_ai.input.messages / mlflow.chat.messages
+    for attr_key in ("gen_ai.input.messages", "mlflow.chat.messages",
+                     "gen_ai.prompt"):
+        raw = attributes.get(attr_key)
+        if raw is not None:
+            intent = first_user_message(raw)
+            if intent:
+                return truncate_middle(intent, _INTENT_LIMIT)
+
+    return ""

@@ -18,6 +18,9 @@ from .trace_utils import (
     normalize_response,
     extract_tool_calls,
     extract_api_spec,
+    extract_intent_from_input,
+    truncate_middle,
+    _INTENT_LIMIT,
 )
 
 
@@ -170,6 +173,48 @@ def _build_llm_rows_for_observation(
 
 # ----------------- trace parsing -----------------
 
+def _extract_trace_intent(
+    json_data: Any,
+    observations: List[Dict[str, Any]],
+) -> str:
+    """
+    Extract a single intent for the entire Langfuse trace.
+
+    Resolution order (first non-empty wins):
+      1. Explicit trace-level metadata (user_query, intent, task, goal, …).
+      2. Trace-level ``input`` field.
+      3. Root observation's input (first user message or scalar field).
+      4. Earliest observation's input (fallback).
+    """
+    # --- 1. Trace-level metadata ---
+    if isinstance(json_data, dict):
+        metadata = safe_json(json_data.get("metadata")) or {}
+        for field in ("user_query", "intent", "task", "goal", "query", "question"):
+            val = metadata.get(field)
+            if val and isinstance(val, str) and val.strip():
+                return truncate_middle(val.strip(), _INTENT_LIMIT)
+
+        # --- 2. Trace-level input field ---
+        trace_input = safe_json(json_data.get("input"))
+        if trace_input:
+            intent = extract_intent_from_input(trace_input)
+            if intent:
+                return intent
+
+    # --- 3/4. Root / earliest observation input ---
+    if observations:
+        obs_sorted = sorted(observations, key=lambda x: x.get("startTime") or "")
+        roots = [o for o in obs_sorted if not o.get("parentObservationId")]
+        for obs in (roots or obs_sorted):
+            obs_input = safe_json(obs.get("input"))
+            if obs_input:
+                intent = extract_intent_from_input(obs_input)
+                if intent:
+                    return intent
+
+    return ""
+
+
 def _extract_common_from_trace_root(json_data: Any, file_name: str):
     """
     Normalize the top-level trace container into:
@@ -178,18 +223,18 @@ def _extract_common_from_trace_root(json_data: Any, file_name: str):
     """
     if isinstance(json_data, dict):
         metadata = safe_json(json_data.get("metadata")) or {}
-        intent = metadata.get("user_query") or metadata.get("intent") or ""
         trace_id = json_data.get("id", file_name)
         session_id = json_data.get("sessionId")
         observations = json_data.get("observations", [])
         traj_score = json_data.get("traj_score") or metadata.get("traj_score")
     elif isinstance(json_data, list):
         observations = json_data
-        intent, session_id, traj_score = "", None, None
+        session_id, traj_score = None, None
         trace_id = file_name
     else:
         raise TypeError("json_data must be a dict (trace) or a list (observations)")
 
+    intent = _extract_trace_intent(json_data, observations)
     return intent, trace_id, session_id, observations, traj_score
 
 

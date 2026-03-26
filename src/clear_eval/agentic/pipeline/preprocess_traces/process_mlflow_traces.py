@@ -23,6 +23,9 @@ from .trace_utils import (
     extract_tool_calls,
     extract_from_output_messages,
     extract_api_spec,
+    extract_intent_from_input,
+    truncate_middle,
+    _INTENT_LIMIT,
 )
 
 
@@ -230,6 +233,71 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
 _SKIP_NAMES = {"get_llm", "Completions", "ChatCompletions", "openai_call", "llm_invoke"}
 
 
+def _extract_trace_intent(
+    trace: Dict[str, Any],
+    spans: List[Dict[str, Any]],
+    by_id: Dict[str, Dict[str, Any]],
+) -> str:
+    """
+    Extract a single intent for the entire trace.
+
+    Resolution order (first non-empty wins):
+      1. Explicit trace-level metadata/tags (intent, user_query, task, goal).
+      2. Root span's input — the first user message or plain-text input.
+      3. First user message found in the earliest (by start_time) span.
+    """
+    intent = _extract_intent_from_trace_metadata(trace)
+    if intent:
+        return truncate_middle(intent, _INTENT_LIMIT)
+
+    # --- 2. Root span's input ---
+    root_spans = [s for s in spans if not get_parent_id(s)]
+    if not root_spans:
+        root_spans = [s for s in spans if get_parent_id(s) not in by_id]
+    if not root_spans:
+        root_spans = spans[:1]
+
+    root_spans.sort(key=lambda s: get_start_time(s) or float("inf"))
+
+    for root in root_spans:
+        intent = extract_intent_from_input(
+            root.get("inputs"), root.get("attributes") or {}
+        )
+        if intent:
+            return intent
+
+    # --- 3. First user message in any span (earliest by start_time) ---
+    sorted_spans = sorted(spans, key=lambda s: get_start_time(s) or float("inf"))
+    for s in sorted_spans:
+        intent = extract_intent_from_input(
+            s.get("inputs"), s.get("attributes") or {}
+        )
+        if intent:
+            return intent
+
+    return ""
+
+
+def _extract_intent_from_trace_metadata(trace: Dict[str, Any]) -> str:
+    """Check trace-level metadata/tags for an explicit intent field."""
+    for container_key in ("tags", "metadata", "info", "request_metadata"):
+        container = trace.get(container_key)
+        if not isinstance(container, dict):
+            continue
+        for field in ("intent", "user_query", "task", "goal", "query", "question",
+                      "mlflow.note.content"):
+            val = container.get(field)
+            if val and isinstance(val, str) and val.strip():
+                return val.strip()
+
+    for field in ("intent", "user_query", "task", "input"):
+        val = trace.get(field)
+        if val and isinstance(val, str) and val.strip():
+            return val.strip()
+
+    return ""
+
+
 def extract_llm_calls_from_mlflow_trace(
     trace: Dict[str, Any],
     file_name: str = None,
@@ -301,13 +369,8 @@ def extract_llm_calls_from_mlflow_trace(
         # Fallback to span's own name
         return _get_span_name(s) or "unknown"
 
-    # Extract intent from trace metadata
-    trace_intent = (
-        _get(trace, ["tags", "intent"]) or
-        _get(trace, ["metadata", "intent"]) or
-        _get(trace, ["metadata", "user_query"]) or
-        ""
-    )
+    # Extract intent once for the entire trace
+    trace_intent = _extract_trace_intent(trace, spans, by_id)
     traj_score = trace.get("traj_score") or _get(trace, ["tags", "traj_score"])
 
     # Find all model call spans
@@ -342,15 +405,6 @@ def extract_llm_calls_from_mlflow_trace(
         # Build complete metadata with span info
         meta_data = _build_span_metadata(s, model_meta)
 
-        attrs = s.get("attributes", {})
-        intent = (
-            attrs.get("langgraph.intent") or
-            attrs.get("intent") or
-            attrs.get("mlflow.intent") or
-            attrs.get("gen_ai.intent") or
-            trace_intent
-        )
-
         if separate_tools:
             # Emit separate rows for tool calls
             if isinstance(tool_calls, list):
@@ -359,7 +413,7 @@ def extract_llm_calls_from_mlflow_trace(
                     rows.append({
                         "id": f"{trace_id}_{step_counter}",
                         "Name": agent_name,
-                        "intent": intent,
+                        "intent": trace_intent,
                         "task_id": trace_id,
                         "step_in_trace_general": step_counter,
                         "step_in_trace_node": per_node_counter[agent_name],
@@ -377,7 +431,7 @@ def extract_llm_calls_from_mlflow_trace(
                 rows.append({
                     "id": f"{trace_id}_{step_counter}",
                     "Name": agent_name,
-                    "intent": intent,
+                    "intent": trace_intent,
                     "task_id": trace_id,
                     "step_in_trace_general": step_counter,
                     "step_in_trace_node": per_node_counter[agent_name],
@@ -402,7 +456,7 @@ def extract_llm_calls_from_mlflow_trace(
             rows.append({
                 "id": f"{trace_id}_{step_counter}",
                 "Name": agent_name,
-                "intent": intent,
+                "intent": trace_intent,
                 "task_id": trace_id,
                 "step_in_trace_general": step_counter,
                 "step_in_trace_node": per_node_counter[agent_name],
