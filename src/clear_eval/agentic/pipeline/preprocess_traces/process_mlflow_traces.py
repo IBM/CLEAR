@@ -77,7 +77,7 @@ def _is_model_call_span(s: Dict[str, Any]) -> bool:
     if _get(s, ["attributes", "gen_ai.operation.name"]):
         return True
     outputs_obj = s.get("outputs")
-    if isinstance(outputs_obj, dict) and ("choices" in outputs_obj or "content" in outputs_obj or "usage" in outputs_obj):
+    if isinstance(outputs_obj, dict) and "choices" in outputs_obj:
         return True
     if _get(s, ["attributes", "gen_ai.output.messages"]):
         return True
@@ -229,8 +229,26 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
 
 # ----------------- core extraction -----------------
 
-# Names to skip when walking up parent chain for calling context
-_SKIP_NAMES = {"get_llm", "Completions", "ChatCompletions", "openai_call", "llm_invoke"}
+# Names to skip when walking up parent chain for calling context.
+# These are generic LLM client / wrapper class names from LangChain and
+# provider SDKs that appear as span names but don't represent the actual
+# LangGraph node that initiated the call.
+_SKIP_NAMES = {
+    # LangChain model wrapper classes
+    "ChatOpenAI", "AzureChatOpenAI", "ChatAnthropic", "ChatGoogleGenerativeAI",
+    "ChatVertexAI", "ChatBedrock", "BedrockChat", "ChatLiteLLM", "ChatOllama",
+    "ChatCohere", "ChatMistralAI", "ChatFireworks", "ChatTogether", "ChatGroq",
+    "ChatWatsonx", "ChatHuggingFace", "ChatNVIDIA",
+    # LangChain runnable / chain wrappers
+    "RunnableSequence", "RunnableLambda", "RunnableParallel",
+    "RunnablePassthrough", "RunnableBranch", "RunnableWithFallbacks",
+    "LLMChain", "ConversationChain",
+    # Provider SDK internals
+    "Completions", "ChatCompletions", "Chat", "Messages",
+    # Common custom wrapper function names
+    "get_llm", "openai_call", "llm_invoke", "call_llm", "invoke_llm",
+    "create_completion", "run_llm",
+}
 
 
 def _extract_trace_intent(
