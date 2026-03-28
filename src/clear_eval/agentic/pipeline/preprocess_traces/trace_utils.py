@@ -38,27 +38,100 @@ def normalize_content(content: Any, include_function_calls: bool = True) -> str:
             if isinstance(block, str):
                 parts.append(block)
             elif isinstance(block, dict):
-                # OpenAI/Anthropic: {"text": "..."} or {"content": "..."}
+                block_type = block.get("type", "")
+
+                # Text blocks: OpenAI/Anthropic {"text": "..."} or {"content": "..."}
                 text = block.get("text") or block.get("content") or block.get("input_text")
-                if text:
+                if text and block_type not in ("tool_use", "tool_result"):
                     parts.append(str(text))
+
+                # Anthropic tool_use: {"type": "tool_use", "name": "...", "input": {...}}
+                elif block_type == "tool_use":
+                    if include_function_calls:
+                        parts.append(f"[Tool Call: {block.get('name', '')}({json.dumps(block.get('input', {}), ensure_ascii=False)})]")
+
+                # Anthropic tool_result: {"type": "tool_result", "content": "..."}
+                elif block_type == "tool_result":
+                    if include_function_calls:
+                        result_content = block.get("content", "")
+                        if isinstance(result_content, list):
+                            result_content = normalize_content(result_content, include_function_calls)
+                        parts.append(f"[Tool Result: {result_content}]")
+
                 # Gemini function call
                 elif "functionCall" in block:
                     if include_function_calls:
                         fc = block["functionCall"]
-                        parts.append(f"[Function: {fc.get('name', '')}({json.dumps(fc.get('args', {}))})]")
+                        parts.append(f"[Tool Call: {fc.get('name', '')}({json.dumps(fc.get('args', {}), ensure_ascii=False)})]")
+
                 # Gemini function response
                 elif "functionResponse" in block:
                     if include_function_calls:
                         fr = block["functionResponse"]
-                        parts.append(f"[Function Response: {fr.get('name', '')} -> {json.dumps(fr.get('response', {}))}]")
+                        parts.append(f"[Tool Result: {fr.get('name', '')} -> {json.dumps(fr.get('response', {}), ensure_ascii=False)}]")
+
                 # Gemini inline data (images, etc.)
                 elif "inlineData" in block:
                     parts.append(f"[Inline Data: {block['inlineData'].get('mimeType', 'unknown')}]")
+
+                # Fallback: unknown dict block — serialize rather than silently drop
+                elif not text:
+                    parts.append(json.dumps(block, ensure_ascii=False))
+
             elif block is not None:
                 parts.append(str(block))
         return "\n".join(parts)
     return json.dumps(content, ensure_ascii=False) if isinstance(content, dict) else str(content)
+
+
+def _extract_tool_calls_from_content(msg: dict) -> List[Dict[str, Any]]:
+    """
+    Extract tool calls from a single message/content dict, normalized to OpenAI shape.
+    Returns list of {"name": str, "arguments": Any}.
+
+    Handles:
+    - OpenAI: msg["tool_calls"] -> [{"function": {"name": ..., "arguments": ...}}, ...]
+    - Anthropic: content blocks with type=="tool_use" -> {"name": ..., "input": ...}
+    - Gemini: parts with "functionCall" -> {"name": ..., "args": ...}
+    """
+    tool_calls = []
+
+    # OpenAI: tool_calls field on the message
+    tc_list = msg.get("tool_calls")
+    if isinstance(tc_list, list):
+        for tc in tc_list:
+            if isinstance(tc, dict):
+                func = tc.get("function", tc)
+                name = func.get("name", "")
+                args = func.get("arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                tool_calls.append({"name": name, "arguments": args})
+
+    # Anthropic / Gemini: scan content blocks
+    content = msg.get("content") or msg.get("parts") or []
+    if isinstance(content, list):
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            # Anthropic tool_use
+            if block.get("type") == "tool_use":
+                tool_calls.append({
+                    "name": block.get("name", ""),
+                    "arguments": block.get("input", {}),
+                })
+            # Gemini functionCall
+            elif "functionCall" in block:
+                fc = block["functionCall"]
+                tool_calls.append({
+                    "name": fc.get("name", ""),
+                    "arguments": fc.get("args", {}),
+                })
+
+    return tool_calls
 
 
 def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) -> Any:
@@ -70,7 +143,7 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
     - If list/dict of messages: transform to structured list
 
     Returns:
-        str (if input was string) or List[{"role": str, "content": str, "is_tool_def": bool}]
+        str (if input was string) or List[{"role": str, "content": str, "is_tool_def": bool, "tool_calls": list}]
     """
     if messages is None:
         return []
@@ -91,17 +164,20 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
         if msg is None:
             continue
         if isinstance(msg, str):
-            result.append({"role": "unknown", "content": msg, "is_tool_def": False})
+            result.append({"role": "unknown", "content": msg, "is_tool_def": False, "tool_calls": []})
             continue
         if not isinstance(msg, dict):
-            result.append({"role": "unknown", "content": str(msg), "is_tool_def": False})
+            result.append({"role": "unknown", "content": str(msg), "is_tool_def": False, "tool_calls": []})
             continue
 
         role = (msg.get("role") or msg.get("type") or "unknown").lower()
         raw_content = msg.get("content") or msg.get("parts") or ""
 
-        # Normalize content to string
-        content = normalize_content(raw_content)
+        # Normalize content to string (exclude tool calls from text to avoid duplication)
+        content = normalize_content(raw_content, include_function_calls=False)
+
+        # Extract tool calls from the message
+        msg_tool_calls = _extract_tool_calls_from_content(msg)
 
         # Truncate system messages
         if role == "system" and content:
@@ -117,15 +193,16 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
             if isinstance(content_to_check, str):
                 try:
                     content_to_check = json.loads(content_to_check)
-                except:
+                except Exception:
                     pass
             if isinstance(content_to_check, dict) and "function" in content_to_check:
                 is_tool_def = True
 
-        if not content:
+        # Keep messages that have content OR tool calls (don't drop tool-only messages)
+        if not content and not msg_tool_calls:
             continue
 
-        result.append({"role": role, "content": content, "is_tool_def": is_tool_def})
+        result.append({"role": role, "content": content, "is_tool_def": is_tool_def, "tool_calls": msg_tool_calls})
 
     return result
 
@@ -140,7 +217,7 @@ def extract_from_output_messages(messages: Any) -> tuple:
         messages: Output in message format [{"role": "assistant", "content": "...", "tool_calls": [...]}]
 
     Returns:
-        (response_text: str, tool_calls: list)
+        (response_text: str, tool_calls: list[{"name": str, "arguments": Any}])
     """
     if messages is None:
         return "", []
@@ -162,11 +239,11 @@ def extract_from_output_messages(messages: Any) -> tuple:
             if isinstance(content, str) and content:
                 text_parts.append(content)
             elif content:
-                text_parts.append(normalize_content(content))
+                text_parts.append(normalize_content(content, include_function_calls=False))
 
-            tc = msg.get("tool_calls")
-            if tc and isinstance(tc, list):
-                tool_calls.extend(tc)
+            # Extract tool calls via shared helper (handles OpenAI, Anthropic, Gemini)
+            msg_tool_calls = _extract_tool_calls_from_content(msg)
+            tool_calls.extend(msg_tool_calls)
 
     return "\n".join(text_parts), tool_calls
 
@@ -214,27 +291,27 @@ def normalize_response(output_data: Any) -> str:
 
 
 def extract_tool_calls(output_data: Any) -> List[Dict[str, Any]]:
-    """Extract tool calls from output data. Handles OpenAI and Gemini formats."""
+    """
+    Extract tool calls from output data. Handles OpenAI, Anthropic, and Gemini formats.
+
+    Returns list of {"name": str, "arguments": Any}, normalized to OpenAI shape.
+    """
     tool_calls = []
 
     if not isinstance(output_data, dict):
         return tool_calls
 
-    # Direct tool_calls field (common in Langfuse)
+    # Direct tool_calls field (common in Langfuse) — use shared helper for normalization
     if "tool_calls" in output_data:
-        tc_list = output_data["tool_calls"]
-        if isinstance(tc_list, list):
-            tool_calls.extend(tc_list)
+        tool_calls.extend(_extract_tool_calls_from_content(output_data))
 
     # OpenAI choices format
     if "choices" in output_data and isinstance(output_data["choices"], list):
         for ch in output_data["choices"]:
             if isinstance(ch, dict):
                 msg = ch.get("message", {})
-                if isinstance(msg, dict) and "tool_calls" in msg:
-                    tc_list = msg.get("tool_calls", [])
-                    if tc_list:
-                        tool_calls.extend(tc_list)
+                if isinstance(msg, dict):
+                    tool_calls.extend(_extract_tool_calls_from_content(msg))
 
     # Gemini candidates format
     if "candidates" in output_data and isinstance(output_data["candidates"], list):
@@ -243,16 +320,33 @@ def extract_tool_calls(output_data: Any) -> List[Dict[str, Any]]:
                 continue
             content = candidate.get("content", {})
             if isinstance(content, dict):
-                parts = content.get("parts", [])
-                for part in parts:
-                    if isinstance(part, dict) and "functionCall" in part:
-                        fc = part["functionCall"]
-                        tool_calls.append({
-                            "name": fc.get("name", ""),
-                            "args": fc.get("args", {})
-                        })
+                # Wrap as a message-like dict so the shared helper can scan parts
+                tool_calls.extend(_extract_tool_calls_from_content(content))
+
+    # Anthropic direct output: {"content": [{"type": "tool_use", ...}, ...], "role": "assistant"}
+    if "content" in output_data and isinstance(output_data.get("content"), list):
+        tool_calls.extend(_extract_tool_calls_from_content(output_data))
 
     return tool_calls
+
+
+def _normalize_tool_def(tool_def: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalize a tool definition to OpenAI shape: {"name", "description", "parameters"}.
+
+    Handles:
+    - OpenAI: already {"name", "description", "parameters"}
+    - Anthropic: {"name", "description", "input_schema"} -> map input_schema to parameters
+    - Gemini: {"name", "description", "parameters"} -> already correct
+    """
+    normalized = {
+        "name": tool_def.get("name", ""),
+        "description": tool_def.get("description", ""),
+    }
+    # Anthropic uses input_schema, OpenAI/Gemini use parameters
+    params = tool_def.get("parameters") or tool_def.get("input_schema") or {}
+    normalized["parameters"] = params
+    return normalized
 
 
 def extract_api_spec(input_data: Any) -> List[Dict[str, Any]]:
@@ -260,10 +354,13 @@ def extract_api_spec(input_data: Any) -> List[Dict[str, Any]]:
     Extract bound tool definitions (API spec) from input data.
     These are the tools available to the LLM, not the tool calls it made.
 
+    Returns list of {"name": str, "description": str, "parameters": dict},
+    normalized to OpenAI shape.
+
     Handles:
     - OpenAI: input.tools or input.functions
     - Gemini: input.tools with functionDeclarations
-    - Anthropic: input.tools
+    - Anthropic: input.tools (with input_schema -> parameters)
     """
     tools = []
 
@@ -278,21 +375,25 @@ def extract_api_spec(input_data: Any) -> List[Dict[str, Any]]:
                 if isinstance(tool, dict):
                     # OpenAI format: {"type": "function", "function": {...}}
                     if "function" in tool:
-                        tools.append(tool["function"])
+                        tools.append(_normalize_tool_def(tool["function"]))
                     # Gemini format: {"functionDeclarations": [...]}
                     elif "functionDeclarations" in tool:
                         decls = tool["functionDeclarations"]
                         if isinstance(decls, list):
-                            tools.extend(decls)
-                    # Direct tool definition
+                            for decl in decls:
+                                if isinstance(decl, dict):
+                                    tools.append(_normalize_tool_def(decl))
+                    # Direct tool definition (Anthropic or other)
                     elif "name" in tool:
-                        tools.append(tool)
+                        tools.append(_normalize_tool_def(tool))
 
     # Legacy OpenAI: functions array
     if "functions" in input_data:
         funcs = input_data["functions"]
         if isinstance(funcs, list):
-            tools.extend(funcs)
+            for func in funcs:
+                if isinstance(func, dict):
+                    tools.append(_normalize_tool_def(func))
 
     return tools
 
@@ -362,7 +463,7 @@ def first_user_message(messages: Any) -> str:
     return ""
 
 
-def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] = None) -> str:
+def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] | None = None) -> str:
     """
     Try to extract the user's query / intent from a span/observation's input.
 
