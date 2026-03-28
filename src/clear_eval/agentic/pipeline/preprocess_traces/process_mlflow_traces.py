@@ -18,6 +18,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from .trace_utils import (
+    safe_json,
     normalize_input_messages,
     normalize_response,
     extract_tool_calls,
@@ -115,8 +116,8 @@ def _extract_input_output_from_span(
         (model_input_str, response_text, tool_calls, api_spec, meta_data)
     """
     attrs = s.get("attributes", {})
-    inputs = s.get("inputs", {}) or {}
-    outputs_obj = s.get("outputs", {}) or {}
+    inputs = s.get("inputs", {}) or safe_json(attrs.get("mlflow.spanInputs")) or {}
+    outputs_obj = s.get("outputs", {}) or safe_json(attrs.get("mlflow.spanOutputs")) or {}
 
     # Extract bound tools (API spec)
     api_spec = extract_api_spec(inputs)
@@ -307,24 +308,89 @@ def _extract_trace_intent(
     return ""
 
 
-def _extract_intent_from_trace_metadata(trace: Dict[str, Any]) -> str:
-    """Check trace-level metadata/tags for an explicit intent field."""
-    for container_key in ("tags", "metadata", "info", "request_metadata"):
-        container = trace.get(container_key)
-        if not isinstance(container, dict):
-            continue
-        for field in ("intent", "user_query", "task", "goal", "query", "question",
-                      "mlflow.note.content"):
+_CONTAINER_KEYS = ("tags", "metadata", "trace_metadata", "request_metadata")
+_INTENT_FIELDS = ("intent", "user_query", "task", "goal", "query", "question",
+                   "request", "input", "mlflow.note.content")
+_SCORE_FIELDS = ("traj_score", "score", "quality", "rating", "correctness")
+
+
+def _get_trace_containers(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Collect all dict containers that may hold intent/score/metadata fields."""
+    info = trace.get("info", {}) or {}
+    seen = []
+    for source in (trace, info):
+        for key in _CONTAINER_KEYS:
+            c = source.get(key)
+            if isinstance(c, dict) and c not in seen:
+                seen.append(c)
+    return seen
+
+
+def _search_trace_field(trace: Dict[str, Any], field_names: tuple) -> Any:
+    """
+    Search for the first non-empty value across top-level trace keys,
+    data.* keys, and all metadata containers.
+    """
+    for field in field_names:
+        # Top-level and data.*
+        val = trace.get(field) or _get(trace, ["data", field])
+        if val is not None and val != "":
+            return val
+        # Containers
+        for container in _get_trace_containers(trace):
             val = container.get(field)
-            if val and isinstance(val, str) and val.strip():
-                return val.strip()
+            if val is not None and val != "":
+                return val
+    return None
 
-    for field in ("intent", "user_query", "task", "input"):
-        val = trace.get(field)
-        if val and isinstance(val, str) and val.strip():
-            return val.strip()
 
+def _get_spans(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Get spans from either flat or native (info/data) format."""
+    return trace.get("spans", []) or _get(trace, ["data", "spans"]) or []
+
+
+def _get_trace_id(trace: Dict[str, Any]) -> Optional[str]:
+    """Get trace_id from either flat or native format."""
+    return (
+        trace.get("trace_id") or
+        trace.get("id") or
+        _get(trace, ["info", "trace_id"]) or
+        _get(trace, ["info", "request_id"])
+    )
+
+
+def _extract_intent_from_trace_metadata(trace: Dict[str, Any]) -> str:
+    """Check trace-level metadata/tags and top-level fields for an explicit intent."""
+    val = _search_trace_field(trace, _INTENT_FIELDS)
+    if val and isinstance(val, str) and val.strip():
+        return val.strip()
     return ""
+
+
+def _get_traj_score(trace: Dict[str, Any]) -> Any:
+    """
+    Get trajectory score from any known location.
+
+    Checks _SCORE_FIELDS across top-level, data.*, and containers,
+    then falls back to MLflow assessments.
+    """
+    val = _search_trace_field(trace, _SCORE_FIELDS)
+    if val is not None:
+        return val
+
+    # MLflow assessments (native format: info.assessments, or top-level)
+    assessments = trace.get("assessments") or _get(trace, ["info", "assessments"]) or []
+    for a in assessments:
+        if not isinstance(a, dict):
+            continue
+        val = a.get("numeric_value")
+        if val is not None:
+            return val
+        val = a.get("value")
+        if val is not None:
+            return val
+
+    return None
 
 
 def extract_llm_calls_from_mlflow_trace(
@@ -336,12 +402,14 @@ def extract_llm_calls_from_mlflow_trace(
     """
     Extract LLM calls from an MLflow trace.
 
+    Accepts both flat and native (info/data envelope) MLflow trace formats.
+
     Uses parent_id to:
     1. Find calling node name by walking up the parent chain
     2. Order LLM calls by start_time, with parent hierarchy as context
 
     Args:
-        trace: The trace dict containing spans
+        trace: The trace dict containing spans (flat or native format)
         file_name: Fallback name for trace_id
         separate_tools: If True, emit separate rows for tool calls vs text responses
                        If False, emit single row per model call with combined response
@@ -350,8 +418,8 @@ def extract_llm_calls_from_mlflow_trace(
     Returns:
         List of row dicts matching the unified CSV schema
     """
-    trace_id = trace.get("trace_id") or trace.get("id") or file_name or "unknown"
-    spans: List[Dict[str, Any]] = trace.get("spans", [])
+    trace_id = _get_trace_id(trace) or file_name or "unknown"
+    spans: List[Dict[str, Any]] = _get_spans(trace)
 
     if not spans:
         return []
@@ -400,7 +468,7 @@ def extract_llm_calls_from_mlflow_trace(
 
     # Extract intent once for the entire trace
     trace_intent = _extract_trace_intent(trace, spans, by_id)
-    traj_score = trace.get("traj_score") or _get(trace, ["tags", "traj_score"])
+    traj_score = _get_traj_score(trace)
 
     # Find all model call spans
     model_spans = [s for s in spans if _is_model_call_span(s)]
