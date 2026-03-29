@@ -6,7 +6,7 @@ format suitable for LLM-as-judge evaluation, significantly reducing token usage
 while preserving the information needed for quality assessment.
 
 INPUT: Unified CSV format (output of preprocessing step)
-  Columns: id, Name, intent, task_id, step_in_trace_general, step_in_trace_node,
+  Columns: id, Name, intent, task_id, step_in_trace_general, llm_call_index,
            model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 
 The CSV format is provider-agnostic (works with Langfuse, MLflow traces)

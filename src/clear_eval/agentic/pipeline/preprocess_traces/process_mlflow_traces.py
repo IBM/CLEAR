@@ -10,9 +10,8 @@ Supports input files that contain:
   - a wrapper {"traces": [...]}
 
 Output fields match the unified CSV schema:
-  id, Name, intent, task_id, step_in_trace_general, step_in_trace_node,
-  llm_call_index, index_in_llm_call, model_input, response, tool_or_agent,
-  api_spec, meta_data, traj_score
+  id, Name, intent, task_id, step_in_trace_general, llm_call_index,
+  model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 """
 
 import json
