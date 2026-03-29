@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 # CSV fieldnames for output (unified schema)
 CSV_FIELDNAMES = [
     'id', 'Name', 'intent', 'task_id', 'step_in_trace_general',
-    'step_in_trace_node', 'model_input', 'response', 'tool_or_agent', 'api_spec', 'meta_data', 'traj_score'
+    'llm_call_index', 'model_input', 'response', 'tool_or_agent',
+    'api_spec', 'meta_data', 'traj_score'
 ]
 
 

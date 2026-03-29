@@ -11,7 +11,8 @@ Supports input files that contain:
 
 Output fields match the unified CSV schema:
   id, Name, intent, task_id, step_in_trace_general, step_in_trace_node,
-  model_input, response, tool_or_agent, api_spec, meta_data, traj_score
+  llm_call_index, index_in_llm_call, model_input, response, tool_or_agent,
+  api_spec, meta_data, traj_score
 """
 
 import json
@@ -26,6 +27,7 @@ from .trace_utils import (
     extract_api_spec,
     extract_intent_from_input,
     truncate_middle,
+    build_csv_rows,
     _INTENT_LIMIT,
 )
 
@@ -489,87 +491,26 @@ def extract_llm_calls_from_mlflow_trace(
 
     model_spans.sort(key=sort_key)
 
-    # Process each model call span
-    rows: List[Dict[str, Any]] = []
-    per_node_counter: Dict[str, int] = {}
-    step_counter = 0
+    # Extract one record per LLM call (framework-specific field extraction only)
+    llm_calls: List[Dict[str, Any]] = []
 
     for s in model_spans:
-        # Find calling node by walking up parent chain
         agent_name = find_calling_node_name(s)
-
-        per_node_counter.setdefault(agent_name, 0)
-        per_node_counter[agent_name] += 1
-
         model_input_str, response_text, tool_calls, api_spec, model_meta = _extract_input_output_from_span(
             s, system_trunc_limit
         )
-        api_spec_str = json.dumps(api_spec) if api_spec else ""
-
-        # Build complete metadata with span info
         meta_data = _build_span_metadata(s, model_meta)
 
-        if separate_tools:
-            # Emit separate rows for tool calls
-            if isinstance(tool_calls, list):
-                for tc in tool_calls:
-                    step_counter += 1
-                    rows.append({
-                        "id": f"{trace_id}_{step_counter}",
-                        "Name": agent_name,
-                        "intent": trace_intent,
-                        "task_id": trace_id,
-                        "step_in_trace_general": step_counter,
-                        "step_in_trace_node": per_node_counter[agent_name],
-                        "model_input": model_input_str,
-                        "response": json.dumps(tc, indent=2),
-                        "tool_or_agent": "tool",
-                        "api_spec": api_spec_str,
-                        "meta_data": json.dumps(meta_data),
-                        "traj_score": traj_score,
-                    })
+        llm_calls.append({
+            "agent_name": agent_name,
+            "task_id": trace_id,
+            "intent": trace_intent,
+            "model_input": model_input_str,
+            "response_text": response_text,
+            "tool_calls": tool_calls,
+            "api_spec": api_spec,
+            "meta_data": meta_data,
+            "traj_score": traj_score,
+        })
 
-            # Emit row for text response
-            if response_text and response_text.strip() not in ("null", "None", ""):
-                step_counter += 1
-                rows.append({
-                    "id": f"{trace_id}_{step_counter}",
-                    "Name": agent_name,
-                    "intent": trace_intent,
-                    "task_id": trace_id,
-                    "step_in_trace_general": step_counter,
-                    "step_in_trace_node": per_node_counter[agent_name],
-                    "model_input": model_input_str,
-                    "response": response_text,
-                    "tool_or_agent": "agent",
-                    "api_spec": api_spec_str,
-                    "meta_data": json.dumps(meta_data),
-                    "traj_score": traj_score,
-                })
-        else:
-            # Single row mode: combine everything
-            step_counter += 1
-            combined_response = response_text
-            if tool_calls:
-                tool_parts = [json.dumps(tc, indent=2) for tc in tool_calls]
-                if tool_parts:
-                    combined_response = "\n---\n".join(tool_parts)
-                    if response_text:
-                        combined_response += f"\n---\n{response_text}"
-
-            rows.append({
-                "id": f"{trace_id}_{step_counter}",
-                "Name": agent_name,
-                "intent": trace_intent,
-                "task_id": trace_id,
-                "step_in_trace_general": step_counter,
-                "step_in_trace_node": per_node_counter[agent_name],
-                "model_input": model_input_str,
-                "response": combined_response,
-                "tool_or_agent": "agent",
-                "api_spec": api_spec_str,
-                "meta_data": json.dumps(meta_data),
-                "traj_score": traj_score,
-            })
-
-    return rows
+    return build_csv_rows(llm_calls, separate_tools=separate_tools)

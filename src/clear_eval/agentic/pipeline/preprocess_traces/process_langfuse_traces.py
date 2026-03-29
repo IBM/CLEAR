@@ -6,7 +6,8 @@ Handles multiple providers: OpenAI, Anthropic, Gemini, etc.
 
 Output fields match the unified CSV schema:
   id, Name, intent, task_id, step_in_trace_general, step_in_trace_node,
-  model_input, response, tool_or_agent, meta_data, traj_score
+  llm_call_index, index_in_llm_call, model_input, response, tool_or_agent,
+  api_spec, meta_data, traj_score
 """
 
 import json
@@ -20,41 +21,29 @@ from .trace_utils import (
     extract_api_spec,
     extract_intent_from_input,
     truncate_middle,
+    build_csv_rows,
     _INTENT_LIMIT,
 )
 
 
-# ----------------- row building -----------------
+# ----------------- field extraction -----------------
 
-def _build_llm_rows_for_observation(
+def _extract_llm_call_record(
     *,
-    rows_out: List[Dict[str, Any]],
     trace_id: str,
     session_id: str,
     intent: str,
     obs: Dict[str, Any],
     agent_name: str,
-    step_counter_ref: Dict[str, int],
-    node_idx: int,
-    separate_tools: bool = True,
     system_trunc_limit: int = 50_000,
     traj_score: Any = None,
-) -> None:
+) -> Dict[str, Any]:
     """
-    Given a GENERATION observation, append 1..N CSV rows.
+    Extract fields from a Langfuse GENERATION observation into a raw
+    LLM-call record suitable for :func:`build_csv_rows`.
 
-    Args:
-        rows_out: List to append rows to (mutated)
-        trace_id: Trace identifier
-        session_id: Session identifier
-        intent: User intent/query
-        obs: Observation dict from Langfuse
-        agent_name: Name of the calling agent/node
-        step_counter_ref: Mutable counter dict {'v': int}
-        node_idx: Index of this observation in the trace
-        separate_tools: If True, emit separate rows for tool calls vs text
-        system_trunc_limit: Max chars for system messages before truncation
-        traj_score: Optional trajectory score
+    Returns a single dict (one per LLM invocation) — row splitting and
+    counter assignment happen in :func:`build_csv_rows`.
     """
     obs_id = obs.get("id")
     parent_id = obs.get("parentObservationId")
@@ -68,7 +57,6 @@ def _build_llm_rows_for_observation(
     else:
         model_input_normalized = normalize_input_messages(input_data, system_trunc_limit) if input_data else []
 
-    # Serialize: if already string keep as-is, otherwise JSON encode
     if isinstance(model_input_normalized, str):
         model_input_str = model_input_normalized
     else:
@@ -79,20 +67,17 @@ def _build_llm_rows_for_observation(
     response_text = normalize_response(output_data)
     tool_calls = extract_tool_calls(output_data)
 
-    # Extract bound tools (API spec)
+    # Bound tools (API spec)
     api_spec = extract_api_spec(input_data)
-    api_spec_str = json.dumps(api_spec) if api_spec else ""
 
-    # Build metadata with span-level info
+    # Metadata
     meta_data = {
-        # Span-level info
         "span_id": obs_id,
         "span_name": obs.get("name"),
         "span_type": obs.get("type"),
         "parent_span_id": parent_id,
         "duration_ms": obs.get("latency"),
         "status": obs.get("statusMessage"),
-        # Model-level info
         "observation_id": obs_id,
         "parent_observation_id": parent_id,
         "Name": agent_name,
@@ -107,68 +92,17 @@ def _build_llm_rows_for_observation(
         "cost": obs.get("calculatedTotalCost"),
     }
 
-    if separate_tools:
-        # Emit separate rows for tool calls
-        if tool_calls:
-            for tc in tool_calls:
-                step_counter_ref["v"] += 1
-                rows_out.append({
-                    "id": f"{trace_id}_{step_counter_ref['v']}",
-                    "Name": agent_name,
-                    "intent": intent,
-                    "task_id": trace_id,
-                    "step_in_trace_general": step_counter_ref["v"],
-                    "step_in_trace_node": node_idx + 1,
-                    "model_input": model_input_str,
-                    "response": json.dumps(tc, indent=2),
-                    "tool_or_agent": "tool",
-                    "api_spec": api_spec_str,
-                    "meta_data": json.dumps(meta_data),
-                    "traj_score": traj_score,
-                })
-
-        # Emit row for text response
-        if response_text and response_text.strip() not in ("null", "None", ""):
-            step_counter_ref["v"] += 1
-            rows_out.append({
-                "id": f"{trace_id}_{step_counter_ref['v']}",
-                "Name": agent_name,
-                "intent": intent,
-                "task_id": trace_id,
-                "step_in_trace_general": step_counter_ref["v"],
-                "step_in_trace_node": node_idx + 1,
-                "model_input": model_input_str,
-                "response": response_text,
-                "tool_or_agent": "agent",
-                "api_spec": api_spec_str,
-                "meta_data": json.dumps(meta_data),
-                "traj_score": traj_score,
-            })
-    else:
-        # Single row mode: combine everything
-        step_counter_ref["v"] += 1
-        combined_response = response_text
-        if tool_calls:
-            tool_parts = [json.dumps(tc, indent=2) for tc in tool_calls]
-            if tool_parts:
-                combined_response = "\n---\n".join(tool_parts)
-                if response_text:
-                    combined_response += f"\n---\n{response_text}"
-
-        rows_out.append({
-            "id": f"{trace_id}_{step_counter_ref['v']}",
-            "Name": agent_name,
-            "intent": intent,
-            "task_id": trace_id,
-            "step_in_trace_general": step_counter_ref["v"],
-            "step_in_trace_node": node_idx + 1,
-            "model_input": model_input_str,
-            "response": combined_response,
-            "tool_or_agent": "agent",
-            "api_spec": api_spec_str,
-            "meta_data": json.dumps(meta_data),
-            "traj_score": traj_score,
-        })
+    return {
+        "agent_name": agent_name,
+        "task_id": trace_id,
+        "intent": intent,
+        "model_input": model_input_str,
+        "response_text": response_text,
+        "tool_calls": tool_calls,
+        "api_spec": api_spec,
+        "meta_data": meta_data,
+        "traj_score": traj_score,
+    }
 
 
 # ----------------- trace parsing -----------------
@@ -294,6 +228,38 @@ def _crewai_filter(_obs: Dict[str, Any]) -> bool:
 
 # ----------------- public extractors -----------------
 
+def _extract_llm_call_records(
+    json_data: Any,
+    file_name: str,
+    predicate: Callable[[Dict[str, Any]], bool],
+    name_func: Callable[[Dict[str, Any]], str],
+    system_trunc_limit: int = 50_000,
+) -> List[Dict[str, Any]]:
+    """
+    Shared extraction logic for Langfuse traces.
+
+    Filters GENERATION observations, extracts fields via *name_func* and
+    *predicate*, and returns raw LLM-call records (no counters / row
+    splitting — that is handled by :func:`build_csv_rows`).
+    """
+    intent, trace_id, session_id, observations, traj_score = _extract_common_from_trace_root(json_data, file_name)
+    gens = _sort_and_filter_generations(observations, predicate)
+
+    llm_calls: List[Dict[str, Any]] = []
+    for obs in gens:
+        agent_name = name_func(obs)
+        llm_calls.append(_extract_llm_call_record(
+            trace_id=trace_id,
+            session_id=session_id or "",
+            intent=intent,
+            obs=obs,
+            agent_name=agent_name,
+            system_trunc_limit=system_trunc_limit,
+            traj_score=traj_score,
+        ))
+    return llm_calls
+
+
 def extract_llm_calls_from_langgraph_trace(
     json_data: Any,
     file_name: str = None,
@@ -312,29 +278,11 @@ def extract_llm_calls_from_langgraph_trace(
     Returns:
         List of row dicts matching the unified CSV schema
     """
-    intent, trace_id, session_id, observations, traj_score = _extract_common_from_trace_root(json_data, file_name)
-    rows: List[Dict[str, Any]] = []
-
-    gens = _sort_and_filter_generations(observations, _langgraph_filter)
-    step_counter = {"v": 0}
-
-    for idx, obs in enumerate(gens):
-        agent_name = _langgraph_agent_name(obs)
-        _build_llm_rows_for_observation(
-            rows_out=rows,
-            trace_id=trace_id,
-            session_id=session_id,
-            intent=intent,
-            obs=obs,
-            agent_name=agent_name,
-            step_counter_ref=step_counter,
-            node_idx=idx,
-            separate_tools=separate_tools,
-            system_trunc_limit=system_trunc_limit,
-            traj_score=traj_score,
-        )
-
-    return rows
+    llm_calls = _extract_llm_call_records(
+        json_data, file_name or "", _langgraph_filter, _langgraph_agent_name,
+        system_trunc_limit=system_trunc_limit,
+    )
+    return build_csv_rows(llm_calls, separate_tools=separate_tools)
 
 
 def extract_llm_calls_from_crewai_trace(
@@ -355,26 +303,8 @@ def extract_llm_calls_from_crewai_trace(
     Returns:
         List of row dicts matching the unified CSV schema
     """
-    intent, trace_id, session_id, observations, traj_score = _extract_common_from_trace_root(json_data, file_name)
-    rows: List[Dict[str, Any]] = []
-
-    gens = _sort_and_filter_generations(observations, _crewai_filter)
-    step_counter = {"v": 0}
-
-    for idx, obs in enumerate(gens):
-        agent_name = _crewai_agent_name(obs)
-        _build_llm_rows_for_observation(
-            rows_out=rows,
-            trace_id=trace_id,
-            session_id=session_id,
-            intent=intent,
-            obs=obs,
-            agent_name=agent_name,
-            step_counter_ref=step_counter,
-            node_idx=idx,
-            separate_tools=separate_tools,
-            system_trunc_limit=system_trunc_limit,
-            traj_score=traj_score,
-        )
-
-    return rows
+    llm_calls = _extract_llm_call_records(
+        json_data, file_name or "", _crewai_filter, _crewai_agent_name,
+        system_trunc_limit=system_trunc_limit,
+    )
+    return build_csv_rows(llm_calls, separate_tools=separate_tools)

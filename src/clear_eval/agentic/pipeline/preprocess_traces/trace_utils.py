@@ -493,3 +493,113 @@ def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] | None
                 return truncate_middle(intent, _INTENT_LIMIT)
 
     return ""
+
+
+# ----- CSV row construction (shared by MLflow & Langfuse processors) -----
+
+
+def build_csv_rows(
+    llm_calls: List[Dict[str, Any]],
+    separate_tools: bool = True,
+) -> List[Dict[str, Any]]:
+    """
+    Build final CSV rows from a list of extracted LLM call records.
+
+    Each record represents a single LLM invocation and contains fields
+    extracted by a framework-specific processor (MLflow / Langfuse).  This
+    function handles row splitting (tool vs agent), counter assignment, and
+    ID generation — logic that is identical across observability backends.
+
+    Args:
+        llm_calls: One dict per LLM call with keys:
+            - agent_name (str)
+            - model_input (str, already serialized)
+            - response_text (str)
+            - tool_calls (list of {"name": str, "arguments": Any})
+            - api_spec (list of tool definitions)
+            - meta_data (dict, not yet JSON-serialized)
+            - intent (str)
+            - task_id (str)
+            - traj_score (Any)
+        separate_tools: When True, emit one row per tool call plus an
+            optional row for the text response.  When False, emit a single
+            combined row per LLM call.
+
+    Returns:
+        List of row dicts matching the unified CSV schema.
+    """
+    rows: List[Dict[str, Any]] = []
+    step_counter = 0
+    llm_call_counter = 0
+
+    for call in llm_calls:
+        agent_name = call["agent_name"]
+        task_id = call["task_id"]
+        intent = call["intent"]
+        model_input = call["model_input"]
+        response_text = call["response_text"]
+        tool_calls = call.get("tool_calls") or []
+        api_spec = call.get("api_spec") or []
+        meta_data = call.get("meta_data") or {}
+        traj_score = call.get("traj_score")
+
+        llm_call_counter += 1
+
+        api_spec_str = json.dumps(api_spec) if api_spec else ""
+        meta_data_str = json.dumps(meta_data)
+
+        # Shared fields for every row produced from this LLM call
+        base = {
+            "Name": agent_name,
+            "intent": intent,
+            "task_id": task_id,
+            "llm_call_index": llm_call_counter,
+            "model_input": model_input,
+            "api_spec": api_spec_str,
+            "meta_data": meta_data_str,
+            "traj_score": traj_score,
+        }
+
+        if separate_tools:
+            # One row per tool call
+            if isinstance(tool_calls, list):
+                for tc in tool_calls:
+                    step_counter += 1
+                    rows.append({
+                        **base,
+                        "id": f"{task_id}_{step_counter}",
+                        "step_in_trace_general": step_counter,
+                        "response": json.dumps(tc, indent=2),
+                        "tool_or_agent": "tool",
+                    })
+
+            # Row for text response (if non-empty)
+            if response_text and response_text.strip() not in ("null", "None", ""):
+                step_counter += 1
+                rows.append({
+                    **base,
+                    "id": f"{task_id}_{step_counter}",
+                    "step_in_trace_general": step_counter,
+                    "response": response_text,
+                    "tool_or_agent": "agent",
+                })
+        else:
+            # Single combined row
+            step_counter += 1
+            combined_response = response_text
+            if tool_calls:
+                tool_parts = [json.dumps(tc, indent=2) for tc in tool_calls]
+                if tool_parts:
+                    combined_response = "\n---\n".join(tool_parts)
+                    if response_text:
+                        combined_response += f"\n---\n{response_text}"
+
+            rows.append({
+                **base,
+                "id": f"{task_id}_{step_counter}",
+                "step_in_trace_general": step_counter,
+                "response": combined_response,
+                "tool_or_agent": "agent",
+            })
+
+    return rows
