@@ -33,14 +33,21 @@ from .trace_utils import (
 # ----------------- helpers -----------------
 
 def _get(d: Dict[str, Any], path: List[Any], default=None):
-    """Safely navigate nested dict by path."""
+    """Safely navigate nested dict by path, auto-parsing JSON strings."""
     cur = d
     for p in path:
+        if isinstance(cur, str):
+            cur = safe_json(cur)
         if isinstance(cur, dict) and p in cur:
             cur = cur[p]
         else:
             return default
-    return cur
+    return safe_json(cur) if isinstance(cur, str) else cur
+
+def _parse_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse all JSON-string values in an attributes dict."""
+    return {k: safe_json(v) if isinstance(v, str) else v for k, v in attrs.items()}
+
 
 def get_by_any_key(s: Dict[str, Any], keys: list[str]):
     for k in keys:
@@ -115,7 +122,7 @@ def _extract_input_output_from_span(
     Returns:
         (model_input_str, response_text, tool_calls, api_spec, meta_data)
     """
-    attrs = s.get("attributes", {})
+    attrs = _parse_attrs(s.get("attributes", {}))
     inputs = s.get("inputs", {}) or safe_json(attrs.get("mlflow.spanInputs")) or {}
     outputs_obj = s.get("outputs", {}) or safe_json(attrs.get("mlflow.spanOutputs")) or {}
 
@@ -134,8 +141,8 @@ def _extract_input_output_from_span(
     if messages is None and isinstance(s.get("events"), list):
         for ev in s["events"]:
             if ev.get("name") == "gen_ai.client.inference.operation.details":
-                ev_attrs = ev.get("attributes", {})
-                messages = ev_attrs.get("gen_ai.input.messages") or ev_attrs.get("gen_ai.prompt")
+                ev_attrs = _parse_attrs(ev.get("attributes", {}))
+                messages = _get(ev_attrs, ["gen_ai.input.messages"]) or _get(ev_attrs, ["gen_ai.prompt"])
                 if messages is not None:
                     break
 
@@ -171,8 +178,8 @@ def _extract_input_output_from_span(
     if not response_text and isinstance(s.get("events"), list):
         for ev in s["events"]:
             if ev.get("name") == "gen_ai.client.inference.operation.details":
-                ev_attrs = ev.get("attributes", {})
-                out_msgs = ev_attrs.get("gen_ai.output.messages") or ev_attrs.get("gen_ai.completion")
+                ev_attrs = _parse_attrs(ev.get("attributes", {}))
+                out_msgs = _get(ev_attrs, ["gen_ai.output.messages"]) or _get(ev_attrs, ["gen_ai.completion"])
                 if out_msgs is not None:
                     response_text, extra_tool_calls = extract_from_output_messages(out_msgs)
                     if not tool_calls and extra_tool_calls:
@@ -216,7 +223,7 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
     Returns:
         Complete metadata dict with span info
     """
-    attrs = s.get("attributes", {})
+    attrs = _parse_attrs(s.get("attributes", {}))
 
     # Calculate duration if timestamps available
     duration_ms = s.get("duration_ms")
@@ -291,7 +298,7 @@ def _extract_trace_intent(
 
     for root in root_spans:
         intent = extract_intent_from_input(
-            root.get("inputs"), root.get("attributes") or {}
+            root.get("inputs"), _parse_attrs(root.get("attributes") or {})
         )
         if intent:
             return intent
@@ -300,7 +307,7 @@ def _extract_trace_intent(
     sorted_spans = sorted(spans, key=lambda s: get_start_time(s) or float("inf"))
     for s in sorted_spans:
         intent = extract_intent_from_input(
-            s.get("inputs"), s.get("attributes") or {}
+            s.get("inputs"), _parse_attrs(s.get("attributes") or {})
         )
         if intent:
             return intent
