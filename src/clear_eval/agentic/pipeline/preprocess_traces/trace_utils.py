@@ -143,7 +143,7 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
     - If list/dict of messages: transform to structured list
 
     Returns:
-        str (if input was string) or List[{"role": str, "content": str, "is_tool_def": bool, "tool_calls": list}]
+        str (if input was string) or List[{"role": str, "content": str, "tool_calls": list}]
     """
     if messages is None:
         return []
@@ -164,10 +164,10 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
         if msg is None:
             continue
         if isinstance(msg, str):
-            result.append({"role": "unknown", "content": msg, "is_tool_def": False, "tool_calls": []})
+            result.append({"role": "unknown", "content": msg, "tool_calls": []})
             continue
         if not isinstance(msg, dict):
-            result.append({"role": "unknown", "content": str(msg), "is_tool_def": False, "tool_calls": []})
+            result.append({"role": "unknown", "content": str(msg), "tool_calls": []})
             continue
 
         role = (msg.get("role") or msg.get("type") or "unknown").lower()
@@ -186,23 +186,11 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
                 content = truncate_middle(content, remaining)
             system_chars_used += len(content)
 
-        # Detect tool definitions
-        is_tool_def = False
-        if role == "tool" and isinstance(raw_content, (dict, str)):
-            content_to_check = raw_content
-            if isinstance(content_to_check, str):
-                try:
-                    content_to_check = json.loads(content_to_check)
-                except Exception:
-                    pass
-            if isinstance(content_to_check, dict) and "function" in content_to_check:
-                is_tool_def = True
-
         # Keep messages that have content OR tool calls (don't drop tool-only messages)
         if not content and not msg_tool_calls:
             continue
 
-        result.append({"role": role, "content": content, "is_tool_def": is_tool_def, "tool_calls": msg_tool_calls})
+        result.append({"role": role, "content": content, "tool_calls": msg_tool_calls})
 
     return result
 

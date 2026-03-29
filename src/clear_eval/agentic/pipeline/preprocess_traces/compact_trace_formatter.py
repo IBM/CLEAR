@@ -34,11 +34,11 @@ def parse_model_input(model_input: str) -> List[Dict[str, Any]]:
     Parse the model_input field from CSV into structured messages.
 
     The model_input can be:
-    1. JSON-encoded list: [{"role": "...", "content": "...", "is_tool_def": bool}, ...]
+    1. JSON-encoded list: [{"role": "...", "content": "...", "tool_calls": [...]}, ...]
     2. Plain string (legacy or raw text)
 
     Returns:
-        List of {"role": str, "content": str, "is_tool_def": bool}
+        List of {"role": str, "content": str, "tool_calls": list}
     """
     if not model_input or not isinstance(model_input, str):
         return []
@@ -57,23 +57,22 @@ def parse_model_input(model_input: str) -> List[Dict[str, Any]]:
                         result.append({
                             "role": msg.get("role", "unknown"),
                             "content": msg.get("content", ""),
-                            "is_tool_def": msg.get("is_tool_def", False)
+                            "tool_calls": msg.get("tool_calls", []),
                         })
                     elif isinstance(msg, str):
-                        result.append({"role": "unknown", "content": msg, "is_tool_def": False})
+                        result.append({"role": "unknown", "content": msg, "tool_calls": []})
                 return result
         except json.JSONDecodeError:
             pass
 
     # Fallback: treat as plain text (legacy format or raw string)
-    return [{"role": "unknown", "content": model_input, "is_tool_def": False}]
+    return [{"role": "unknown", "content": model_input, "tool_calls": []}]
 
 
 def extract_input_context(
     model_input: str,
     max_system_len: int = 5000,
     max_total_len: int = 50000,
-    include_tool_defs: bool = False,
 ) -> str:
     """
     Extract relevant context from model_input for compact representation.
@@ -81,17 +80,15 @@ def extract_input_context(
     Keeps:
     - User/human messages (the actual queries/inputs)
     - Assistant/ai messages (conversation history)
-    - Tool results (not tool definitions)
+    - Tool results and tool calls
 
     Optionally strips or truncates:
     - System prompts (heavily truncated)
-    - Tool/function definitions (stripped by default)
 
     Args:
         model_input: Raw model_input string from CSV
         max_system_len: Max chars to keep from system prompts
         max_total_len: Max total chars for the extracted context
-        include_tool_defs: Whether to include tool definitions (False = strip them)
 
     Returns:
         Compact input context string
@@ -106,11 +103,6 @@ def extract_input_context(
     for msg in messages:
         role = msg["role"]
         content = msg["content"]
-        is_tool_def = msg["is_tool_def"]
-
-        # Skip tool definitions unless requested
-        if is_tool_def and not include_tool_defs:
-            continue
 
         # Truncate system prompts
         if role == "system":
@@ -293,9 +285,9 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
 
 def format_compact_trace(
     df: pd.DataFrame,
-    max_input_context: int = 5000,
-    max_response_len: int = 5000,
-    max_system_prompt: int = 5000,
+    max_input_context: int = 10000,
+    max_response_len: int = 10000,
+    max_system_prompt: int = 10000,
     include_tools_per_step: bool = True,
     include_input_context: bool = True,
     include_metadata: bool = True,
