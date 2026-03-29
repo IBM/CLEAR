@@ -269,7 +269,7 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
     """
     if not text or len(text) <= max_len:
         return text or ""
-
+    #print(f"truncate_text: {len(text)} > {max_len}")
     if strategy == "end":
         return text[:max_len] + "..."
     elif strategy == "start":
@@ -282,9 +282,161 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
 # =============================================================================
 # Main compact formatting function
 # =============================================================================
+NO_LIMIT = 10 ** 9
+def _precompute_steps(
+    df: pd.DataFrame,
+    include_tools_per_step: bool,
+    include_input_context: bool,
+    include_metadata: bool,
+    truncate_content: bool,
+    max_input_context: int = 10000,
+    max_response_len: int = 10000,
+    max_system_prompt: int = 10000,
+) -> List[Dict[str, str]]:
+    """
+    Build per-step data (header, tools line, input context, response).
+
+    When *truncate_content* is False the input/response fields are extracted
+    at full length so the caller can measure them before deciding how much to
+    cut.  When True the fixed per-field limits are applied immediately.
+    """
+
+    steps: List[Dict[str, str]] = []
+
+    for idx, row in df.iterrows():
+        step_num = row.get("step_in_trace_general", idx + 1)
+        agent_name = row.get("Name", "unknown")
+        action_type = row.get("tool_or_agent", "agent")
+
+        # --- step header ---
+        header_parts = [
+            f"### Step {step_num}",
+            f"Agent: {agent_name}",
+            f"Type: {action_type}",
+        ]
+        if include_metadata:
+            meta = parse_metadata(row.get("meta_data", ""))
+            model = meta.get("model", "")
+            tokens_info = meta.get("tokens", {})
+            total_tokens = (
+                tokens_info.get("total", 0) if isinstance(tokens_info, dict) else 0
+            )
+            latency = meta.get("latency", 0)
+            if model:
+                header_parts.append(f"Model: {model}")
+            if total_tokens:
+                header_parts.append(f"Tokens: {total_tokens}")
+            if latency:
+                header_parts.append(f"Latency: {latency}ms")
+        step_header = " | ".join(header_parts)
+
+        # --- tool names ---
+        tools_line = ""
+        if include_tools_per_step:
+            api_spec = row.get("api_spec", "")
+            if pd.notna(api_spec) and api_spec:
+                tool_names = extract_tool_names(api_spec)
+                if tool_names:
+                    if len(tool_names) <= 5:
+                        tools_line = f"**Available Tools:** {', '.join(tool_names)}"
+                    else:
+                        tools_line = (
+                            f"**Available Tools:** "
+                            f"{', '.join(tool_names[:5])} "
+                            f"(+{len(tool_names) - 5} more)"
+                        )
+
+        # --- input context ---
+        input_text = ""
+        if include_input_context:
+            model_input = row.get("model_input", "")
+            if pd.notna(model_input) and model_input:
+                if truncate_content:
+                    input_text = extract_input_context(
+                        str(model_input),
+                        max_system_len=max_system_prompt,
+                        max_total_len=max_input_context,
+                    )
+                else:
+                    input_text = extract_input_context(
+                        str(model_input),
+                        max_system_len=NO_LIMIT,
+                        max_total_len=NO_LIMIT,
+                    )
+
+        # --- response ---
+        response_text = ""
+        response_raw = row.get("response", "")
+        if pd.notna(response_raw) and response_raw:
+            limit = max_response_len if truncate_content else NO_LIMIT
+            response_text = format_response_compact(str(response_raw), max_len=limit)
+
+        steps.append({
+            "header": step_header,
+            "tools": tools_line,
+            "input": input_text,
+            "response": response_text,
+        })
+
+    return steps
+
+
+def _assemble_trace(header_text: str, steps: List[Dict[str, str]]) -> str:
+    """Join the trace header and per-step blocks into the final string."""
+    lines = [header_text]
+    for s in steps:
+        lines.append(s["header"])
+        lines.append("")
+
+        if s["tools"]:
+            lines.append(s["tools"])
+            lines.append("")
+
+        if s["input"]:
+            lines.append("**Input Context:**")
+            lines.append("```")
+            lines.append(s["input"])
+            lines.append("```")
+            lines.append("")
+
+        if s["response"]:
+            lines.append("**Response:**")
+            lines.append("```")
+            lines.append(s["response"])
+            lines.append("```")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _estimate_skeleton_size(header_text: str, steps: List[Dict[str, str]]) -> int:
+    """
+    Estimate the character count of everything *except* input/response content.
+
+    This includes the trace header, per-step headers, tool lines, markdown
+    fences, separators, and newlines.
+    """
+    size = len(header_text)
+    for s in steps:
+        size += len(s["header"]) + 2          # header + "\n\n"
+        if s["tools"]:
+            size += len(s["tools"]) + 2       # tools + "\n\n"
+        if s["input"]:
+            # "**Input Context:**\n```\n" ... "\n```\n\n"
+            size += len("**Input Context:**\n```\n") + len("\n```\n\n")
+        if s["response"]:
+            size += len("**Response:**\n```\n") + len("\n```\n\n")
+        size += len("---\n\n")
+    return size
+
 
 def format_compact_trace(
     df: pd.DataFrame,
+    max_tokens: Optional[int] = None,
+    chars_per_token: float = 3.5,
     max_input_context: int = 10000,
     max_response_len: int = 10000,
     max_system_prompt: int = 10000,
@@ -295,11 +447,28 @@ def format_compact_trace(
     """
     Convert a trace DataFrame to compact text format for LLM judge.
 
+    Two modes of operation:
+
+    **Fixed limits** (``max_tokens is None``, the default):
+        Each field is truncated to the fixed per-field character limits
+        (``max_input_context``, ``max_response_len``, ``max_system_prompt``).
+        Behaviour is identical to the original implementation.
+
+    **Adaptive** (``max_tokens`` is set):
+        The formatter first extracts all content *without* truncation,
+        measures the total size, and – only if it exceeds the token budget –
+        applies the *minimal* proportional truncation needed to fit.
+        The per-field fixed limits are ignored in this mode.
+
     Args:
         df: DataFrame with unified CSV schema
-        max_input_context: Max chars for extracted input context per step
-        max_response_len: Max chars for response per step
-        max_system_prompt: Max chars to keep from system prompts
+        max_tokens: Total token budget for the output.  When set, adaptive
+            truncation is used and the fixed per-field limits are ignored.
+        chars_per_token: Approximate characters per token used to convert
+            *max_tokens* to a character budget (default 3.5).
+        max_input_context: Max chars for input context per step (fixed mode)
+        max_response_len: Max chars for response per step (fixed mode)
+        max_system_prompt: Max chars for system prompts (fixed mode)
         include_tools_per_step: Show available tools at each step
         include_input_context: Include extracted input context
         include_metadata: Include model/tokens/latency info
@@ -310,7 +479,9 @@ def format_compact_trace(
     if df.empty:
         return "Empty trace"
 
-    # Get trace-level info from first row
+    adaptive = max_tokens is not None
+
+    # ── trace header ──────────────────────────────────────────────────
     first_row = df.iloc[0]
     task_id = first_row.get("task_id", "unknown")
     intent = first_row.get("intent", "")
@@ -318,86 +489,63 @@ def format_compact_trace(
     if pd.isna(traj_score):
         traj_score = "N/A"
 
-    lines = []
-    lines.append(f"## Trace: {task_id}")
-    lines.append(f"**User Query:** {intent}")
-    lines.append(f"**Total Steps:** {len(df)} | **Trajectory Score:** {traj_score}")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
+    header_text = "\n".join([
+        f"## Trace: {task_id}",
+        f"**User Query:** {intent}",
+        f"**Total Steps:** {len(df)} | **Trajectory Score:** {traj_score}",
+        "", "---", "",
+    ])
 
-    # Process each step
-    for idx, row in df.iterrows():
-        step_num = row.get("step_in_trace_general", idx + 1)
-        agent_name = row.get("Name", "unknown")
-        action_type = row.get("tool_or_agent", "agent")
+    # ── fixed-limit mode (original behaviour) ────────────────────────
+    if not adaptive:
+        steps = _precompute_steps(
+            df,
+            include_tools_per_step=include_tools_per_step,
+            include_input_context=include_input_context,
+            include_metadata=include_metadata,
+            truncate_content=True,
+            max_input_context=max_input_context,
+            max_response_len=max_response_len,
+            max_system_prompt=max_system_prompt,
+        )
+        res = _assemble_trace(header_text, steps)
+        return res
 
-        # Header line
-        header_parts = [f"### Step {step_num}", f"Agent: {agent_name}", f"Type: {action_type}"]
+    # ── adaptive mode ─────────────────────────────────────────────────
+    # Pass 1: extract all content untruncated
+    steps = _precompute_steps(
+        df,
+        include_tools_per_step=include_tools_per_step,
+        include_input_context=include_input_context,
+        include_metadata=include_metadata,
+        truncate_content=False,
+    )
 
-        # Add metadata if requested
-        if include_metadata:
-            meta = parse_metadata(row.get("meta_data", ""))
-            model = meta.get("model", "")
-            tokens = meta.get("tokens", {})
-            total_tokens = tokens.get("total", 0) if isinstance(tokens, dict) else 0
-            latency = meta.get("latency", 0)
+    # Measure
+    char_budget = int(max_tokens * chars_per_token)
+    skeleton_size = _estimate_skeleton_size(header_text, steps)
+    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
+    available = char_budget - skeleton_size
 
-            if model:
-                header_parts.append(f"Model: {model}")
-            if total_tokens:
-                header_parts.append(f"Tokens: {total_tokens}")
-            if latency:
-                header_parts.append(f"Latency: {latency}ms")
+    # Pass 2: apply proportional truncation only if needed
+    if available > 0 and total_content > available:
+        ratio = available / total_content
+        for s in steps:
+            if s["input"]:
+                limit = max(int(len(s["input"]) * ratio), 50)
+                s["input"] = truncate_text(s["input"], limit, strategy="middle")
+            if s["response"]:
+                limit = max(int(len(s["response"]) * ratio), 50)
+                s["response"] = truncate_text(s["response"], limit, strategy="middle")
+    elif available <= 0:
+        # Budget too tight even for skeleton – truncate everything to minimum
+        for s in steps:
+            if s["input"]:
+                s["input"] = truncate_text(s["input"], 50, strategy="middle")
+            if s["response"]:
+                s["response"] = truncate_text(s["response"], 50, strategy="middle")
 
-        lines.append(" | ".join(header_parts))
-        lines.append("")
-
-        # Available tools at this step
-        if include_tools_per_step:
-            api_spec = row.get("api_spec", "")
-            if pd.notna(api_spec) and api_spec:
-                tool_names = extract_tool_names(api_spec)
-                if tool_names:
-                    if len(tool_names) <= 5:
-                        lines.append(f"**Available Tools:** {', '.join(tool_names)}")
-                    else:
-                        lines.append(f"**Available Tools:** {', '.join(tool_names[:5])} (+{len(tool_names)-5} more)")
-                    lines.append("")
-
-        # Input context (extracted from model_input)
-        if include_input_context:
-            model_input = row.get("model_input", "")
-            if pd.notna(model_input) and model_input:
-                input_context = extract_input_context(
-                    str(model_input),
-                    max_system_len=max_system_prompt,
-                    max_total_len=max_input_context,
-                )
-                if input_context:
-                    lines.append("**Input Context:**")
-                    lines.append("```")
-                    lines.append(input_context)
-                    lines.append("```")
-                    lines.append("")
-
-        # Response
-        response = row.get("response", "")
-        if pd.notna(response) and response:
-            formatted_response = format_response_compact(str(response), max_len=max_response_len)
-
-            if formatted_response:
-                lines.append("**Response:**")
-                lines.append("```")
-                lines.append(formatted_response)
-                lines.append("```")
-                lines.append("")
-
-        lines.append("---")
-        lines.append("")
-
-    res = "\n".join(lines)
-    print(len(res)/4)
+    res = _assemble_trace(header_text, steps)
     return res
 
 
@@ -425,7 +573,7 @@ def format_compact_trace_from_csv(
 
 def process_trace_directory(
     input_dir: str,
-    output_dir: str,
+    output_dir: str = None,
     **kwargs
 ) -> Dict[str, str]:
     """
@@ -440,8 +588,10 @@ def process_trace_directory(
         Dict mapping trace_id to output file path
     """
     input_path = Path(input_dir)
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
+    output_path = None
+    if output_dir:
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
 
     results = {}
 
@@ -449,13 +599,18 @@ def process_trace_directory(
         trace_id = csv_file.stem
 
         try:
-            compact = format_compact_trace_from_csv(str(csv_file), **kwargs)
+            full_trace = format_compact_trace_from_csv(str(csv_file), max_input_context=NO_LIMIT, max_response_len=NO_LIMIT, max_system_prompt=NO_LIMIT)
+            compact = format_compact_trace_from_csv(str(csv_file), max_tokens=128_000, **kwargs)
+            prev = format_compact_trace_from_csv(str(csv_file), **kwargs)
 
-            output_file = output_path / f"{trace_id}_compact.txt"
-            with open(output_file, 'w') as f:
-                f.write(compact)
+            def tok_len(s): return int(len(s)/3.5)
+            print(f"{trace_id},{tok_len(full_trace)},{tok_len(prev)},{tok_len(compact)}")
+            if output_dir:
+                output_file = output_path / f"{trace_id}_compact.txt"
+                with open(output_file, 'w') as f:
+                    f.write(compact)
 
-            results[trace_id] = str(output_file)
+                results[trace_id] = str(output_file)
 
         except Exception as e:
             print(f"Error processing {csv_file}: {e}")
@@ -469,19 +624,26 @@ def process_trace_directory(
 
 if __name__ == "__main__":
     import sys
-
+    output_path = Path("/Users/lilache/Documents/agentic/data/paper_experiments/HAL/gaia_hal_generalist_agent_gpt4120250414_1744652581/new_processed_traces")
+    res = process_trace_directory("/Users/lilache/Documents/agentic/data/paper_experiments/HAL/gaia_hal_generalist_agent_gpt4120250414_1744652581/csvs", output_dir=  output_path)
+    sys.exit(0)
     if len(sys.argv) < 2:
         print("Usage: python compact_trace_formatter.py <trace.csv> [output.txt]")
         print("\nConverts unified CSV trace to compact text format for LLM judges.")
         sys.exit(1)
 
     csv_path = sys.argv[1]
-    compact = format_compact_trace_from_csv(csv_path)
-
-    if len(sys.argv) > 2:
-        output_path = sys.argv[2]
-        with open(output_path, 'w') as f:
-            f.write(compact)
-        print(f"Saved to {output_path}")
+    import os
+    if os.path.isdir(csv_path):
+        csv_paths = os.listdir(csv_path)
     else:
-        print(compact)
+        csv_paths = [csv_path]
+        compact = format_compact_trace_from_csv(csv_path)
+
+        if len(sys.argv) > 2:
+            output_path = sys.argv[2]
+            with open(output_path, 'w') as f:
+                f.write(compact)
+            print(f"Saved to {output_path}")
+        else:
+            print(compact)
