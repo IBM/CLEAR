@@ -134,21 +134,24 @@ Use `--from-raw-traces false` to use existing CSV files directly.
 
 **CSV Schema:**
 
-Each row represents a single LLM call within a trajectory. The `Name` column identifies the component (agent/tool) that made the call—CLEAR analysis is performed separately for each unique component.
+Each CSV file represents one trajectory (`task_id`). Each row represents one LLM call. The `Name` column identifies the component (agent/node) that made the call — CLEAR analysis is performed separately for each unique component.
 
-| Column | Type | Required | Description                                               |
-|--------|------|----------|-----------------------------------------------------------|
-| `id` | str | Yes      | Unique row identifier: `{task_id}_{step}`                 |
-| `Name` or `agent_name` | str | Yes      | Component name (CLEAR analyzes each component separately) |
-| `task_id` | str | Yes      | Trajectory identifier                                     |
-| `step_in_trace_general` | int | Yes      | Step number in trajectory (0-indexed)                     |
-| `step_in_trace_node` | int | No       | Step number within this component                         |
-| `model_input` | str | Yes      | Input to the LLM call                                     |
-| `response` | str | Yes      | Output from the LLM call                                  |
-| `tool_or_agent` | str | No       | Type: `tool` or `agent`                                   |
-| `intent` | str | No       | Original user query                                       |
-| `meta_data` | json | No       | Additional metadata (tokens, latency)                     |
-| `traj_score` | float | No       | Ground truth trajectory score (0-1)                       |
+For the full intermediate representation reference covering both `--separate-tools` modes, see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
+
+| Column | Type | Required | Description                                                                                                   |
+|--------|------|----------|---------------------------------------------------------------------------------------------------------------|
+| `id` | str | Yes | Unique row identifier: `{task_id}_{step_in_trace_general}`                                                    |
+| `Name` | str | Yes | Agent / node name (component that invoked the LLM)                                                            |
+| `intent` | str | No | Original user query / goal for this trajectory                                                                |
+| `task_id` | str | Yes | Trajectory identifier (groups all rows of one trace)                                                          |
+| `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed)                                                               |
+| `llm_call_index` | int | No | LLM invocation counter (1-indexed)                                                                            |
+| `model_input` | json/str | Yes | Normalised input messages sent to the LLM: [{"role":"...", "content":"...", "tool_calls":[]}...] or a string] |
+| `response` | str | Yes | LLM output — tool calls and text combined (joined by `\n---\n`)                                               |
+| `tool_or_agent` | str | No | Always `"agent"` in this mode                                                                                 |
+| `api_spec` | json | No | JSON list of tool definitions available to the LLM call                                                       |
+| `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs                                                    |
+| `traj_score` | float | No | Optional ground-truth trajectory score (0-1)                                                                  |
 
 ---
 
