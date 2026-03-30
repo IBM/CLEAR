@@ -118,9 +118,51 @@ def deduplicate_model_input(
     return json.dumps(messages)
 
 
+def _format_tool_call(tc: Any, role: str = "") -> str:
+    """
+    Format a single tool call for display.
+    
+    Handles multiple formats:
+    - OpenAI format: {"function": {"name": "...", "arguments": "..."}}
+    - Direct format: {"name": "...", "args": "..."}
+    - Non-standard: dumps as JSON
+    
+    Args:
+        tc: Tool call object (dict or other)
+        role: Role prefix for the output (optional)
+    
+    Returns:
+        Formatted tool call string
+    """
+    prefix = f"{role} [Tool Call]: " if role else "[Tool Call]: "
+    
+    if not isinstance(tc, dict):
+        # Non-dict tool call - dump as is
+        return f"{prefix}{str(tc)}"
+    
+    # Try to extract name and args from various formats
+    func = tc.get("function", tc)
+    name = func.get("name", tc.get("name"))
+    
+    if not name:
+        # No name found - dump entire dict as JSON
+        return f"{prefix}{json.dumps(tc)}"
+    
+    # Extract arguments from various possible locations
+    args = func.get("arguments", tc.get("arguments", tc.get("args", {})))
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except:
+            pass
+    
+    args_str = json.dumps(args) if isinstance(args, dict) else str(args)
+    return f"{prefix}{name}({args_str})"
+
+
 def extract_input_context(
     model_input: str,
-    max_system_len: int = 5000,
+    max_system_len: int = 10000,
     max_total_len: int = 50000,
 ) -> str:
     """
@@ -152,13 +194,20 @@ def extract_input_context(
     for msg in messages:
         role = msg["role"]
         content = msg["content"]
+        tool_calls = msg.get("tool_calls", [])
 
         # Truncate system prompts
         if role == "system":
             content = truncate_text(content, max_system_len, strategy="middle")
 
-        # Format output
-        output_parts.append(f"{role}: {content}")
+        # Format output with content
+        if content:
+            output_parts.append(f"{role}: {content}")
+        
+        # Add tool calls if present
+        if tool_calls:
+            for tc in tool_calls:
+                output_parts.append(_format_tool_call(tc, role=role))
 
     result = "\n\n".join(output_parts)
 
@@ -251,18 +300,8 @@ def format_response_compact(response: str, max_len: int = 10000) -> str:
 
         if tool_calls:
             for tc in tool_calls:
-                if isinstance(tc, dict):
-                    # Format tool call compactly
-                    func = tc.get("function", tc)
-                    name = func.get("name", tc.get("name", "unknown"))
-                    args = func.get("arguments", tc.get("args", {}))
-                    if isinstance(args, str):
-                        try:
-                            args = json.loads(args)
-                        except:
-                            pass
-                    args_str = json.dumps(args) if isinstance(args, dict) else str(args)
-                    parts.append(f"[Tool Call: {name}({args_str})]")
+                # Use centralized formatting (without role prefix for responses)
+                parts.append(_format_tool_call(tc, role=""))
 
     result = "\n".join(parts)
 
