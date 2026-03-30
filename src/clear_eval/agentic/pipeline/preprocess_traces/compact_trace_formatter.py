@@ -230,7 +230,7 @@ def parse_response(response: str) -> List[Dict[str, Any]]:
     return [{"role": "assistant", "content": response, "tool_calls": None}]
 
 
-def format_response_compact(response: str, max_len: int = 1000) -> str:
+def format_response_compact(response: str, max_len: int = 10000) -> str:
     """
     Format response for compact representation.
 
@@ -320,27 +320,24 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
 # Main compact formatting function
 # =============================================================================
 NO_LIMIT = 10 ** 9
-def _precompute_steps(
+
+def _collect_and_deduplicate_steps(
     df: pd.DataFrame,
     include_tools_per_step: bool,
     include_input_context: bool,
-    truncate_content: bool,
-    max_input_context: int = 10000,
-    max_response_len: int = 10000,
-    max_system_prompt: int = 10000,
-) -> List[Dict[str, str]]:
+) -> List[Dict[str, Any]]:
     """
-    Build per-step data (header, tools line, input context, response).
-
-    When *truncate_content* is False the input/response fields are extracted
-    at full length so the caller can measure them before deciding how much to
-    cut.  When True the fixed per-field limits are applied immediately.
+    Phase 1: Collect step data and deduplicate input messages.
     
-    Deduplication: Tracks previous model_input per agent to remove repeated
-    prefix messages in accumulated conversations.
+    This phase ONLY:
+    - Extracts headers and tools (formatted)
+    - Deduplicates model_input per agent (stores raw JSON strings)
+    - Stores raw response strings
+    - Does NOT format or truncate input/response content
+    
+    Returns steps with raw deduplicated content ready for processing.
     """
-
-    steps: List[Dict[str, str]] = []
+    steps: List[Dict[str, Any]] = []
     # Track previous model_input per agent for deduplication
     agent_previous_input: Dict[str, str] = {}
 
@@ -373,51 +370,175 @@ def _precompute_steps(
                             f"(+{len(tool_names) - 5} more)"
                         )
 
-        # --- input context with deduplication ---
-        input_text = ""
+        # --- deduplicate model_input (store RAW JSON, no formatting yet) ---
+        deduplicated_input_raw = ""
         if include_input_context:
             model_input = row.get("model_input", "")
             if pd.notna(model_input) and model_input:
                 # Get previous input for this agent (if any)
                 previous_input = agent_previous_input.get(agent_name)
 
-                # Update the previous input for this agent (store the ORIGINAL, not deduplicated)
-                agent_previous_input[agent_name] = str(model_input)
-
-                # Deduplicate BEFORE any truncation or formatting
-                deduplicated_input = deduplicate_model_input(
+                # Deduplicate and store RAW JSON string
+                deduplicated_input_raw = deduplicate_model_input(
                     str(model_input),
                     previous_input=previous_input,
                 )
                 
-                # Now extract and format the deduplicated input
-                if truncate_content:
-                    input_text = extract_input_context(
-                        deduplicated_input,
-                        max_system_len=max_system_prompt,
-                        max_total_len=max_input_context,
-                    )
-                else:
-                    input_text = extract_input_context(
-                        deduplicated_input,
-                        max_system_len=NO_LIMIT,
-                        max_total_len=NO_LIMIT,
-                    )
-        # --- response ---
-        response_text = ""
+                # Update the previous input for this agent (store the ORIGINAL, not deduplicated)
+                agent_previous_input[agent_name] = str(model_input)
+
+        # --- store raw response ---
         response_raw = row.get("response", "")
-        if pd.notna(response_raw) and response_raw:
-            limit = max_response_len if truncate_content else NO_LIMIT
-            response_text = format_response_compact(str(response_raw), max_len=limit)
+        if not pd.notna(response_raw):
+            response_raw = ""
 
         steps.append({
             "header": step_header,
             "tools": tools_line,
-            "input": input_text,
-            "response": response_text,
+            "input_raw": deduplicated_input_raw,  # Raw JSON string
+            "response_raw": str(response_raw) if response_raw else "",  # Raw string
         })
 
     return steps
+
+
+def _process_and_truncate_fixed(
+    steps: List[Dict[str, Any]],
+    max_input_context: int,
+    max_response_len: int,
+    max_system_prompt: int,
+) -> None:
+    """
+    Phase 2a: Process raw content and apply fixed per-field truncation.
+    
+    This matches the original behavior:
+    - Extracts and formats input with per-message system prompt truncation
+    - Formats response
+    - Applies final truncation limits
+    
+    Modifies steps in-place, converting raw fields to formatted text.
+    """
+    for s in steps:
+        # Process input with per-message truncation (original behavior)
+        if s["input_raw"]:
+            s["input"] = extract_input_context(
+                s["input_raw"],
+                max_system_len=max_system_prompt,
+                max_total_len=max_input_context,
+            )
+        else:
+            s["input"] = ""
+        
+        # Process response with truncation
+        if s["response_raw"]:
+            s["response"] = format_response_compact(
+                s["response_raw"],
+                max_len=max_response_len,
+            )
+        else:
+            s["response"] = ""
+        
+        # Remove raw fields (no longer needed)
+        del s["input_raw"]
+        del s["response_raw"]
+
+
+def _process_and_truncate_adaptive(
+    steps: List[Dict[str, Any]],
+    header_text: str,
+    max_tokens: int,
+    chars_per_token: float,
+) -> None:
+    """
+    Phase 2b: Process raw content and apply adaptive proportional truncation.
+    
+    - First extracts and formats all content WITHOUT truncation
+    - Then applies minimal proportional truncation to fit token budget
+    
+    Modifies steps in-place, converting raw fields to formatted text.
+    """
+    # First pass: extract and format without truncation
+    for s in steps:
+        if s["input_raw"]:
+            s["input"] = extract_input_context(
+                s["input_raw"],
+                max_system_len=NO_LIMIT,
+                max_total_len=NO_LIMIT,
+            )
+        else:
+            s["input"] = ""
+        
+        if s["response_raw"]:
+            s["response"] = format_response_compact(
+                s["response_raw"],
+                max_len=NO_LIMIT,
+            )
+        else:
+            s["response"] = ""
+    
+    # Second pass: apply proportional truncation if needed
+    char_budget = int(max_tokens * chars_per_token)
+    skeleton_size = _estimate_skeleton_size(header_text, steps)
+    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
+    available = char_budget - skeleton_size
+
+    if available > 0 and total_content > available:
+        ratio = available / total_content
+        for s in steps:
+            if s["input"]:
+                limit = max(int(len(s["input"]) * ratio), 50)
+                s["input"] = truncate_text(s["input"], limit, strategy="middle")
+            if s["response"]:
+                limit = max(int(len(s["response"]) * ratio), 50)
+                s["response"] = truncate_text(s["response"], limit, strategy="middle")
+    elif available <= 0:
+        # Budget too tight even for skeleton – truncate everything to minimum
+        for s in steps:
+            if s["input"]:
+                s["input"] = truncate_text(s["input"], 50, strategy="middle")
+            if s["response"]:
+                s["response"] = truncate_text(s["response"], 50, strategy="middle")
+    
+    # Remove raw fields (no longer needed)
+    for s in steps:
+        del s["input_raw"]
+        del s["response_raw"]
+
+
+def _apply_adaptive_truncation(
+    steps: List[Dict[str, str]],
+    header_text: str,
+    max_tokens: int,
+    chars_per_token: float,
+) -> None:
+    """
+    Phase 2b: Apply adaptive proportional truncation.
+    
+    Modifies steps in-place by applying minimal proportional truncation
+    to fit within the token budget.
+    """
+    char_budget = int(max_tokens * chars_per_token)
+    skeleton_size = _estimate_skeleton_size(header_text, steps)
+    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
+    available = char_budget - skeleton_size
+
+    # Apply proportional truncation only if needed
+    if available > 0 and total_content > available:
+        ratio = available / total_content
+        for s in steps:
+            if s["input"]:
+                limit = max(int(len(s["input"]) * ratio), 50)
+                s["input"] = truncate_text(s["input"], limit, strategy="middle")
+            if s["response"]:
+                limit = max(int(len(s["response"]) * ratio), 50)
+                s["response"] = truncate_text(s["response"], limit, strategy="middle")
+    elif available <= 0:
+        # Budget too tight even for skeleton – truncate everything to minimum
+        for s in steps:
+            if s["input"]:
+                s["input"] = truncate_text(s["input"], 50, strategy="middle")
+            if s["response"]:
+                s["response"] = truncate_text(s["response"], 50, strategy="middle")
 
 
 def _assemble_trace(header_text: str, steps: List[Dict[str, str]]) -> str:
@@ -533,53 +654,32 @@ def format_compact_trace(
         "", "---", "",
     ])
 
-    # ── fixed-limit mode (original behaviour) ────────────────────────
+    # ── Phase 1: Collect and deduplicate (no processing) ─────────────
+    steps = _collect_and_deduplicate_steps(
+        df,
+        include_tools_per_step=include_tools_per_step,
+        include_input_context=include_input_context,
+    )
+
+    # ── Phase 2: Process and truncate ────────────────────────────────
     if not adaptive:
-        steps = _precompute_steps(
-            df,
-            include_tools_per_step=include_tools_per_step,
-            include_input_context=include_input_context,
-            truncate_content=True,
+        # Fixed-limit mode: process with per-message truncation (original behavior)
+        _process_and_truncate_fixed(
+            steps,
             max_input_context=max_input_context,
             max_response_len=max_response_len,
             max_system_prompt=max_system_prompt,
         )
-        res = _assemble_trace(header_text, steps)
-        return res
+    else:
+        # Adaptive mode: process then apply proportional truncation
+        _process_and_truncate_adaptive(
+            steps,
+            header_text=header_text,
+            max_tokens=max_tokens,
+            chars_per_token=chars_per_token,
+        )
 
-    # ── adaptive mode ─────────────────────────────────────────────────
-    # Pass 1: extract all content untruncated
-    steps = _precompute_steps(
-        df,
-        include_tools_per_step=include_tools_per_step,
-        include_input_context=include_input_context,
-        truncate_content=False,
-    )
-
-    # Measure
-    char_budget = int(max_tokens * chars_per_token)
-    skeleton_size = _estimate_skeleton_size(header_text, steps)
-    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
-    available = char_budget - skeleton_size
-
-    # Pass 2: apply proportional truncation only if needed
-    if available > 0 and total_content > available:
-        ratio = available / total_content
-        for s in steps:
-            if s["input"]:
-                limit = max(int(len(s["input"]) * ratio), 50)
-                s["input"] = truncate_text(s["input"], limit, strategy="middle")
-            if s["response"]:
-                limit = max(int(len(s["response"]) * ratio), 50)
-                s["response"] = truncate_text(s["response"], limit, strategy="middle")
-    elif available <= 0:
-        # Budget too tight even for skeleton – truncate everything to minimum
-        for s in steps:
-            if s["input"]:
-                s["input"] = truncate_text(s["input"], 50, strategy="middle")
-            if s["response"]:
-                s["response"] = truncate_text(s["response"], 50, strategy="middle")
-
+    # ── Phase 3: Assemble final output ───────────────────────────────
     res = _assemble_trace(header_text, steps)
     return res
 
