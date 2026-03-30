@@ -246,18 +246,6 @@ def extract_tool_names(api_spec: str) -> List[str]:
 
     return []
 
-
-def parse_metadata(meta_data: str) -> Dict[str, Any]:
-    """Parse meta_data JSON string into dict."""
-    if not meta_data or not isinstance(meta_data, str):
-        return {}
-
-    try:
-        return json.loads(meta_data)
-    except:
-        return {}
-
-
 def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
     """
     Truncate text to max_len.
@@ -287,7 +275,6 @@ def _precompute_steps(
     df: pd.DataFrame,
     include_tools_per_step: bool,
     include_input_context: bool,
-    include_metadata: bool,
     truncate_content: bool,
     max_input_context: int = 10000,
     max_response_len: int = 10000,
@@ -314,20 +301,6 @@ def _precompute_steps(
             f"Agent: {agent_name}",
             f"Type: {action_type}",
         ]
-        if include_metadata:
-            meta = parse_metadata(row.get("meta_data", ""))
-            model = meta.get("model", "")
-            tokens_info = meta.get("tokens", {})
-            total_tokens = (
-                tokens_info.get("total", 0) if isinstance(tokens_info, dict) else 0
-            )
-            latency = meta.get("latency", 0)
-            if model:
-                header_parts.append(f"Model: {model}")
-            if total_tokens:
-                header_parts.append(f"Tokens: {total_tokens}")
-            if latency:
-                header_parts.append(f"Latency: {latency}ms")
         step_header = " | ".join(header_parts)
 
         # --- tool names ---
@@ -442,7 +415,6 @@ def format_compact_trace(
     max_system_prompt: int = 10000,
     include_tools_per_step: bool = True,
     include_input_context: bool = True,
-    include_metadata: bool = True,
 ) -> str:
     """
     Convert a trace DataFrame to compact text format for LLM judge.
@@ -471,7 +443,6 @@ def format_compact_trace(
         max_system_prompt: Max chars for system prompts (fixed mode)
         include_tools_per_step: Show available tools at each step
         include_input_context: Include extracted input context
-        include_metadata: Include model/tokens/latency info
 
     Returns:
         Compact text representation of the trace
@@ -502,7 +473,6 @@ def format_compact_trace(
             df,
             include_tools_per_step=include_tools_per_step,
             include_input_context=include_input_context,
-            include_metadata=include_metadata,
             truncate_content=True,
             max_input_context=max_input_context,
             max_response_len=max_response_len,
@@ -517,7 +487,6 @@ def format_compact_trace(
         df,
         include_tools_per_step=include_tools_per_step,
         include_input_context=include_input_context,
-        include_metadata=include_metadata,
         truncate_content=False,
     )
 
