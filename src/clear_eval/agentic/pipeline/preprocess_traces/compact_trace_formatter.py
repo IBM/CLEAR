@@ -218,97 +218,20 @@ def extract_input_context(
 
 
 # =============================================================================
-# Parsing utilities for response field
+# Formatting utilities for response field
 # =============================================================================
-
-def parse_response(response: str) -> List[Dict[str, Any]]:
-    """
-    Parse the response field from CSV into structured messages.
-
-    The response can be:
-    1. JSON-encoded list: [{"role": "assistant", "content": "...", "tool_calls": [...]}]
-    2. Plain string (text response)
-    3. JSON object (tool call, etc.)
-
-    Returns:
-        List of {"role": str, "content": str, "tool_calls": list|None}
-    """
-    if not response or not isinstance(response, str):
-        return []
-
-    response = response.strip()
-
-    # Try to parse as JSON list (new structured format)
-    if response.startswith('['):
-        try:
-            parsed = json.loads(response)
-            if isinstance(parsed, list):
-                result = []
-                for msg in parsed:
-                    if isinstance(msg, dict):
-                        result.append({
-                            "role": msg.get("role", "assistant"),
-                            "content": msg.get("content", ""),
-                            "tool_calls": msg.get("tool_calls")
-                        })
-                    elif isinstance(msg, str):
-                        result.append({"role": "assistant", "content": msg, "tool_calls": None})
-                return result
-        except json.JSONDecodeError:
-            pass
-
-    # Try to parse as JSON object (single tool call or structured response)
-    if response.startswith('{'):
-        try:
-            parsed = json.loads(response)
-            if isinstance(parsed, dict):
-                # Could be a tool call or single message
-                if "role" in parsed:
-                    return [{
-                        "role": parsed.get("role", "assistant"),
-                        "content": parsed.get("content", ""),
-                        "tool_calls": parsed.get("tool_calls")
-                    }]
-                else:
-                    # Treat as tool call or other structured response
-                    return [{"role": "assistant", "content": "", "tool_calls": [parsed]}]
-        except json.JSONDecodeError:
-            pass
-
-    # Fallback: plain text response
-    return [{"role": "assistant", "content": response, "tool_calls": None}]
-
 
 def format_response_compact(response: str, max_len: int = 10000) -> str:
     """
     Format response for compact representation.
-
-    Handles both structured (JSON) and plain text responses.
+    
+    Simply returns the response as-is with truncation applied.
+    The response field already contains the formatted output from the agent.
     """
-    messages = parse_response(response)
-
-    if not messages:
+    if not response or not isinstance(response, str):
         return ""
-
-    parts = []
-    for msg in messages:
-        content = msg.get("content", "")
-        tool_calls = msg.get("tool_calls")
-
-        if content:
-            parts.append(content)
-
-        if tool_calls:
-            for tc in tool_calls:
-                # Use centralized formatting (without role prefix for responses)
-                parts.append(_format_tool_call(tc, role=""))
-
-    result = "\n".join(parts)
-
-    # Truncate if needed
-    result = truncate_text(result, max_len, strategy="middle")
-
-    return result
+    
+    return truncate_text(response.strip(), max_len, strategy="middle")
 
 
 # =============================================================================
