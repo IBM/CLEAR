@@ -336,6 +336,61 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
 
 
 # =============================================================================
+# Separate-tools merging
+# =============================================================================
+
+
+def _merge_separate_tool_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Merge separate-tools rows into one row per LLM call.
+
+    When --separate-tools is true, each LLM call is split into multiple rows
+    (one per tool call + optional text response).  This merges them back so
+    each LLM call has one input and one concatenated response.
+
+    If the DataFrame already has one row per LLM call, returns it as-is.
+    """
+    if "llm_call_index" not in df.columns:
+        return df
+
+    # No duplicates → already one row per LLM call
+    if df["llm_call_index"].is_unique:
+        return df
+
+    merged_rows = []
+    for _, group in df.groupby("llm_call_index", sort=False):
+        first_row = group.iloc[0].to_dict()
+
+        # Concatenate responses: format tool-call rows, keep text as-is
+        response_parts = []
+        for _, row in group.iterrows():
+            resp = row.get("response", "")
+            if not pd.notna(resp) or not str(resp).strip():
+                continue
+            resp = str(resp).strip()
+
+            if row.get("tool_or_agent") == "tool":
+                try:
+                    tc = json.loads(resp)
+                    response_parts.append(_format_tool_call(tc))
+                except (json.JSONDecodeError, TypeError):
+                    response_parts.append(resp)
+            else:
+                response_parts.append(resp)
+
+        first_row["response"] = "\n".join(response_parts)
+        first_row["tool_or_agent"] = "agent"
+        first_row["step_in_trace_general"] = group["step_in_trace_general"].min()
+
+        merged_rows.append(first_row)
+
+    result = pd.DataFrame(merged_rows).reset_index(drop=True)
+    # Re-number steps sequentially after merging
+    result["step_in_trace_general"] = range(1, len(result) + 1)
+    return result
+
+
+# =============================================================================
 # Main compact formatting function
 # =============================================================================
 NO_LIMIT = 10 ** 9
@@ -651,6 +706,9 @@ def format_compact_trace(
     """
     if df.empty:
         return "Empty trace"
+
+    # ── Normalize: merge separate-tools rows into one per LLM call ──
+    df = _merge_separate_tool_rows(df)
 
     adaptive = max_tokens is not None
 
