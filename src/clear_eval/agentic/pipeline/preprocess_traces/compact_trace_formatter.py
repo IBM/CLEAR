@@ -29,43 +29,72 @@ import pandas as pd
 # Parsing utilities for model_input field
 # =============================================================================
 
-def parse_model_input(model_input: str) -> List[Dict[str, Any]]:
+def _parse_message_list(messages: list) -> List[Dict[str, Any]]:
+    """Normalize a list of message dicts/strings into structured messages."""
+    result = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            if "content" not in msg:
+                # Different format — serialize the whole dict so data isn't lost
+                content = json.dumps(msg, ensure_ascii=False)
+            else:
+                content = msg["content"] or ""
+            result.append({
+                "role": msg.get("role", "unknown"),
+                "content": content,
+                "tool_calls": msg.get("tool_calls", []),
+            })
+        elif isinstance(msg, str):
+            result.append({"role": "unknown", "content": msg, "tool_calls": []})
+        else:
+            result.append({"role": "unknown", "content": str(msg), "tool_calls": []})
+    return result
+
+
+def parse_model_input(model_input: Any) -> List[Dict[str, Any]]:
     """
     Parse the model_input field from CSV into structured messages.
 
-    The model_input can be:
-    1. JSON-encoded list: [{"role": "...", "content": "...", "tool_calls": [...]}, ...]
-    2. Plain string (legacy or raw text)
+    Handles:
+    - JSON-encoded list/dict string
+    - Plain string
+    - Already-parsed list or dict
+    - Numeric or other types (converted to string)
 
     Returns:
         List of {"role": str, "content": str, "tool_calls": list}
     """
-    if not model_input or not isinstance(model_input, str):
+    if model_input is None:
         return []
 
+    # Already a list (pre-parsed)
+    if isinstance(model_input, list):
+        return _parse_message_list(model_input)
+
+    # Already a dict (single message)
+    if isinstance(model_input, dict):
+        return _parse_message_list([model_input])
+
+    # Convert non-string to string (e.g. numeric from pandas)
+    if not isinstance(model_input, str):
+        model_input = str(model_input)
+
     model_input = model_input.strip()
+    if not model_input:
+        return []
 
-    # Try to parse as JSON first (new format)
-    if model_input.startswith('['):
-        try:
-            parsed = json.loads(model_input)
-            if isinstance(parsed, list):
-                # Validate and normalize the structure
-                result = []
-                for msg in parsed:
-                    if isinstance(msg, dict):
-                        result.append({
-                            "role": msg.get("role", "unknown"),
-                            "content": msg.get("content", ""),
-                            "tool_calls": msg.get("tool_calls", []),
-                        })
-                    elif isinstance(msg, str):
-                        result.append({"role": "unknown", "content": msg, "tool_calls": []})
-                return result
-        except json.JSONDecodeError:
-            pass
+    # Try to parse as JSON
+    try:
+        parsed = json.loads(model_input)
+        if isinstance(parsed, list):
+            return _parse_message_list(parsed)
+        if isinstance(parsed, dict):
+            return _parse_message_list([parsed])
+        # json.loads returned a scalar (string, number) — use original text
+    except (json.JSONDecodeError, TypeError):
+        pass
 
-    # Fallback: treat as plain text (legacy format or raw string)
+    # Fallback: treat as plain text
     return [{"role": "unknown", "content": model_input, "tool_calls": []}]
 
 
@@ -142,6 +171,8 @@ def _format_tool_call(tc: Any, role: str = "") -> str:
     
     # Try to extract name and args from various formats
     func = tc.get("function", tc)
+    if not isinstance(func, dict):
+        func = tc
     name = func.get("name", tc.get("name"))
     
     if not name:
@@ -221,16 +252,21 @@ def extract_input_context(
 # Formatting utilities for response field
 # =============================================================================
 
-def format_response_compact(response: str, max_len: int = 10000) -> str:
+def format_response_compact(response: Any, max_len: int = 10000) -> str:
     """
     Format response for compact representation.
-    
+
     Simply returns the response as-is with truncation applied.
-    The response field already contains the formatted output from the agent.
+    Converts non-string types (dict, list, numeric) to string.
     """
-    if not response or not isinstance(response, str):
+    if response is None:
         return ""
-    
+    if isinstance(response, (dict, list)):
+        response = json.dumps(response, ensure_ascii=False)
+    elif not isinstance(response, str):
+        response = str(response)
+    if not response.strip():
+        return ""
     return truncate_text(response.strip(), max_len, strategy="middle")
 
 
@@ -325,7 +361,8 @@ def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
     """
     if not text or len(text) <= max_len:
         return text or ""
-    #print(f"truncate_text: {len(text)} > {max_len}")
+    if max_len < 20:
+        return text[:max_len] + "..."
     if strategy == "end":
         return text[:max_len] + "..."
     elif strategy == "start":
@@ -380,7 +417,8 @@ def _merge_separate_tool_rows(df: pd.DataFrame) -> pd.DataFrame:
 
         first_row["response"] = "\n".join(response_parts)
         first_row["tool_or_agent"] = "agent"
-        first_row["step_in_trace_general"] = group["step_in_trace_general"].min()
+        if "step_in_trace_general" in group.columns:
+            first_row["step_in_trace_general"] = group["step_in_trace_general"].min()
 
         merged_rows.append(first_row)
 
@@ -463,14 +501,16 @@ def _collect_and_deduplicate_steps(
 
         # --- store raw response ---
         response_raw = row.get("response", "")
-        if not pd.notna(response_raw):
+        if response_raw is None or (isinstance(response_raw, float) and pd.isna(response_raw)):
             response_raw = ""
+        else:
+            response_raw = str(response_raw)
 
         steps.append({
             "header": step_header,
             "tools": tools_line,
             "input_raw": deduplicated_input_raw,  # Raw JSON string
-            "response_raw": str(response_raw) if response_raw else "",  # Raw string
+            "response_raw": response_raw,
         })
 
     return steps
@@ -575,42 +615,6 @@ def _process_and_truncate_adaptive(
     for s in steps:
         del s["input_raw"]
         del s["response_raw"]
-
-
-def _apply_adaptive_truncation(
-    steps: List[Dict[str, str]],
-    header_text: str,
-    max_tokens: int,
-    chars_per_token: float,
-) -> None:
-    """
-    Phase 2b: Apply adaptive proportional truncation.
-    
-    Modifies steps in-place by applying minimal proportional truncation
-    to fit within the token budget.
-    """
-    char_budget = int(max_tokens * chars_per_token)
-    skeleton_size = _estimate_skeleton_size(header_text, steps)
-    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
-    available = char_budget - skeleton_size
-
-    # Apply proportional truncation only if needed
-    if available > 0 and total_content > available:
-        ratio = available / total_content
-        for s in steps:
-            if s["input"]:
-                limit = max(int(len(s["input"]) * ratio), 50)
-                s["input"] = truncate_text(s["input"], limit, strategy="middle")
-            if s["response"]:
-                limit = max(int(len(s["response"]) * ratio), 50)
-                s["response"] = truncate_text(s["response"], limit, strategy="middle")
-    elif available <= 0:
-        # Budget too tight even for skeleton – truncate everything to minimum
-        for s in steps:
-            if s["input"]:
-                s["input"] = truncate_text(s["input"], 50, strategy="middle")
-            if s["response"]:
-                s["response"] = truncate_text(s["response"], 50, strategy="middle")
 
 
 def _assemble_trace(header_text: str, steps: List[Dict[str, str]]) -> str:
