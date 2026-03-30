@@ -464,16 +464,19 @@ def _process_and_truncate_adaptive(
     header_text: str,
     max_tokens: int,
     chars_per_token: float,
+    max_response_len: int,
 ) -> None:
     """
     Phase 2b: Process raw content and apply adaptive proportional truncation.
-    
-    - First extracts and formats all content WITHOUT truncation
-    - Then applies minimal proportional truncation to fit token budget
-    
+
+    - Extracts and formats all content
+    - Truncates responses to a fixed max_response_len (not proportional)
+    - Treats responses as fixed overhead (included in skeleton budget)
+    - Only applies proportional truncation to input content
+
     Modifies steps in-place, converting raw fields to formatted text.
     """
-    # First pass: extract and format without truncation
+    # First pass: extract and format content
     for s in steps:
         if s["input_raw"]:
             s["input"] = extract_input_context(
@@ -483,38 +486,36 @@ def _process_and_truncate_adaptive(
             )
         else:
             s["input"] = ""
-        
+
         if s["response_raw"]:
+            # Truncate response to fixed limit only (not proportional)
             s["response"] = format_response_compact(
                 s["response_raw"],
-                max_len=NO_LIMIT,
+                max_len=max_response_len,
             )
         else:
             s["response"] = ""
-    
-    # Second pass: apply proportional truncation if needed
+
+    # Second pass: proportionally truncate INPUT only to fit budget
+    # Response is treated as fixed (included in skeleton budget)
     char_budget = int(max_tokens * chars_per_token)
     skeleton_size = _estimate_skeleton_size(header_text, steps)
-    total_content = sum(len(s["input"]) + len(s["response"]) for s in steps)
-    available = char_budget - skeleton_size
+    response_size = sum(len(s["response"]) for s in steps)
+    total_input = sum(len(s["input"]) for s in steps)
+    available = char_budget - skeleton_size - response_size
 
-    if available > 0 and total_content > available:
-        ratio = available / total_content
+    if available > 0 and total_input > available:
+        ratio = available / total_input
         for s in steps:
             if s["input"]:
                 limit = max(int(len(s["input"]) * ratio), 50)
                 s["input"] = truncate_text(s["input"], limit, strategy="middle")
-            if s["response"]:
-                limit = max(int(len(s["response"]) * ratio), 50)
-                s["response"] = truncate_text(s["response"], limit, strategy="middle")
     elif available <= 0:
-        # Budget too tight even for skeleton – truncate everything to minimum
+        # Budget too tight even for skeleton + responses – truncate input to minimum
         for s in steps:
             if s["input"]:
                 s["input"] = truncate_text(s["input"], 50, strategy="middle")
-            if s["response"]:
-                s["response"] = truncate_text(s["response"], 50, strategy="middle")
-    
+
     # Remove raw fields (no longer needed)
     for s in steps:
         del s["input_raw"]
@@ -625,25 +626,23 @@ def format_compact_trace(
     Two modes of operation:
 
     **Fixed limits** (``max_tokens is None``, the default):
-        Each field is truncated to the fixed per-field character limits
-        (``max_input_context``, ``max_response_len``, ``max_system_prompt``).
-        Behaviour is identical to the original implementation.
+        Collects, deduplicates, and formats without any truncation.
 
     **Adaptive** (``max_tokens`` is set):
-        The formatter first extracts all content *without* truncation,
-        measures the total size, and – only if it exceeds the token budget –
-        applies the *minimal* proportional truncation needed to fit.
-        The per-field fixed limits are ignored in this mode.
+        Responses are truncated to a fixed ``max_response_len`` limit (never
+        proportionally) and treated as fixed overhead.  Only input content
+        is proportionally truncated to fit the remaining token budget.
 
     Args:
         df: DataFrame with unified CSV schema
         max_tokens: Total token budget for the output.  When set, adaptive
-            truncation is used and the fixed per-field limits are ignored.
+            truncation is used for input content only.
         chars_per_token: Approximate characters per token used to convert
             *max_tokens* to a character budget (default 3.5).
-        max_input_context: Max chars for input context per step (fixed mode)
-        max_response_len: Max chars for response per step (fixed mode)
-        max_system_prompt: Max chars for system prompts (fixed mode)
+        max_input_context: Max chars for input context per step (unused, kept for API compat)
+        max_response_len: Max chars for response per step (used in adaptive mode
+            as fixed response truncation limit)
+        max_system_prompt: Max chars for system prompts (unused, kept for API compat)
         include_tools_per_step: Show available tools at each step
         include_input_context: Include extracted input context
 
@@ -696,12 +695,13 @@ def format_compact_trace(
             steps,
         )
     else:
-        # Adaptive mode: process then apply proportional truncation
+        # Adaptive mode: fixed response truncation, proportional input truncation
         _process_and_truncate_adaptive(
             steps,
             header_text=header_text,
             max_tokens=max_tokens,
             chars_per_token=chars_per_token,
+            max_response_len=max_response_len,
         )
 
     # ── Phase 3: Assemble final output ───────────────────────────────
