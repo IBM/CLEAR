@@ -195,24 +195,24 @@ def _crewai_agent_name(obs: Dict[str, Any]) -> str:
     return md.get("agent") or md.get("agent_name") or obs.get("name") or "unknown_agent"
 
 
-# def _langgraph_filter(obs: Dict[str, Any]) -> bool:
-#     """
-#     Filter for LangGraph GENERATION observations.
-#
-#     Since we already filter to type=='GENERATION', all observations here represent
-#     actual LLM API calls. Node names and observation names reflect graph structure
-#     and instrumentation, not whether the call is meaningful.
-#
-#     Removed skip_nodes and skip_names filters to prevent data loss from legitimate
-#     LLM calls in nodes like "extract" or using clients like "ChatWatsonX".
-#     """
-#     # Accept all GENERATION observations - they represent real LLM calls
-#     return True
-#
-#
-# def _crewai_filter(_obs: Dict[str, Any]) -> bool:
-#     """CrewAI: keep all GENERATION observations."""
-#     return True
+def _langgraph_filter(obs: Dict[str, Any]) -> bool:
+    """
+    Filter for LangGraph GENERATION observations.
+
+    Since we already filter to type=='GENERATION', all observations here represent
+    actual LLM API calls. Node names and observation names reflect graph structure
+    and instrumentation, not whether the call is meaningful.
+
+    Removed skip_nodes and skip_names filters to prevent data loss from legitimate
+    LLM calls in nodes like "extract" or using clients like "ChatWatsonX".
+    """
+    # Accept all GENERATION observations - they represent real LLM calls
+    return True
+
+
+def _crewai_filter(_obs: Dict[str, Any]) -> bool:
+    """CrewAI: keep all GENERATION observations."""
+    return True
 
 
 # ----------------- public extractors -----------------
@@ -268,7 +268,7 @@ def extract_llm_calls_from_langgraph_trace(
         List of row dicts matching the unified CSV schema
     """
     llm_calls = _extract_llm_call_records(
-        json_data, file_name or "", _langgraph_agent_name,
+        json_data, file_name or "", _langgraph_filter, _langgraph_agent_name,
         system_trunc_limit=system_trunc_limit,
     )
     return build_csv_rows(llm_calls, separate_tools=separate_tools)
