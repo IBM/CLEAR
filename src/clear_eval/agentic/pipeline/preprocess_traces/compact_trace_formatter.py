@@ -251,11 +251,68 @@ def extract_tool_names(api_spec: str) -> List[str]:
     try:
         tools = json.loads(api_spec)
         if isinstance(tools, list):
-            return [t.get("name", "unknown") for t in tools if isinstance(t, dict) and t.get("name")]
+            names = []
+            for t in tools:
+                if not isinstance(t, dict):
+                    continue
+                # Full OpenAI format: {"type": "function", "function": {"name": ...}}
+                func = t.get("function", t)
+                name = func.get("name") if isinstance(func, dict) else t.get("name")
+                if name:
+                    names.append(name)
+            return names
     except:
         pass
 
     return []
+
+
+def collect_all_tools(df: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+    """
+    Collect all unique tools from the entire trace.
+    
+    Returns a dict mapping tool name to tool definition.
+    """
+    all_tools = {}
+    
+    for idx, row in df.iterrows():
+        api_spec = row.get("api_spec", "")
+        if pd.notna(api_spec) and api_spec:
+            try:
+                tools = json.loads(str(api_spec))
+                if isinstance(tools, list):
+                    for tool in tools:
+                        if not isinstance(tool, dict):
+                            continue
+                        # Full OpenAI format: {"type": "function", "function": {"name": ...}}
+                        func = tool.get("function", tool)
+                        name = func.get("name") if isinstance(func, dict) else tool.get("name")
+                        if name and name not in all_tools:
+                            all_tools[name] = tool
+            except:
+                pass
+    
+    return all_tools
+
+
+def format_tools_section(all_tools: Dict[str, Dict[str, Any]]) -> str:
+    """
+    Format all tools into a section for the trace header.
+    
+    Simply dumps the tool definitions as JSON to preserve exact format.
+    """
+    if not all_tools:
+        return ""
+    
+    lines = ["## Available Tools", "", "```json"]
+    
+    # Convert to list and dump as JSON
+    tools_list = [tool_def for tool_def in all_tools.values()]
+    lines.append(json.dumps(tools_list, indent=2))
+    
+    lines.extend(["```", "", "---", ""])
+    
+    return "\n".join(lines)
 
 def truncate_text(text: str, max_len: int, strategy: str = "middle") -> str:
     """
@@ -366,9 +423,6 @@ def _collect_and_deduplicate_steps(
 
 def _process_and_truncate_fixed(
     steps: List[Dict[str, Any]],
-    max_input_context: int,
-    max_response_len: int,
-    max_system_prompt: int,
 ) -> None:
     """
     Phase 2a: Process raw content and apply fixed per-field truncation.
@@ -385,8 +439,8 @@ def _process_and_truncate_fixed(
         if s["input_raw"]:
             s["input"] = extract_input_context(
                 s["input_raw"],
-                max_system_len=max_system_prompt,
-                max_total_len=max_input_context,
+                max_system_len=NO_LIMIT,
+                max_total_len=NO_LIMIT,
             )
         else:
             s["input"] = ""
@@ -395,7 +449,7 @@ def _process_and_truncate_fixed(
         if s["response_raw"]:
             s["response"] = format_response_compact(
                 s["response_raw"],
-                max_len=max_response_len,
+                max_len=NO_LIMIT,
             )
         else:
             s["response"] = ""
@@ -601,7 +655,7 @@ def format_compact_trace(
 
     adaptive = max_tokens is not None
 
-    # ── trace header ──────────────────────────────────────────────────
+    # ── trace header with tools ───────────────────────────────────────
     first_row = df.iloc[0]
     task_id = first_row.get("task_id", "unknown")
     intent = first_row.get("intent", "")
@@ -609,12 +663,24 @@ def format_compact_trace(
     if pd.isna(traj_score):
         traj_score = "N/A"
 
-    header_text = "\n".join([
+    # Collect all unique tools from the trace
+    all_tools = collect_all_tools(df)
+    tools_section = format_tools_section(all_tools)
+
+    header_parts = [
         f"## Trace: {task_id}",
         f"**User Query:** {intent}",
         f"**Total Steps:** {len(df)} | **Trajectory Score:** {traj_score}",
-        "", "---", "",
-    ])
+        "",
+    ]
+    
+    # Add tools section if there are any tools
+    if tools_section:
+        header_parts.append(tools_section)
+    else:
+        header_parts.extend(["---", ""])
+    
+    header_text = "\n".join(header_parts)
 
     # ── Phase 1: Collect and deduplicate (no processing) ─────────────
     steps = _collect_and_deduplicate_steps(
@@ -628,9 +694,6 @@ def format_compact_trace(
         # Fixed-limit mode: process with per-message truncation (original behavior)
         _process_and_truncate_fixed(
             steps,
-            max_input_context=max_input_context,
-            max_response_len=max_response_len,
-            max_system_prompt=max_system_prompt,
         )
     else:
         # Adaptive mode: process then apply proportional truncation
