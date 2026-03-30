@@ -846,9 +846,7 @@ def process_trace_directory(
 
 if __name__ == "__main__":
     import sys
-    output_path = Path("/Users/lilache/Documents/agentic/data/paper_experiments/HAL/gaia_hal_generalist_agent_gpt4120250414_1744652581/new_processed_traces")
-    res = process_trace_directory("/Users/lilache/Documents/agentic/data/paper_experiments/HAL/gaia_hal_generalist_agent_gpt4120250414_1744652581/csvs", output_dir=  output_path)
-    sys.exit(0)
+
     if len(sys.argv) < 2:
         print("Usage: python compact_trace_formatter.py <trace.csv> [output.txt]")
         print("\nConverts unified CSV trace to compact text format for LLM judges.")
