@@ -69,6 +69,55 @@ def parse_model_input(model_input: str) -> List[Dict[str, Any]]:
     return [{"role": "unknown", "content": model_input, "tool_calls": []}]
 
 
+def deduplicate_model_input(
+    model_input: str,
+    previous_input: Optional[str] = None,
+) -> str:
+    """
+    Remove prefix messages from model_input that were already seen in previous_input.
+    
+    This deduplication happens BEFORE any truncation or formatting to ensure
+    accurate comparison of message content.
+    
+    Args:
+        model_input: Current model_input string from CSV
+        previous_input: Previous model_input for this agent (for deduplication)
+    
+    Returns:
+        Deduplicated model_input string (as JSON) with only delta messages
+    """
+    if not previous_input:
+        return model_input
+    
+    messages = parse_model_input(model_input)
+    if not messages:
+        return model_input
+    
+    previous_messages = parse_model_input(previous_input)
+    if not previous_messages:
+        return model_input
+    
+    # Find the longest common prefix
+    common_prefix_len = 0
+    for i, (curr_msg, prev_msg) in enumerate(zip(messages, previous_messages)):
+        # Compare role and content to determine if messages are identical
+        if (curr_msg.get("role") == prev_msg.get("role") and
+            curr_msg.get("content") == prev_msg.get("content")):
+            common_prefix_len = i + 1
+        else:
+            break
+    
+    # Keep only the delta (new messages after the common prefix)
+    if common_prefix_len > 0:
+        messages = messages[common_prefix_len:]
+    
+    # Return as JSON string to maintain format consistency
+    if not messages:
+        return "[]"
+    
+    return json.dumps(messages)
+
+
 def extract_input_context(
     model_input: str,
     max_system_len: int = 5000,
@@ -86,7 +135,7 @@ def extract_input_context(
     - System prompts (heavily truncated)
 
     Args:
-        model_input: Raw model_input string from CSV
+        model_input: Raw model_input string from CSV (should be deduplicated first)
         max_system_len: Max chars to keep from system prompts
         max_total_len: Max total chars for the extracted context
 
@@ -286,9 +335,14 @@ def _precompute_steps(
     When *truncate_content* is False the input/response fields are extracted
     at full length so the caller can measure them before deciding how much to
     cut.  When True the fixed per-field limits are applied immediately.
+    
+    Deduplication: Tracks previous model_input per agent to remove repeated
+    prefix messages in accumulated conversations.
     """
 
     steps: List[Dict[str, str]] = []
+    # Track previous model_input per agent for deduplication
+    agent_previous_input: Dict[str, str] = {}
 
     for idx, row in df.iterrows():
         step_num = row.get("step_in_trace_general", idx + 1)
@@ -319,24 +373,36 @@ def _precompute_steps(
                             f"(+{len(tool_names) - 5} more)"
                         )
 
-        # --- input context ---
+        # --- input context with deduplication ---
         input_text = ""
         if include_input_context:
             model_input = row.get("model_input", "")
             if pd.notna(model_input) and model_input:
+                # Get previous input for this agent (if any)
+                previous_input = agent_previous_input.get(agent_name)
+
+                # Update the previous input for this agent (store the ORIGINAL, not deduplicated)
+                agent_previous_input[agent_name] = str(model_input)
+
+                # Deduplicate BEFORE any truncation or formatting
+                deduplicated_input = deduplicate_model_input(
+                    str(model_input),
+                    previous_input=previous_input,
+                )
+                
+                # Now extract and format the deduplicated input
                 if truncate_content:
                     input_text = extract_input_context(
-                        str(model_input),
+                        deduplicated_input,
                         max_system_len=max_system_prompt,
                         max_total_len=max_input_context,
                     )
                 else:
                     input_text = extract_input_context(
-                        str(model_input),
+                        deduplicated_input,
                         max_system_len=NO_LIMIT,
                         max_total_len=NO_LIMIT,
                     )
-
         # --- response ---
         response_text = ""
         response_raw = row.get("response", "")
