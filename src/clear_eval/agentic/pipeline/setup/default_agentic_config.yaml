@@ -21,7 +21,7 @@ results_dir: null        # Output directory for results
 from_raw_traces: false          # If true, preprocess raw traces first
 agent_framework: langgraph      # langgraph | crewai
 observability_framework: langfuse # mlflow | langfuse
-separate_tools: false           # Separate tool calls from text responses
+separate_tools: combined        # combined | separate | tools_with_reasoning
 
 # Execution
 overwrite: true                 # Overwrite existing results

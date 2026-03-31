@@ -26,14 +26,15 @@ Each file contains all the rows for a single trajectory (one `task_id`).
 ## Modes: `--separate-tools`
 
 The `--separate-tools` flag controls how you represent LLM calls that produce
-tool calls.
+tool calls.  Accepts bool (`true`/`false`) for backward compatibility.
 
 | Mode | What each row represents | `tool_or_agent` | `response` content |
 |------|--------------------------|-----------------|--------------------|
-| `false` (default) | One LLM invocation | Always `"agent"` | Free-form text (may include tool calls however you choose to represent them) |
-| `true` | One tool call **or** one text response | `"tool"` or `"agent"` | Single tool-call JSON **or** text |
+| `combined` (default) | One LLM invocation | Always `"agent"` | Free-form text (may include tool calls however you choose to represent them) |
+| `separate` | One tool call **or** one text response | `"tool"` or `"agent"` | Single tool-call JSON **or** text |
+| `tools_with_reasoning` | One tool call (reasoning text appended to tool rows' `model_input` as context) | `"tool"` or `"agent"` | Single tool-call JSON **or** text (standalone text only) |
 
-Both modes use the same columns.
+All modes use the same columns.
 
 ## Shared columns
 
@@ -115,7 +116,7 @@ CSVs yourself, use the full OpenAI format directly.
 
 ---
 
-## Mode: `--separate-tools false` (default)
+## Mode: `--separate-tools combined` (default)
 
 Each row represents **one LLM invocation**.  This is the simpler mode — use it
 when you don't need per-tool-call evaluation.
@@ -152,7 +153,7 @@ A trace where agent A calls the LLM twice and agent B calls it once:
 
 ---
 
-## Mode: `--separate-tools true`
+## Mode: `--separate-tools separate`
 
 Each LLM invocation is split into **separate rows**: one per tool call, plus an
 optional row for the text response.  Use this mode when you want per-tool-call
@@ -190,4 +191,29 @@ only, and call 3 produced 1 tool call with no text:
 Key rules:
 - `step_in_trace_general` increments for every **row** (must be unique within the file).
 - `llm_call_index` increments per **LLM invocation** (shared by all rows from that invocation).
+
+---
+
+## Mode: `--separate-tools tools_with_reasoning`
+
+Like `separate`, but when an LLM call produces both tool calls and text, the
+reasoning text is **not** emitted as its own row.  Instead it is appended to
+each tool row's `model_input` as an assistant message, giving SPARC richer
+context for evaluating the tool call.
+
+Text-only LLM calls (no tool calls) still produce an `"agent"` row as usual.
+
+### Example
+
+Same trace as the `separate` example above.  Note that row 3 (the agent text
+from LLM call 1) is gone — its content is folded into the `model_input` of
+rows 1 and 2:
+
+| Name | task_id | step_in_trace_general | llm_call_index | tool_or_agent | response (abbreviated) | model_input note |
+|------|---------|-----------------------|----------------|---------------|------------------------|------------------|
+| A | tr-abc | 1 | 1 | tool | `{"id":"call_1",...}` | includes `"Based on the search results..."` as assistant message |
+| A | tr-abc | 2 | 1 | tool | `{"id":"call_2",...}` | includes `"Based on the search results..."` as assistant message |
+| B | tr-abc | 3 | 2 | agent | The answer is 42. | |
+| A | tr-abc | 4 | 3 | tool | `{"id":"call_3",...}` | |
+
 - Tool rows come before the agent row within each `llm_call_index` group.

@@ -597,7 +597,7 @@ Config file structure (YAML format - see setup/default_agentic_config.yaml):
   # Preprocessing options (only used when from_raw_traces=true)
   agent_framework: langgraph
   observability_framework: langfuse
-  separate_tools: false
+  separate_tools: combined
 
   # Execution options
   overwrite: true

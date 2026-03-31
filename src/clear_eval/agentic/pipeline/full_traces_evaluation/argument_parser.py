@@ -49,9 +49,11 @@ def add_preprocessing_args_to_parser(parser: argparse.ArgumentParser) -> None:
     )
     group.add_argument(
         "--separate-tools",
-        type=str2bool,
+        type=str,
         default=None,
-        help="Separate tool calls in preprocessing (default: false, keep false for now)",
+        help="How to represent tool calls and reasoning text: "
+             "combined (default), separate, tools_with_reasoning. "
+             "Also accepts true/false for backward compatibility.",
     )
 
 

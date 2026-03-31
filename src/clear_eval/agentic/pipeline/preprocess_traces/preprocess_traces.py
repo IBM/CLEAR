@@ -39,7 +39,7 @@ CSV_FIELDNAMES = [
 def get_extractor(
     agent_framework: str,
     observability_framework: str,
-    separate_tools: bool = True
+    separate_tools:str,
 ):
     """
     Get the appropriate extractor function based on agent framework and observability platform.
@@ -47,7 +47,9 @@ def get_extractor(
     Args:
         agent_framework: The agent framework used (langgraph, crewai)
         observability_framework: The observability platform (langfuse, mlflow)
-        separate_tools: Whether to emit separate rows for tools vs agent responses
+        separate_tools: Tool/text splitting mode (combined, separate,
+            tools_with_reasoning). Also accepts bool for
+            backward compatibility.
 
     Returns:
         Extractor function that takes (json_data, file_name) and returns list of row dicts
@@ -56,18 +58,19 @@ def get_extractor(
         ValueError: If the combination is not supported
     """
     key = (agent_framework.lower(), observability_framework.lower())
+    kwargs = dict(separate_tools=separate_tools)
 
     if key == ("langgraph", "langfuse"):
         return lambda trace, file_name: extract_llm_calls_from_langgraph_trace(
-            trace, file_name, separate_tools=separate_tools
+            trace, file_name, **kwargs
         )
     elif key == ("crewai", "langfuse"):
         return lambda trace, file_name: extract_llm_calls_from_crewai_trace(
-            trace, file_name, separate_tools=separate_tools
+            trace, file_name, **kwargs
         )
     elif key == ("langgraph", "mlflow"):
         return lambda trace, file_name: extract_llm_calls_from_mlflow_trace(
-            trace, file_name, separate_tools=separate_tools
+            trace, file_name, **kwargs
         )
     else:
         supported = ["langgraph+langfuse", "crewai+langfuse", "langgraph+mlflow"]
@@ -132,7 +135,7 @@ def process_traces_to_traj_data(
     output_dir: str,
     agent_framework: str = "langgraph",
     observability_framework: str = "langfuse",
-    separate_tools: bool = True,
+    separate_tools="combined",
     overwrite: bool = True,
 ) -> str:
     """
@@ -143,7 +146,9 @@ def process_traces_to_traj_data(
         output_dir: Directory to save trajectory CSV files
         agent_framework: Agent framework used (langgraph, crewai)
         observability_framework: Observability platform (langfuse, mlflow)
-        separate_tools: For mlflow, whether to emit separate rows for tools vs agent responses
+        separate_tools: Tool/text splitting mode (combined, separate,
+            tools_with_reasoning). Also accepts bool for
+            backward compatibility.
         overwrite: Whether to overwrite existing trajectory CSV files
 
     Returns:
@@ -154,7 +159,8 @@ def process_traces_to_traj_data(
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Get the appropriate extractor
-    extractor = get_extractor(agent_framework, observability_framework, separate_tools)
+    extractor = get_extractor(agent_framework, observability_framework,
+                              separate_tools)
 
     json_files = list(input_path.glob('*.json'))
     logger.info("=" * 80)
@@ -301,8 +307,10 @@ Supported combinations:
     parser.add_argument(
         "--separate-tools",
         dest="separate_tools",
-        action="store_true",
-        help="Emit separate rows for tool calls vs text responses (default: True)"
+        type=str,
+        default="combined",
+        help="How to represent tool calls and reasoning text: "
+             "combined (default), separate, tools_with_reasoning",
     )
 
     args = parser.parse_args()

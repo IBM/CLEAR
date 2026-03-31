@@ -551,9 +551,44 @@ def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] | None
 # ----- CSV row construction (shared by MLflow & Langfuse processors) -----
 
 
+def _append_reasoning_to_input(model_input: str, reasoning_text: str) -> str:
+    """Append reasoning text as an assistant message to model_input JSON."""
+    try:
+        messages = json.loads(model_input)
+        if isinstance(messages, list):
+            messages.append({"role": "assistant", "content": reasoning_text, "tool_calls": []})
+            return json.dumps(messages)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return model_input
+
+
+_VALID_SEPARATE_TOOLS = ("combined", "separate", "tools_with_reasoning")
+
+
+def _normalize_separate_tools(value) -> str:
+    """Normalize ``separate_tools`` to a canonical string mode.
+
+    Accepts bool (backward compat) or string.  Returns one of:
+    ``"combined"``, ``"separate"``, ``"tools_with_reasoning"``.
+    """
+    if isinstance(value, bool):
+        return "separate" if value else "combined"
+    if isinstance(value, str):
+        low = value.lower()
+        if low in ("true", "false"):
+            return "separate" if low == "true" else "combined"
+        if low in _VALID_SEPARATE_TOOLS:
+            return low
+    raise ValueError(
+        f"Invalid separate_tools value: {value!r}. "
+        f"Expected bool or one of: {', '.join(_VALID_SEPARATE_TOOLS)}"
+    )
+
+
 def build_csv_rows(
     llm_calls: List[Dict[str, Any]],
-    separate_tools: bool = True,
+    separate_tools:str,
 ) -> List[Dict[str, Any]]:
     """
     Build final CSV rows from a list of extracted LLM call records.
@@ -574,13 +609,23 @@ def build_csv_rows(
             - intent (str)
             - task_id (str)
             - traj_score (Any)
-        separate_tools: When True, emit one row per tool call plus an
-            optional row for the text response.  When False, emit a single
-            combined row per LLM call.
+        separate_tools: Controls how tool calls and text are represented.
+            Accepts bool for backward compatibility (True -> "separate",
+            False -> "combined") or one of:
+            - ``"combined"`` (default): single row per LLM call.  When tool
+              calls are present the response is a JSON object with
+              ``"content"`` and ``"tool_calls"`` keys; otherwise plain text.
+            - ``"separate"``: one row per tool call plus an optional row for
+              the text response.
+            - ``"tools_with_reasoning"``: like ``"separate"`` but the
+              reasoning text is appended to each tool row's ``model_input``
+              as an assistant message (richer SPARC context).  No separate
+              agent row is emitted.
 
     Returns:
         List of row dicts matching the unified CSV schema.
     """
+    separate_tools = _normalize_separate_tools(separate_tools)
     rows: List[Dict[str, Any]] = []
     step_counter = 0
     llm_call_counter = 0
@@ -613,21 +658,30 @@ def build_csv_rows(
             "traj_score": traj_score,
         }
 
-        if separate_tools:
+        if separate_tools != "combined":
+            has_text = response_text and response_text.strip() not in ("null", "None", "")
+            has_tools = isinstance(tool_calls, list) and len(tool_calls) > 0
+
+            # Determine model_input for tool rows
+            tool_input = model_input
+            if has_tools and has_text and separate_tools == "tools_with_reasoning":
+                tool_input = _append_reasoning_to_input(model_input, response_text)
+
             # One row per tool call
-            if isinstance(tool_calls, list):
+            if has_tools:
                 for tc in tool_calls:
                     step_counter += 1
                     rows.append({
                         **base,
                         "id": f"{task_id}_{step_counter}",
                         "step_in_trace_general": step_counter,
+                        "model_input": tool_input,
                         "response": json.dumps(tc, indent=2),
                         "tool_or_agent": "tool",
                     })
 
-            # Row for text response (if non-empty)
-            if response_text and response_text.strip() not in ("null", "None", ""):
+            # Agent row: emit when there's text and either no tools or "separate" mode
+            if has_text and (not has_tools or separate_tools == "separate"):
                 step_counter += 1
                 rows.append({
                     **base,

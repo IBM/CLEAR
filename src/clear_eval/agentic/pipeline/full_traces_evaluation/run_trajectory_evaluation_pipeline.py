@@ -469,18 +469,19 @@ def preprocess_traces_if_needed(
     from_raw_traces: bool,
     agent_framework: str = "langgraph",
     observability_framework: str = "mlflow",
-    separate_tools: bool = False,
+    separate_tools="combined",
 ) -> Path:
     """
     Preprocess raw traces to CSV if needed, otherwise return input directory.
-    
+
     Args:
         input_dir: Input directory (JSON traces or CSV files)
         output_dir: Base output directory
         from_raw_traces: If True, process JSON traces; if False, use CSV files directly
         agent_framework: Agent framework (for JSON processing)
         observability_framework: Observability framework (for JSON processing)
-        separate_tools: Separate tool calls (for JSON processing)
+        separate_tools: Tool/text splitting mode (combined, separate,
+            tools_with_reasoning). Also accepts bool.
         
     Returns:
         Path to directory containing CSV files
