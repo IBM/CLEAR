@@ -221,6 +221,8 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
             continue
 
         role = (msg.get("role") or msg.get("type") or "unknown").lower()
+        if role == "model":
+            role = "assistant"
         raw_content = msg.get("content") or msg.get("parts") or ""
 
         # Normalize content to string (exclude tool calls from text to avoid duplication)
@@ -637,13 +639,13 @@ def build_csv_rows(
         else:
             # Single combined row
             step_counter += 1
-            combined_response = response_text
             if tool_calls:
-                tool_parts = [json.dumps(tc, indent=2) for tc in tool_calls]
-                if tool_parts:
-                    combined_response = "\n---\n".join(tool_parts)
-                    if response_text:
-                        combined_response += f"\n---\n{response_text}"
+                combined_response = json.dumps({
+                    "content": response_text or "",
+                    "tool_calls": tool_calls,
+                })
+            else:
+                combined_response = response_text
 
             rows.append({
                 **base,

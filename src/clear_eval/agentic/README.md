@@ -147,7 +147,7 @@ For the full intermediate representation reference covering both `--separate-too
 | `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed)                                                               |
 | `llm_call_index` | int | No | LLM invocation counter (1-indexed)                                                                            |
 | `model_input` | json/str | Yes | Normalised input messages sent to the LLM: [{"role":"...", "content":"...", "tool_calls":[]}...] or a string] |
-| `response` | str | Yes | LLM output — tool calls and text combined (joined by `\n---\n`)                                               |
+| `response` | str | Yes | LLM output — by default JSON `{"content": "...", "tool_calls": [...]}` when tool calls are present, plain text otherwise. Any string format is accepted. |
 | `tool_or_agent` | str | No | Always `"agent"` in this mode                                                                                 |
 | `api_spec` | json | No | JSON list of tool definitions available to the LLM call                                                       |
 | `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs                                                    |
