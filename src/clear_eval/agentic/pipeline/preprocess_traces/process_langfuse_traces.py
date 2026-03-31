@@ -5,7 +5,7 @@ Supports LangGraph and CrewAI frameworks.
 Handles multiple providers: OpenAI, Anthropic, Gemini, etc.
 
 Output fields match the unified CSV schema:
-fix doc  id, Name, intent, task_id, step_in_trace_general, llm_call_index,
+id, Name, intent, task_id, step_in_trace_general, llm_call_index,
   model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 """
 
@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Callable
 
 from .trace_utils import (
     safe_json,
+    extract_messages_from_input,
     normalize_input_messages,
     normalize_response,
     extract_tool_calls,
@@ -50,16 +51,16 @@ def _extract_llm_call_record(
 
     # Input - normalize and serialize
     input_data = safe_json(obs.get("input"))
-    messages = input_data if isinstance(input_data, list) else input_data.get("messages") or input_data.get("contents")
-    if messages:
-        model_input_normalized = normalize_input_messages(messages, system_trunc_limit)
-    else:
-        model_input_normalized = normalize_input_messages(input_data, system_trunc_limit) if input_data else []
+    messages = input_data if isinstance(input_data, list) else extract_messages_from_input(input_data)
 
-    if isinstance(model_input_normalized, str):
-        model_input_str = model_input_normalized
+    if messages:
+        model_input_str = json.dumps(normalize_input_messages(messages, system_trunc_limit), ensure_ascii=False)
+    elif isinstance(input_data, str):
+        model_input_str = input_data
+    elif isinstance(input_data, dict) and input_data:
+        model_input_str = json.dumps(input_data, ensure_ascii=False)
     else:
-        model_input_str = json.dumps(model_input_normalized, ensure_ascii=False)
+        model_input_str = ""
 
     # Output
     output_data = safe_json(obs.get("output"))

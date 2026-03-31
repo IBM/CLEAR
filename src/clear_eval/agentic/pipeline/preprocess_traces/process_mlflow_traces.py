@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional
 
 from .trace_utils import (
     safe_json,
+    extract_messages_from_input,
     normalize_input_messages,
     normalize_response,
     extract_tool_calls,
@@ -130,10 +131,10 @@ def _extract_input_output_from_span(
     # Extract bound tools (API spec)
     api_spec = extract_api_spec(inputs)
 
-    # Extract input messages (OpenAI: messages, Gemini: contents, Anthropic: messages with system)
+    # Extract input messages (OpenAI/Anthropic: messages, Gemini: contents)
+    # extract_messages_from_input handles separate system prompts (Anthropic/Gemini)
     messages = (
-        inputs.get("messages") or
-        inputs.get("contents") or
+        extract_messages_from_input(inputs) or
         inputs.get("prompt") or
         _get(attrs, ["gen_ai.input.messages"]) or
         _get(attrs, ["gen_ai.prompt"]) or
@@ -318,7 +319,7 @@ def _extract_trace_intent(
 
 _CONTAINER_KEYS = ("tags", "metadata", "trace_metadata", "request_metadata")
 _INTENT_FIELDS = ("intent", "user_query", "task", "goal", "query", "question",
-                   "request", "input", "mlflow.note.content")
+                   "request", "request_preview", "input", "mlflow.note.content")
 _SCORE_FIELDS = ("traj_score", "score", "quality", "rating", "correctness")
 
 

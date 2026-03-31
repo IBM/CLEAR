@@ -151,6 +151,39 @@ def _extract_tool_calls_from_content(msg: dict) -> List[Dict[str, Any]]:
     return tool_calls
 
 
+def extract_messages_from_input(input_data: Any) -> Any:
+    """
+    Extract the messages list from an LLM input, including any separate system prompt.
+
+    Handles:
+    - List input: returned as-is (already a messages array)
+    - Dict with "messages" (OpenAI/Anthropic) or "contents" (Gemini): extracts them
+      and prepends the system prompt from "system" (Anthropic) or
+      "system_instruction" (Gemini) if present
+    - String / other: returned as-is
+
+    Returns:
+        The messages list (possibly with a system message prepended), or the
+        original value if it's not a dict/list.
+    """
+    if not isinstance(input_data, dict):
+        return input_data
+
+    messages = input_data.get("messages") or input_data.get("contents")
+    if messages is None:
+        return None
+
+    # Anthropic: "system" (str or list of blocks)
+    # Gemini: "system_instruction" (dict with "parts")
+    system = input_data.get("system") or input_data.get("system_instruction")
+    if system:
+        system_text = normalize_content(system, include_function_calls=False)
+        if system_text:
+            messages = [{"role": "system", "content": system_text}] + list(messages)
+
+    return messages
+
+
 def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) -> Any:
     """
     Normalize input messages (what goes INTO the LLM).
@@ -276,7 +309,7 @@ def normalize_response(output_data: Any) -> str:
             return "\n---\n".join(p for p in parts if p)
 
         # Gemini-style candidates format
-        if "candidates" in output_data and isinstance(output_data["candidates"], list):
+        elif "candidates" in output_data and isinstance(output_data["candidates"], list):
             parts = []
             for candidate in output_data["candidates"]:
                 if not isinstance(candidate, dict):
@@ -286,10 +319,10 @@ def normalize_response(output_data: Any) -> str:
                     parts.append(normalize_content(content.get("parts", []), include_function_calls=False))
             return "\n---\n".join(p for p in parts if p)
 
-        # Direct content/parts format
-        if "content" in output_data:
+        # Direct content/parts format (Anthropic or unwrapped)
+        elif "content" in output_data:
             return normalize_content(output_data["content"], include_function_calls=False)
-        if "parts" in output_data:
+        elif "parts" in output_data:
             return normalize_content(output_data["parts"], include_function_calls=False)
 
     return json.dumps(output_data, ensure_ascii=False) if isinstance(output_data, dict) else str(output_data)
@@ -307,10 +340,6 @@ def extract_tool_calls(output_data: Any) -> List[Dict[str, Any]]:
     if not isinstance(output_data, dict):
         return tool_calls
 
-    # Direct tool_calls field (common in Langfuse) — use shared helper for normalization
-    if "tool_calls" in output_data:
-        tool_calls.extend(_extract_tool_calls_from_content(output_data))
-
     # OpenAI choices format
     if "choices" in output_data and isinstance(output_data["choices"], list):
         for ch in output_data["choices"]:
@@ -320,17 +349,20 @@ def extract_tool_calls(output_data: Any) -> List[Dict[str, Any]]:
                     tool_calls.extend(_extract_tool_calls_from_content(msg))
 
     # Gemini candidates format
-    if "candidates" in output_data and isinstance(output_data["candidates"], list):
+    elif "candidates" in output_data and isinstance(output_data["candidates"], list):
         for candidate in output_data["candidates"]:
             if not isinstance(candidate, dict):
                 continue
             content = candidate.get("content", {})
             if isinstance(content, dict):
-                # Wrap as a message-like dict so the shared helper can scan parts
                 tool_calls.extend(_extract_tool_calls_from_content(content))
 
     # Anthropic direct output: {"content": [{"type": "tool_use", ...}, ...], "role": "assistant"}
-    if "content" in output_data and isinstance(output_data.get("content"), list):
+    elif "content" in output_data and isinstance(output_data.get("content"), list):
+        tool_calls.extend(_extract_tool_calls_from_content(output_data))
+
+    # Direct tool_calls field (e.g. Langfuse-normalized output)
+    elif "tool_calls" in output_data:
         tool_calls.extend(_extract_tool_calls_from_content(output_data))
 
     return tool_calls
