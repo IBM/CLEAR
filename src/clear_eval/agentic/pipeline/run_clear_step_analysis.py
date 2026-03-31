@@ -97,12 +97,21 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
     )
 
 
+TOOL_CALLS_SUFFIX = "__tool_calls"
+
+
 ##########################################
 ## Convert shared data to clear format ###
 ##########################################
 def convert_to_clear_format(input_dir: str, output_dir: str):
     """
     Convert CSV files to CLEAR format grouped by agent.
+
+    When the data contains tool rows (``tool_or_agent == "tool"``), each agent
+    produces two CSVs:
+    - ``{agent_name}.csv`` — reasoning (agent) rows
+    - ``{agent_name}__tool_calls.csv`` — tool-call rows, with ``model_input``
+      renamed to ``context`` (expected by :class:`ToolCallEvalUseCase`)
 
     Args:
         input_dir: Directory containing CSV files
@@ -112,6 +121,7 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
 
     agent_data = defaultdict(list)
+    tool_data = defaultdict(list)
     total_rows = 0
     task_counter = Counter()
     agent_counter = Counter()
@@ -140,19 +150,37 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
                     task_counter[task_id] += 1
 
                     row_with_agent = {'agent_name': agent_name, **row}
-                    agent_data[agent_name].append(row_with_agent)
+                    is_tool_row = (
+                        'tool_or_agent' in row.index
+                        and row.get('tool_or_agent') == 'tool'
+                    )
+                    if is_tool_row:
+                        tool_data[agent_name].append(row_with_agent)
+                    else:
+                        agent_data[agent_name].append(row_with_agent)
 
         except Exception as e:
             logger.error(f"Error processing {csv_file}: {e}")
             continue
 
-    logger.info(f"Writing {len(agent_data)} agent CSV files")
+    # Write agent (reasoning) CSVs
+    all_agents = set(agent_data.keys()) | set(tool_data.keys())
+    logger.info(f"Writing CSV files for {len(all_agents)} agents")
 
-    for agent_name, rows in agent_data.items():
-        output_file = output_dir / f"{agent_name}.csv"
-        out_df = pd.DataFrame(rows)
-        out_df.to_csv(output_file, index=False)
-        logger.info(f"  {agent_name}.csv ({len(rows)} rows)")
+    for agent_name in sorted(all_agents):
+        if agent_name in agent_data:
+            out_df = pd.DataFrame(agent_data[agent_name])
+            output_file = output_dir / f"{agent_name}.csv"
+            out_df.to_csv(output_file, index=False)
+            logger.info(f"  {agent_name}.csv ({len(out_df)} reasoning rows)")
+
+        if agent_name in tool_data:
+            out_df = pd.DataFrame(tool_data[agent_name])
+            # ToolCallUseCase expects "context" instead of "model_input"
+            out_df.rename(columns={"model_input": "context"}, inplace=True)
+            output_file = output_dir / f"{agent_name}{TOOL_CALLS_SUFFIX}.csv"
+            out_df.to_csv(output_file, index=False)
+            logger.info(f"  {agent_name}{TOOL_CALLS_SUFFIX}.csv ({len(out_df)} tool rows)")
 
     statistics = {
         "total_rows": total_rows,
@@ -189,6 +217,11 @@ def run_analysis_for_agent(
     """
     Run CLEAR analysis for a single agent CSV file.
 
+    Tool-call CSVs (filename ending with ``__tool_calls``) are routed to
+    ``task="tool_call"`` (SPARC evaluation) and stored in a ``tool_eval/``
+    subdirectory under the parent agent's results directory.  All other CSVs
+    use ``task="general"`` (standard CLEAR evaluation).
+
     Args:
         csv_path: Path to the CSV file
         results_dir: Directory to save CLEAR analysis results
@@ -198,16 +231,24 @@ def run_analysis_for_agent(
     Returns:
         True if analysis was run, False if skipped, None if error
     """
-    # Make a copy to avoid modifying the original
     config_dict = config_dict.copy()
 
-    agent_name = csv_path.stem
-    eval_model_name = config_dict.get("eval_model_name", "unknown")
+    stem = csv_path.stem
+    is_tool_csv = stem.endswith(TOOL_CALLS_SUFFIX)
 
-    output_dir = Path(results_dir) / agent_name
+    if is_tool_csv:
+        agent_name = stem[: -len(TOOL_CALLS_SUFFIX)]
+        output_dir = Path(results_dir) / agent_name / "tool_eval"
+        task = "tool_call"
+        label = "tool-call"
+    else:
+        agent_name = stem
+        output_dir = Path(results_dir) / agent_name
+        task = "general"
+        label = "reasoning"
 
     logger.info("=" * 80)
-    logger.info(f"Processing: {agent_name}")
+    logger.info(f"Processing: {agent_name} ({label})")
     logger.info(f"Output folder: {output_dir}")
     logger.info("=" * 80)
 
@@ -219,16 +260,15 @@ def run_analysis_for_agent(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        logger.info("Running CLEAR analysis...")
+        logger.info(f"Running {label} analysis...")
         logger.info(f"  Data: {csv_path}")
         logger.info(f"  Output: {output_dir}")
 
-        # Add computed paths to config
         config_dict["data_path"] = str(csv_path)
         config_dict["output_dir"] = str(output_dir)
         config_dict["resume_enabled"] = not overwrite
+        config_dict["task"] = task
 
-        # Run evaluation pipeline
         run_clear_eval_evaluation(None, **config_dict)
 
         logger.info("Analysis completed!")
@@ -236,7 +276,7 @@ def run_analysis_for_agent(
         return True
 
     except Exception as e:
-        logger.error(f"Error running analysis for {agent_name}: {str(e)}")
+        logger.error(f"Error running analysis for {agent_name} ({label}): {str(e)}")
         import traceback
         traceback.print_exc()
         return None

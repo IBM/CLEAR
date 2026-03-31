@@ -1,0 +1,25 @@
+########################
+### Modify as needed ###
+########################
+data_dir: ""
+results_dir: ""
+overwrite: true
+max_workers: 10
+run_name: my_experiment
+separate_tools: true # true for spark evaluation
+from_raw_traces: false # true for process from traces, false for process from intermediate representation
+
+# Model Configuration
+inference_backend: litellm
+endpoint_url: null
+provider: openai
+eval_model_name: gpt-4o
+eval_model_params:
+  temperature: 0.0
+  max_tokens: 8096
+
+# keep as is
+run_step_by_step: true
+run_full_trajectory: false
+memory_only: false
+gen_model_name: none
