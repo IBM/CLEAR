@@ -31,7 +31,8 @@ logger = logging.getLogger(__name__)
 # CSV fieldnames for output (unified schema)
 CSV_FIELDNAMES = [
     'id', 'Name', 'intent', 'task_id', 'step_in_trace_general',
-    'step_in_trace_node', 'model_input', 'response', 'tool_or_agent', 'api_spec', 'meta_data', 'traj_score'
+    'llm_call_index', 'model_input', 'response', 'tool_or_agent',
+    'api_spec', 'meta_data', 'traj_score'
 ]
 
 
@@ -173,6 +174,8 @@ def process_traces_to_traj_data(
 
     total_traces = 0
     total_skipped = 0
+    traces_with_no_llm_calss  = 0
+    processed_traces = 0
     total_llm_calls = 0
 
     for json_file in json_files:
@@ -187,6 +190,8 @@ def process_traces_to_traj_data(
                 continue
 
             for trace_idx, trace_data in enumerate(traces):
+                total_traces += 1
+
                 llm_calls = process_single_trace(
                     trace_data=trace_data,
                     extractor=extractor,
@@ -195,6 +200,7 @@ def process_traces_to_traj_data(
                 )
 
                 if not llm_calls:
+                    traces_with_no_llm_calss += 1
                     continue
 
                 # Determine output filename
@@ -213,7 +219,7 @@ def process_traces_to_traj_data(
                     writer.writeheader()
                     writer.writerows(llm_calls)
 
-                total_traces += 1
+                processed_traces += 1
                 total_llm_calls += len(llm_calls)
 
                 trace_info = f"trace {trace_idx + 1}" if len(traces) > 1 else ""
@@ -226,8 +232,7 @@ def process_traces_to_traj_data(
 
     logger.info("=" * 80)
     logger.info("TRACE PROCESSING COMPLETE")
-    logger.info(f"Total traces processed: {total_traces}")
-    logger.info(f"Total traces skipped (existing): {total_skipped}")
+    logger.info(f"Total traces: {total_traces}, skipped: {total_skipped}, no LLM calls: {traces_with_no_llm_calss}, with llm calls: {processed_traces}")
     logger.info(f"Total LLM calls extracted: {total_llm_calls}")
     logger.info("=" * 80)
 

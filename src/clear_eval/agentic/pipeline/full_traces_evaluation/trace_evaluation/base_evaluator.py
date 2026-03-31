@@ -401,11 +401,21 @@ class TrajectoryEvaluator(ABC):
 
         # Format trajectory text using format_compact_trace
         try:
-            trajectory_text = format_compact_trace(df)
-            # Cap trajectory to fit in context window
             if self.context_tokens:
+                # Adaptive mode: let the formatter distribute the budget
+                # proportionally across steps instead of a blunt overall cap.
+                budget_tokens = int(
+                    (self.context_tokens - RESPONSE_RESERVED_TOKENS - PROMPT_OVERHEAD_TOKENS)
+                    * CONTEXT_SAFETY_MARGIN
+                )
+                trajectory_text = format_compact_trace(
+                    df, max_tokens=budget_tokens, chars_per_token=CHARS_PER_TOKEN,
+                )
+                # Safety net: if the estimate was slightly off, still cap
                 max_chars = self.get_max_trajectory_chars()
                 trajectory_text = cap_trajectory(trajectory_text, max_chars)
+            else:
+                trajectory_text = format_compact_trace(df)
         except Exception as e:
             logger.error("Failed to format trajectory %s: %s", traj_name, e)
             return None

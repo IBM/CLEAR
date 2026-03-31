@@ -10,7 +10,7 @@ Supports input files that contain:
   - a wrapper {"traces": [...]}
 
 Output fields match the unified CSV schema:
-  id, Name, intent, task_id, step_in_trace_general, step_in_trace_node,
+  id, Name, intent, task_id, step_in_trace_general, llm_call_index,
   model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 """
 
@@ -18,25 +18,38 @@ import json
 from typing import Any, Dict, List, Optional
 
 from .trace_utils import (
+    safe_json,
+    extract_messages_from_input,
     normalize_input_messages,
     normalize_response,
     extract_tool_calls,
     extract_from_output_messages,
     extract_api_spec,
+    extract_intent_from_input,
+    truncate_middle,
+    build_csv_rows,
+    _INTENT_LIMIT,
 )
 
 
 # ----------------- helpers -----------------
 
 def _get(d: Dict[str, Any], path: List[Any], default=None):
-    """Safely navigate nested dict by path."""
+    """Safely navigate nested dict by path, auto-parsing JSON strings."""
     cur = d
     for p in path:
+        if isinstance(cur, str):
+            cur = safe_json(cur)
         if isinstance(cur, dict) and p in cur:
             cur = cur[p]
         else:
             return default
-    return cur
+    return safe_json(cur) if isinstance(cur, str) else cur
+
+def _parse_attrs(attrs: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse all JSON-string values in an attributes dict."""
+    return {k: safe_json(v) if isinstance(v, str) else v for k, v in attrs.items()}
+
 
 def get_by_any_key(s: Dict[str, Any], keys: list[str]):
     for k in keys:
@@ -45,13 +58,13 @@ def get_by_any_key(s: Dict[str, Any], keys: list[str]):
     return None
 
 def get_parent_id(s):
-     return get_by_any_key(s, ["parent_id", "parent_span_id"])
+     return get_by_any_key(s, ["parent_id", "parent_span_id", "parentSpanId"])
 
 def get_start_time(s):
-    return get_by_any_key(s, ["start_time_unix_nano", "start_time_ns"])
+    return get_by_any_key(s, ["start_time_unix_nano", "start_time_ns", "start_time"])
 
 def get_end_time(s):
-    return get_by_any_key(s, ["end_time_unix_nano", "end_time_ns"])
+    return get_by_any_key(s, ["end_time_unix_nano", "end_time_ns", "end_time"])
 
 # ----------------- span semantics -----------------
 
@@ -64,7 +77,7 @@ _MODEL_TYPES = {"CHAT_MODEL", "MODEL", "GENERATION"}
 
 
 def _is_wrapper_span(s: Dict[str, Any]) -> bool:
-    return (_span_type(s) in _WRAPPER_TYPES) or bool(_get(s, ["attributes", "langgraph.node"]))
+    return (_span_type(s) in _WRAPPER_TYPES)# or bool(_get(s, ["attributes", "langgraph.node"]))
 
 
 def _is_model_call_span(s: Dict[str, Any]) -> bool:
@@ -74,7 +87,7 @@ def _is_model_call_span(s: Dict[str, Any]) -> bool:
     if _get(s, ["attributes", "gen_ai.operation.name"]):
         return True
     outputs_obj = s.get("outputs")
-    if isinstance(outputs_obj, dict) and ("choices" in outputs_obj or "content" in outputs_obj or "usage" in outputs_obj):
+    if isinstance(outputs_obj, dict) and "choices" in outputs_obj:
         return True
     if _get(s, ["attributes", "gen_ai.output.messages"]):
         return True
@@ -83,7 +96,7 @@ def _is_model_call_span(s: Dict[str, Any]) -> bool:
 
 def _get_span_name(s: Dict[str, Any]) -> Optional[str]:
     return (
-        _get(s, ["attributes", "langgraph.node"]) or
+      #  _get(s, ["attributes", "langgraph.node"]) or
         _get(s, ["attributes", "mlflow.spanFunctionName"]) or
         s.get("name")
     )
@@ -111,17 +124,18 @@ def _extract_input_output_from_span(
     Returns:
         (model_input_str, response_text, tool_calls, api_spec, meta_data)
     """
-    attrs = s.get("attributes", {})
-    inputs = s.get("inputs", {}) or {}
-    outputs_obj = s.get("outputs", {}) or {}
+    attrs = _parse_attrs(s.get("attributes", {}))
+    inputs = s.get("inputs", {}) or safe_json(attrs.get("mlflow.spanInputs")) or {}
+    outputs_obj = s.get("outputs", {}) or safe_json(attrs.get("mlflow.spanOutputs")) or {}
 
     # Extract bound tools (API spec)
     api_spec = extract_api_spec(inputs)
 
-    # Extract input messages (OpenAI: messages, Gemini: contents)
+    # Extract input messages (OpenAI/Anthropic: messages, Gemini: contents)
+    # extract_messages_from_input handles separate system prompts (Anthropic/Gemini)
     messages = (
-        inputs.get("messages") or
-        inputs.get("contents") or
+        extract_messages_from_input(inputs) or
+        inputs.get("prompt") or
         _get(attrs, ["gen_ai.input.messages"]) or
         _get(attrs, ["gen_ai.prompt"]) or
         inputs.get("input")
@@ -129,8 +143,8 @@ def _extract_input_output_from_span(
     if messages is None and isinstance(s.get("events"), list):
         for ev in s["events"]:
             if ev.get("name") == "gen_ai.client.inference.operation.details":
-                ev_attrs = ev.get("attributes", {})
-                messages = ev_attrs.get("gen_ai.input.messages") or ev_attrs.get("gen_ai.prompt")
+                ev_attrs = _parse_attrs(ev.get("attributes", {}))
+                messages = _get(ev_attrs, ["gen_ai.input.messages"]) or _get(ev_attrs, ["gen_ai.prompt"])
                 if messages is not None:
                     break
 
@@ -166,8 +180,8 @@ def _extract_input_output_from_span(
     if not response_text and isinstance(s.get("events"), list):
         for ev in s["events"]:
             if ev.get("name") == "gen_ai.client.inference.operation.details":
-                ev_attrs = ev.get("attributes", {})
-                out_msgs = ev_attrs.get("gen_ai.output.messages") or ev_attrs.get("gen_ai.completion")
+                ev_attrs = _parse_attrs(ev.get("attributes", {}))
+                out_msgs = _get(ev_attrs, ["gen_ai.output.messages"]) or _get(ev_attrs, ["gen_ai.completion"])
                 if out_msgs is not None:
                     response_text, extra_tool_calls = extract_from_output_messages(out_msgs)
                     if not tool_calls and extra_tool_calls:
@@ -190,6 +204,16 @@ def _extract_input_output_from_span(
     return model_input_str, response_text, tool_calls, api_spec, meta_data
 
 
+def _extract_status(s: Dict[str, Any]) -> Optional[str]:
+    """Extract span status, handling both OTel nested and MLflow flat formats."""
+    status = s.get("status")
+    if isinstance(status, dict):
+        return status.get("status_code") or status.get("code")
+    if isinstance(status, str):
+        return status
+    return None
+
+
 def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[str, Any]:
     """
     Build complete metadata including span-level information.
@@ -201,7 +225,7 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
     Returns:
         Complete metadata dict with span info
     """
-    attrs = s.get("attributes", {})
+    attrs = _parse_attrs(s.get("attributes", {}))
 
     # Calculate duration if timestamps available
     duration_ms = s.get("duration_ms")
@@ -217,7 +241,7 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
         "span_type": _span_type(s),
         "parent_span_id": get_parent_id(s),
         "duration_ms": duration_ms,
-        "status": s.get("status", {}).get("status_code"),
+        "status": _extract_status(s),
     }
 
     # Merge span metadata with model metadata
@@ -226,8 +250,156 @@ def _build_span_metadata(s: Dict[str, Any], model_meta: Dict[str, Any]) -> Dict[
 
 # ----------------- core extraction -----------------
 
-# Names to skip when walking up parent chain for calling context
-_SKIP_NAMES = {"get_llm", "Completions", "ChatCompletions", "openai_call", "llm_invoke"}
+# Names to skip when walking up parent chain for calling context.
+# These are generic LLM client / wrapper class names from LangChain and
+# provider SDKs that appear as span names but don't represent the actual
+# LangGraph node that initiated the call.
+_SKIP_NAMES = {
+    # LangChain model wrapper classes
+    "ChatOpenAI", "AzureChatOpenAI", "ChatAnthropic", "ChatGoogleGenerativeAI",
+    "ChatVertexAI", "ChatBedrock", "BedrockChat", "ChatLiteLLM", "ChatOllama",
+    "ChatCohere", "ChatMistralAI", "ChatFireworks", "ChatTogether", "ChatGroq",
+    "ChatWatsonx", "ChatHuggingFace", "ChatNVIDIA",
+    # LangChain runnable / chain wrappers
+    "RunnableSequence", "RunnableLambda", "RunnableParallel",
+    "RunnablePassthrough", "RunnableBranch", "RunnableWithFallbacks",
+    "LLMChain", "ConversationChain",
+    # Provider SDK internals
+    "Completions", "ChatCompletions", "Chat", "Messages",
+    # Common custom wrapper function names
+    "get_llm", "openai_call", "llm_invoke", "call_llm", "invoke_llm",
+    "create_completion", "run_llm",
+}
+
+
+def _extract_trace_intent(
+    trace: Dict[str, Any],
+    spans: List[Dict[str, Any]],
+    by_id: Dict[str, Dict[str, Any]],
+) -> str:
+    """
+    Extract a single intent for the entire trace.
+
+    Resolution order (first non-empty wins):
+      1. Explicit trace-level metadata/tags (intent, user_query, task, goal).
+      2. Root span's input — the first user message or plain-text input.
+      3. First user message found in the earliest (by start_time) span.
+    """
+    intent = _extract_intent_from_trace_metadata(trace)
+    if intent:
+        return truncate_middle(intent, _INTENT_LIMIT)
+
+    # --- 2. Root span's input ---
+    root_spans = [s for s in spans if not get_parent_id(s)]
+    if not root_spans:
+        root_spans = [s for s in spans if get_parent_id(s) not in by_id]
+    if not root_spans:
+        root_spans = spans[:1]
+
+    root_spans.sort(key=lambda s: get_start_time(s) or float("inf"))
+
+    for root in root_spans:
+        intent = extract_intent_from_input(
+            root.get("inputs"), _parse_attrs(root.get("attributes") or {})
+        )
+        if intent:
+            return intent
+
+    # --- 3. First user message in any span (earliest by start_time) ---
+    sorted_spans = sorted(spans, key=lambda s: get_start_time(s) or float("inf"))
+    for s in sorted_spans:
+        intent = extract_intent_from_input(
+            s.get("inputs"), _parse_attrs(s.get("attributes") or {})
+        )
+        if intent:
+            return intent
+
+    return ""
+
+
+_CONTAINER_KEYS = ("tags", "metadata", "trace_metadata", "request_metadata")
+_INTENT_FIELDS = ("intent", "user_query", "task", "goal", "query", "question",
+                   "request", "request_preview", "input", "mlflow.note.content")
+_SCORE_FIELDS = ("traj_score", "score", "quality", "rating", "correctness")
+
+
+def _get_trace_containers(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Collect all dict containers that may hold intent/score/metadata fields."""
+    info = trace.get("info", {}) or {}
+    seen = []
+    for source in (trace, info):
+        for key in _CONTAINER_KEYS:
+            c = source.get(key)
+            if isinstance(c, dict) and c not in seen:
+                seen.append(c)
+    return seen
+
+
+def _search_trace_field(trace: Dict[str, Any], field_names: tuple) -> Any:
+    """
+    Search for the first non-empty value across top-level trace keys,
+    data.* keys, and all metadata containers.
+    """
+    for field in field_names:
+        # Top-level and data.*
+        val = trace.get(field) or _get(trace, ["data", field])
+        if val is not None and val != "":
+            return val
+        # Containers
+        for container in _get_trace_containers(trace):
+            val = container.get(field)
+            if val is not None and val != "":
+                return val
+    return None
+
+
+def _get_spans(trace: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Get spans from either flat or native (info/data) format."""
+    return trace.get("spans", []) or _get(trace, ["data", "spans"]) or []
+
+
+def _get_trace_id(trace: Dict[str, Any]) -> Optional[str]:
+    """Get trace_id from either flat or native format."""
+    return (
+        trace.get("trace_id") or
+        trace.get("id") or
+        _get(trace, ["info", "trace_id"]) or
+        _get(trace, ["info", "request_id"])
+    )
+
+
+def _extract_intent_from_trace_metadata(trace: Dict[str, Any]) -> str:
+    """Check trace-level metadata/tags and top-level fields for an explicit intent."""
+    val = _search_trace_field(trace, _INTENT_FIELDS)
+    if val and isinstance(val, str) and val.strip():
+        return val.strip()
+    return ""
+
+
+def _get_traj_score(trace: Dict[str, Any]) -> Any:
+    """
+    Get trajectory score from any known location.
+
+    Checks _SCORE_FIELDS across top-level, data.*, and containers,
+    then falls back to MLflow assessments.
+    """
+    val = _search_trace_field(trace, _SCORE_FIELDS)
+    if val is not None:
+        return val
+
+    # MLflow assessments (native format: info.assessments, or top-level)
+    assessments = trace.get("assessments") or _get(trace, ["info", "assessments"]) or []
+    for a in assessments:
+        if not isinstance(a, dict):
+            continue
+        val = a.get("numeric_value")
+        if val is not None:
+            return val
+        val = a.get("value")
+        if val is not None:
+            return val
+
+    return None
 
 
 def extract_llm_calls_from_mlflow_trace(
@@ -239,12 +411,14 @@ def extract_llm_calls_from_mlflow_trace(
     """
     Extract LLM calls from an MLflow trace.
 
+    Accepts both flat and native (info/data envelope) MLflow trace formats.
+
     Uses parent_id to:
     1. Find calling node name by walking up the parent chain
     2. Order LLM calls by start_time, with parent hierarchy as context
 
     Args:
-        trace: The trace dict containing spans
+        trace: The trace dict containing spans (flat or native format)
         file_name: Fallback name for trace_id
         separate_tools: If True, emit separate rows for tool calls vs text responses
                        If False, emit single row per model call with combined response
@@ -253,8 +427,8 @@ def extract_llm_calls_from_mlflow_trace(
     Returns:
         List of row dicts matching the unified CSV schema
     """
-    trace_id = trace.get("trace_id") or trace.get("id") or file_name or "unknown"
-    spans: List[Dict[str, Any]] = trace.get("spans", [])
+    trace_id = _get_trace_id(trace) or file_name or "unknown"
+    spans: List[Dict[str, Any]] = _get_spans(trace)
 
     if not spans:
         return []
@@ -301,14 +475,9 @@ def extract_llm_calls_from_mlflow_trace(
         # Fallback to span's own name
         return _get_span_name(s) or "unknown"
 
-    # Extract intent from trace metadata
-    trace_intent = (
-        _get(trace, ["tags", "intent"]) or
-        _get(trace, ["metadata", "intent"]) or
-        _get(trace, ["metadata", "user_query"]) or
-        ""
-    )
-    traj_score = trace.get("traj_score") or _get(trace, ["tags", "traj_score"])
+    # Extract intent once for the entire trace
+    trace_intent = _extract_trace_intent(trace, spans, by_id)
+    traj_score = _get_traj_score(trace)
 
     # Find all model call spans
     model_spans = [s for s in spans if _is_model_call_span(s)]
@@ -322,96 +491,26 @@ def extract_llm_calls_from_mlflow_trace(
 
     model_spans.sort(key=sort_key)
 
-    # Process each model call span
-    rows: List[Dict[str, Any]] = []
-    per_node_counter: Dict[str, int] = {}
-    step_counter = 0
+    # Extract one record per LLM call (framework-specific field extraction only)
+    llm_calls: List[Dict[str, Any]] = []
 
     for s in model_spans:
-        # Find calling node by walking up parent chain
         agent_name = find_calling_node_name(s)
-
-        per_node_counter.setdefault(agent_name, 0)
-        per_node_counter[agent_name] += 1
-
         model_input_str, response_text, tool_calls, api_spec, model_meta = _extract_input_output_from_span(
             s, system_trunc_limit
         )
-        api_spec_str = json.dumps(api_spec) if api_spec else ""
-
-        # Build complete metadata with span info
         meta_data = _build_span_metadata(s, model_meta)
 
-        attrs = s.get("attributes", {})
-        intent = (
-            attrs.get("langgraph.intent") or
-            attrs.get("intent") or
-            attrs.get("mlflow.intent") or
-            attrs.get("gen_ai.intent") or
-            trace_intent
-        )
+        llm_calls.append({
+            "agent_name": agent_name,
+            "task_id": trace_id,
+            "intent": trace_intent,
+            "model_input": model_input_str,
+            "response_text": response_text,
+            "tool_calls": tool_calls,
+            "api_spec": api_spec,
+            "meta_data": meta_data,
+            "traj_score": traj_score,
+        })
 
-        if separate_tools:
-            # Emit separate rows for tool calls
-            if isinstance(tool_calls, list):
-                for tc in tool_calls:
-                    step_counter += 1
-                    rows.append({
-                        "id": f"{trace_id}_{step_counter}",
-                        "Name": agent_name,
-                        "intent": intent,
-                        "task_id": trace_id,
-                        "step_in_trace_general": step_counter,
-                        "step_in_trace_node": per_node_counter[agent_name],
-                        "model_input": model_input_str,
-                        "response": json.dumps(tc, indent=2),
-                        "tool_or_agent": "tool",
-                        "api_spec": api_spec_str,
-                        "meta_data": json.dumps(meta_data),
-                        "traj_score": traj_score,
-                    })
-
-            # Emit row for text response
-            if response_text and response_text.strip() not in ("null", "None", ""):
-                step_counter += 1
-                rows.append({
-                    "id": f"{trace_id}_{step_counter}",
-                    "Name": agent_name,
-                    "intent": intent,
-                    "task_id": trace_id,
-                    "step_in_trace_general": step_counter,
-                    "step_in_trace_node": per_node_counter[agent_name],
-                    "model_input": model_input_str,
-                    "response": response_text,
-                    "tool_or_agent": "agent",
-                    "api_spec": api_spec_str,
-                    "meta_data": json.dumps(meta_data),
-                    "traj_score": traj_score,
-                })
-        else:
-            # Single row mode: combine everything
-            step_counter += 1
-            combined_response = response_text
-            if tool_calls:
-                tool_parts = [json.dumps(tc, indent=2) for tc in tool_calls]
-                if tool_parts:
-                    combined_response = "\n---\n".join(tool_parts)
-                    if response_text:
-                        combined_response += f"\n---\n{response_text}"
-
-            rows.append({
-                "id": f"{trace_id}_{step_counter}",
-                "Name": agent_name,
-                "intent": intent,
-                "task_id": trace_id,
-                "step_in_trace_general": step_counter,
-                "step_in_trace_node": per_node_counter[agent_name],
-                "model_input": model_input_str,
-                "response": combined_response,
-                "tool_or_agent": "agent",
-                "api_spec": api_spec_str,
-                "meta_data": json.dumps(meta_data),
-                "traj_score": traj_score,
-            })
-
-    return rows
+    return build_csv_rows(llm_calls, separate_tools=separate_tools)

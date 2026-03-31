@@ -27,3 +27,4 @@ separate_tools: false
 run_step_by_step: true
 run_full_trajectory: false
 memory_only: true
+gen_model_name: none
