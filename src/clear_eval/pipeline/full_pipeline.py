@@ -51,7 +51,8 @@ def run_generation_pipeline(config):
     run_name = get_run_name(config)
     gen_file_name = get_gen_file_name(run_name, gen_model)
     gen_output_path = os.path.join(output_dir, gen_file_name)
-    run_predictions_generation_save_results(data_df, config, gen_output_path)
+    gen_llm = get_llm_from_config(config, eval_mode=False)
+    run_predictions_generation_save_results(data_df, gen_llm, config, gen_output_path)
 
 def get_gen_file_name(run_name, gen_model):
     gen_model_str = get_model_name_for_file(gen_model)
@@ -177,14 +178,17 @@ def run_aggregation_pipeline(config):
     run_aggregation_from_df(config, eval_df, run_info)
 
 def get_eval_llm_from_config(config):
+    return get_llm_from_config(config, eval_mode=True)
+
+def get_llm_from_config(config, eval_mode=True):
     """
     Get LLM client from configuration.
-    
+
     Supports three inference backends:
     1. langchain: Use LangChain (default for built-in providers)
     2. litellm: Use LiteLLM (supports many providers)
     3. endpoint: Use direct HTTP endpoint backend
-    
+
     Backward compatible with use_litellm boolean field.
     """
     # Get inference_backend, with backward compatibility for use_litellm
@@ -193,19 +197,22 @@ def get_eval_llm_from_config(config):
     else:
         inference_backend = config.get("inference_backend")
 
+    model_name_field ="eval_model_name" if eval_mode else "gen_model_name"
+    model_params_field = "eval_model_params" if eval_mode else "gen_model_params"
+
     # Build arguments for get_llm_client
     client_args = {
         "provider": config["provider"],
-        "model": config["eval_model_name"],
+        "model": config[model_name_field],
         "inference_backend": inference_backend,
-        "parameters": config.get('eval_model_params'),
-        "eval_mode": True
+        "parameters": config.get(model_params_field),
+        "eval_mode": eval_mode
     }
-    
+
     # Add endpoint_url if using endpoint backend
     if inference_backend == "endpoint":
         client_args["endpoint_url"] = config.get("endpoint_url")
-    
+
     return get_llm_client(**client_args)
 
 
@@ -272,7 +279,8 @@ def run_eval_pipeline(config):
         if resume_enabled:
             gen_df = load_dataframe_from_cache(gen_output_path, expected_rows=len(data_df))
         if gen_df is None:
-            gen_df = run_predictions_generation_save_results(data_df, config, gen_output_path)
+            gen_llm = get_llm_from_config(config, eval_mode = False)
+            gen_df = run_predictions_generation_save_results(data_df, gen_llm, config, gen_output_path)
             # Do not use newer cached results, using these generations
             resume_enabled = False
     else:
