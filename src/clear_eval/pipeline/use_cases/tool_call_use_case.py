@@ -478,5 +478,5 @@ if __name__ == "__main__":
             llm = get_eval_llm_from_config(config)
 
             tool_call_use_case = ToolCallEvalUseCase()
-            evaluated_df = tool_call_use_case.eval_records(df.copy().head(4), llm, config)
+            evaluated_df = tool_call_use_case.eval_records(df.copy(), llm, config)
             evaluated_df.to_csv(sample_data_file.replace(".csv", f"_eval_{provider}_{inference_backend}.csv"), index=False)
