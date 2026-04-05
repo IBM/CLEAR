@@ -86,6 +86,45 @@ def _patch_json_schema_to_pydantic_model():
 _patch_json_schema_to_pydantic_model()
 
 
+def _relax_freeform_object_types(schema: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Return a *copy* of *schema* where every free-form ``"type": "object"``
+    property (i.e. one that declares no ``properties`` of its own) is loosened
+    to ``"type": ["object", "string"]``.
+
+    This keeps the validation schema in sync with the Pydantic model produced
+    by the patched ``json_schema_to_pydantic_model`` (which maps ``"object"``
+    → ``str``).  Without this, OpenAI returns a JSON string for such fields
+    but ``jsonschema.validate`` rejects it because the original schema only
+    allows ``"object"``.
+    """
+    import copy
+    schema = copy.deepcopy(schema)
+    for _prop_name, prop_schema in schema.get("properties", {}).items():
+        if (
+            prop_schema.get("type") == "object"
+            and "properties" not in prop_schema
+        ):
+            prop_schema["type"] = ["object", "string"]
+    return schema
+
+
+def _patch_validate(client):
+    """
+    Monkey-patch ``_validate`` on *client* so that dict schemas are relaxed
+    (via `_relax_freeform_object_types`) before ``jsonschema.validate`` runs.
+    """
+    _orig_validate = client._validate
+
+    def _relaxed_validate(raw, schema):
+        if isinstance(schema, dict):
+            schema = _relax_freeform_object_types(schema)
+        return _orig_validate(raw, schema)
+
+    client._validate = _relaxed_validate
+    return client
+
+
 def _make_prompt_validated_wrapper(client):
     """
     Wrap an ALTK ValidatingLLMClient so that ``generate`` / ``generate_async``
@@ -196,6 +235,9 @@ class ToolCallEvalUseCase(EvalUseCase):
             # LiteLLM model format: provider/model_name (consistent with LiteLLMClient)
             litellm_model = f"{provider}/{model_name}"
             altk_client = MetricsClientCls(model_name=litellm_model)
+            # Relax validation so free-form "object" fields also accept the
+            # string representation produced by the patched Pydantic model.
+            _patch_validate(altk_client)
             # Providers that don't support OpenAI-style response_format need
             # prompt-based schema validation instead.
             if provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT:
