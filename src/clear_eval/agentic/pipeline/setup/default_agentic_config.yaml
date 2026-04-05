@@ -74,6 +74,8 @@ input_columns:
   - step_in_trace_node
   - id
   - traj_score
+  - agent_or_tool
+  - llm_call_index
 
 
 # ============================================================================
