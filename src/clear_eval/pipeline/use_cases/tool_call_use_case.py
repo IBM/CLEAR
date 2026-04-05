@@ -153,9 +153,23 @@ def _make_prompt_validated_wrapper(client):
         try:
             return _orig_parse(raw)
         except (ValueError, KeyError):
+            # Check if the response contains reasoning_content but no actual
+            # content — this happens when reasoning models (e.g. on watsonx)
+            # exhaust the max_tokens budget on "thinking" tokens.
+            _choices = getattr(raw, "choices", None) or (raw.get("choices", []) if isinstance(raw, dict) else [])
+            if _choices:
+                _msg = getattr(_choices[0], "message", None) or (_choices[0].get("message", {}) if isinstance(_choices[0], dict) else {})
+                _reasoning = getattr(_msg, "reasoning_content", None) or (_msg.get("reasoning_content") if isinstance(_msg, dict) else None)
+                _finish = getattr(_choices[0], "finish_reason", None) or (_choices[0].get("finish_reason") if isinstance(_choices[0], dict) else None)
+                if _reasoning and _finish == "length":
+                    logger.warning(
+                        "LLM reasoning consumed entire token budget (finish_reason='length'). "
+                        "Consider increasing 'max_tokens' in eval_model_params. Will retry."
+                    )
+            else:
+                logger.debug("LLM returned empty/unparseable response; will retry.")
             # Return empty string so the ValidatingLLMClient retry loop
             # sees it as invalid output and retries instead of crashing.
-            logger.debug("LLM returned empty/unparseable response; will retry.")
             return ""
 
     client._parse_llm_response = _safe_parse_llm_response
@@ -186,6 +200,57 @@ def _make_prompt_validated_wrapper(client):
     return client
 
 
+def _inject_default_generation_args(client, eval_model_params: Dict[str, Any]):
+    """
+    Monkey-patch ``generate`` and ``generate_async`` on *client* so that
+    inference parameters from *eval_model_params* (e.g. ``max_tokens``,
+    ``temperature``) are injected into every call.
+
+    For providers like watsonx whose SDK methods (``ModelInference.achat``)
+    expect these parameters inside a ``params`` dict rather than as top-level
+    keyword arguments, we inject them directly into the ``params`` kwarg.
+
+    **Important:** This must be applied *after* ``_make_prompt_validated_wrapper``
+    because ``ValidatingLLMClient.generate_async`` calls ``super()._generate_async()``
+    which bypasses instance-level patches on ``_generate_async``.  By wrapping
+    ``generate`` / ``generate_async`` (the outermost entry points) we ensure the
+    ``params`` dict is present before *any* downstream code runs.
+    """
+    params_dict: Dict[str, Any] = {}
+    if "max_tokens" in eval_model_params:
+        params_dict["max_tokens"] = eval_model_params["max_tokens"]
+    if "temperature" in eval_model_params:
+        params_dict["temperature"] = eval_model_params["temperature"]
+    if not params_dict:
+        return client
+
+    _orig_generate = client.generate
+    _orig_generate_async = client.generate_async
+
+    def _patched_generate(prompt, **kwargs):
+        # Merge into the `params` dict that watsonx SDK methods expect
+        existing_params = kwargs.get("params") or {}
+        if isinstance(existing_params, dict):
+            merged = {**params_dict, **existing_params}  # caller overrides defaults
+        else:
+            merged = existing_params  # TextChatParameters object — don't touch
+        kwargs["params"] = merged
+        return _orig_generate(prompt, **kwargs)
+
+    async def _patched_generate_async(prompt, **kwargs):
+        existing_params = kwargs.get("params") or {}
+        if isinstance(existing_params, dict):
+            merged = {**params_dict, **existing_params}
+        else:
+            merged = existing_params
+        kwargs["params"] = merged
+        return await _orig_generate_async(prompt, **kwargs)
+
+    client.generate = _patched_generate
+    client.generate_async = _patched_generate_async
+    return client
+
+
 # Providers whose LLM endpoints do NOT support response_format with a
 # Pydantic model (i.e. OpenAI-style structured output).
 _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx"}
@@ -208,7 +273,8 @@ class ToolCallEvalUseCase(EvalUseCase):
 
         # convert CLEAR llm to ALTK llm
         altk_llm_client = self.clear_llm_client_to_altk_llm_client(llm, config.get("provider"),
-                                                                   config.get("eval_model_name"))
+                                                                   config.get("eval_model_name"),
+                                                                   config.get("eval_model_params"))
 
         # call sparc with pipeline over examples, results store sorted results over the examples
         results = await self.generate_sparc_evaluation_results(df=df, llm_client=altk_llm_client)
@@ -226,7 +292,8 @@ class ToolCallEvalUseCase(EvalUseCase):
         df[score_col] = df[score_col].astype('Float64')
         return df
 
-    def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str) -> BaseLLMClient:
+    def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str,
+                                               eval_model_params: Optional[Dict] = None) -> BaseLLMClient:
         """Convert CLEAR's LLM object to ALTK's LLM Object."""
 
         # LiteLLMClient - use ALTK's native litellm support
@@ -234,7 +301,19 @@ class ToolCallEvalUseCase(EvalUseCase):
             MetricsClientCls = get_llm("litellm.output_val")
             # LiteLLM model format: provider/model_name (consistent with LiteLLMClient)
             litellm_model = f"{provider}/{model_name}"
-            altk_client = MetricsClientCls(model_name=litellm_model)
+            # Forward inference parameters (e.g. max_tokens) so that the
+            # ALTK client passes them through to every litellm.completion
+            # call.  Without an explicit max_tokens some providers (watsonx)
+            # default to a very low value (1024) which is easily exhausted
+            # by reasoning-model "thinking" tokens, leaving no room for the
+            # actual response content.
+            lite_kwargs: Dict[str, Any] = {}
+            if eval_model_params:
+                if "max_tokens" in eval_model_params:
+                    lite_kwargs["max_tokens"] = eval_model_params["max_tokens"]
+                if "temperature" in eval_model_params:
+                    lite_kwargs["temperature"] = eval_model_params["temperature"]
+            altk_client = MetricsClientCls(model_name=litellm_model, **lite_kwargs)
             # Relax validation so free-form "object" fields also accept the
             # string representation produced by the patched Pydantic model.
             _patch_validate(altk_client)
@@ -254,21 +333,36 @@ class ToolCallEvalUseCase(EvalUseCase):
         if provider == "watsonx":
             MetricsClientCls = get_llm("watsonx.output_val")
             if llm.space_id:
-                return MetricsClientCls(
+                altk_client = MetricsClientCls(
                     model_id=llm.model_id,
                     api_key=llm.api_key._secret_value,
                     url=llm.url,
                     space_id=llm.space_id,
                 )
             elif llm.project_id:
-                return MetricsClientCls(
+                altk_client = MetricsClientCls(
                     model_id=llm.model_id,
                     api_key=llm.api_key._secret_value,
                     url=llm.url._secret_value,
-                    project_id=llm.project_id
+                    project_id=llm.project_id,
                 )
             else:
                 raise KeyError("Either space_id or project_id must be specified for watsonx inference.")
+            # Relax validation so free-form "object" fields also accept the
+            # string representation produced by the patched Pydantic model.
+            _patch_validate(altk_client)
+            # watsonx does not support OpenAI-style response_format, so use
+            # prompt-based schema validation instead.
+            altk_client = _make_prompt_validated_wrapper(altk_client)
+            # Inject inference parameters (e.g. max_tokens, temperature) into
+            # every LLM call via the watsonx `params` dict.  Without an
+            # explicit max_tokens, watsonx defaults to 1024 which is easily
+            # exhausted by reasoning-model "thinking" tokens.
+            # NOTE: must be applied *after* _make_prompt_validated_wrapper so
+            # that this is the outermost wrapper and `params` flows through.
+            if eval_model_params:
+                _inject_default_generation_args(altk_client, eval_model_params)
+            return altk_client
 
         elif provider == "azure":
             MetricsClientCls = get_llm("azure_openai.async.output_val")
@@ -376,6 +470,7 @@ if __name__ == "__main__":
     for provider in ["openai", "watsonx"]:
         # for inference_backend in ["litellm"]:
         for inference_backend in ["langchain", "litellm"]:
+            print(f"=======provider: {provider}, inference_backend: {inference_backend}======")
             # model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
             model_name = "gpt-4.1" if provider == "openai" else "openai/gpt-oss-120b"
             config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider , eval_model_name=model_name, inference_backend=inference_backend)
@@ -383,5 +478,5 @@ if __name__ == "__main__":
             llm = get_eval_llm_from_config(config)
 
             tool_call_use_case = ToolCallEvalUseCase()
-            evaluated_df = tool_call_use_case.eval_records(df.copy(), llm, config)
+            evaluated_df = tool_call_use_case.eval_records(df.copy().head(4), llm, config)
             evaluated_df.to_csv(sample_data_file.replace(".csv", f"_eval_{provider}_{inference_backend}.csv"), index=False)
