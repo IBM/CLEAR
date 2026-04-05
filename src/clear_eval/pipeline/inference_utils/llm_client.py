@@ -193,8 +193,11 @@ class LiteLLMClient(LLMClient):
                 raise KeyError("WATSONX_PROJECT_ID or WATSONX_SPACE_ID env var required.")
 
         elif self.provider == "openai":
-            if not os.getenv("OPENAI_API_KEY"):
-                raise KeyError("OPENAI_API_KEY env var required.")
+            # Skip API key check for local endpoints (api_base provided)
+            if "api_base" not in self.params and not os.getenv("OPENAI_API_KEY"):
+                raise KeyError(
+                    "OPENAI_API_KEY env var required (or provide api_base for local endpoints)."
+                )
 
         # Other providers: trust user has set credentials per litellm docs
         logger.debug(f"Configured {self.provider} provider")
@@ -482,6 +485,9 @@ def get_llm_client(
             llm_client = EndpointClient(backend)
 
         elif inference_backend == "litellm":
+            # Pass endpoint_url as api_base for local/custom endpoints
+            if endpoint_url and "api_base" not in parameters:
+                parameters["api_base"] = endpoint_url
             llm_client = LiteLLMClient(
                 provider=provider,
                 model=model,

@@ -206,12 +206,9 @@ def get_llm_from_config(config, eval_mode=True):
         "model": config[model_name_field],
         "inference_backend": inference_backend,
         "parameters": config.get(model_params_field),
-        "eval_mode": eval_mode
+        "eval_mode": eval_mode,
+        "endpoint_url": config.get("endpoint_url"),
     }
-
-    # Add endpoint_url if using endpoint backend
-    if inference_backend == "endpoint":
-        client_args["endpoint_url"] = config.get("endpoint_url")
 
     return get_llm_client(**client_args)
 
