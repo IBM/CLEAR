@@ -8,7 +8,7 @@ that receive the entire dataset and return evaluation results.
 import logging
 import pandas as pd
 
-from clear_eval.pipeline.use_cases.EvalUseCase import EvalUseCase
+from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
 from clear_eval.pipeline.constants import SCORE_COL, EVALUATION_TEXT_COL
 from clear_eval.pipeline.external_judge import (
     load_external_judge, call_external_judge, ExternalJudgeError

@@ -3,7 +3,7 @@ from tqdm import tqdm
 from importlib.resources import files
 from typing import Tuple, List
 import pandas as pd
-from clear_eval.pipeline.use_cases.EvalUseCase import EvalUseCase
+from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from altk.core.toolkit import AgentPhase, ComponentConfig
