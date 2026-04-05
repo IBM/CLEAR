@@ -1,7 +1,7 @@
 import json
 from tqdm import tqdm
 from importlib.resources import files
-from typing import Tuple, List
+from typing import Any, Dict, Tuple, List, Optional, Type, TypeVar, Union
 import pandas as pd
 from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
@@ -17,6 +17,139 @@ from clear_eval.pipeline.inference_utils.llm_client import run_async, LiteLLMCli
 from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 
 logger = logging.getLogger(__name__)
+
+
+def _patch_json_schema_to_pydantic_model():
+    """
+    Monkey-patch altk's json_schema_to_pydantic_model to fix OpenAI structured
+    output compatibility.
+
+    OpenAI's structured output API requires 'additionalProperties: false' on all
+    object-type schemas. When the original function maps JSON Schema "object" type
+    to Python ``dict``, Pydantic generates a schema with 'additionalProperties: true',
+    which OpenAI rejects. This patch maps free-form "object" fields (like the
+    "correction" field in SPARC metrics) to ``str`` instead, so the LLM returns
+    them as JSON-formatted strings.
+    """
+    from pydantic import BaseModel, create_model, Field as PydField
+
+    _T = TypeVar("_T")
+
+    def patched_json_schema_to_pydantic_model(
+        schema: Dict[str, Any], model_name: str = "AutoModel"
+    ) -> Type[BaseModel]:
+        fields: Dict[str, Any] = {}
+        required_fields = set(schema.get("required", []))
+
+        type_mapping = {
+            "string": str,
+            "integer": int,
+            "number": float,
+            "boolean": bool,
+            "array": list,
+            # Map "object" to str to avoid OpenAI additionalProperties issue.
+            # Free-form object fields (no sub-properties defined) cannot satisfy
+            # OpenAI's requirement for additionalProperties: false, so we
+            # represent them as JSON strings instead.
+            "object": str,
+            "null": type(None),
+        }
+
+        def parse_type(type_def: Union[str, List[str]]) -> Type[_T]:
+            if isinstance(type_def, list):
+                python_types = [type_mapping.get(t, Any) for t in type_def]
+                if type(None) in python_types:
+                    python_types.remove(type(None))
+                    if len(python_types) == 1:
+                        return Optional[python_types[0]]  # type: ignore
+                    else:
+                        return Optional[Union[tuple(python_types)]]  # type: ignore
+                else:
+                    return Union[tuple(python_types)]  # type: ignore
+            else:
+                return type_mapping.get(type_def, Any)
+
+        for prop_name, prop_schema in schema.get("properties", {}).items():
+            field_type: Any = parse_type(prop_schema.get("type"))
+            default = ... if prop_name in required_fields else None
+            description = prop_schema.get("description", None)
+            field_args = {"description": description} if description else {}
+            fields[prop_name] = (field_type, PydField(default, **field_args))
+
+        return create_model(model_name, **fields)  # type: ignore
+
+    import altk.core.llm.output_parser as _output_parser_module
+    _output_parser_module.json_schema_to_pydantic_model = patched_json_schema_to_pydantic_model
+
+
+# Apply the patch at import time so all downstream ALTK code uses the fixed version
+_patch_json_schema_to_pydantic_model()
+
+
+def _make_prompt_validated_wrapper(client):
+    """
+    Wrap an ALTK ValidatingLLMClient so that ``generate`` / ``generate_async``
+    use **prompt-based** schema validation instead of the provider-native
+    ``response_format`` parameter.
+
+    This is needed for providers (e.g. watsonx) that do not support OpenAI-style
+    structured output via ``response_format``.  The wrapper overrides every call
+    so that:
+      • ``schema_field`` is forced to ``None`` (no ``response_format`` kwarg).
+      • ``include_schema_in_system_prompt`` is forced to ``True`` so the schema
+        description is injected into the system message and the response is
+        validated client-side by ALTK's retry loop.
+
+    Additionally, ``_parse_llm_response`` is patched so that an empty LLM
+    response returns ``""`` instead of raising ``ValueError``.  This lets the
+    ALTK validation/retry loop treat it as a malformed output and retry,
+    rather than bubbling up an unrecoverable error.
+    """
+    _orig_generate = client.generate
+    _orig_generate_async = client.generate_async
+    _orig_parse = client._parse_llm_response
+
+    # --- Resilient response parser -----------------------------------
+    def _safe_parse_llm_response(raw):
+        try:
+            return _orig_parse(raw)
+        except (ValueError, KeyError):
+            # Return empty string so the ValidatingLLMClient retry loop
+            # sees it as invalid output and retries instead of crashing.
+            logger.debug("LLM returned empty/unparseable response; will retry.")
+            return ""
+
+    client._parse_llm_response = _safe_parse_llm_response
+
+    # --- Wrappers that force prompt-based validation -----------------
+    def _wrapped_generate(prompt, *, schema, schema_field=None, retries=3, **kw):
+        return _orig_generate(
+            prompt,
+            schema=schema,
+            schema_field=None,
+            retries=retries,
+            include_schema_in_system_prompt=True,
+            **kw,
+        )
+
+    async def _wrapped_generate_async(prompt, *, schema, schema_field=None, retries=3, **kw):
+        return await _orig_generate_async(
+            prompt,
+            schema=schema,
+            schema_field=None,
+            retries=retries,
+            include_schema_in_system_prompt=True,
+            **kw,
+        )
+
+    client.generate = _wrapped_generate
+    client.generate_async = _wrapped_generate_async
+    return client
+
+
+# Providers whose LLM endpoints do NOT support response_format with a
+# Pydantic model (i.e. OpenAI-style structured output).
+_PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx"}
 
 
 class ToolCallEvalUseCase(EvalUseCase):
@@ -62,7 +195,12 @@ class ToolCallEvalUseCase(EvalUseCase):
             MetricsClientCls = get_llm("litellm.output_val")
             # LiteLLM model format: provider/model_name (consistent with LiteLLMClient)
             litellm_model = f"{provider}/{model_name}"
-            return MetricsClientCls(model_name=litellm_model)
+            altk_client = MetricsClientCls(model_name=litellm_model)
+            # Providers that don't support OpenAI-style response_format need
+            # prompt-based schema validation instead.
+            if provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT:
+                altk_client = _make_prompt_validated_wrapper(altk_client)
+            return altk_client
 
         # LangChainClient - extract from underlying LangChain object
         if isinstance(llm_client, LangChainClient):
@@ -192,10 +330,12 @@ if __name__ == "__main__":
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
 
+    # for provider in ["watsonx"]:
     for provider in ["openai", "watsonx"]:
+        # for inference_backend in ["litellm"]:
         for inference_backend in ["langchain", "litellm"]:
-            #model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
-            model_name = "Azure/gpt-4.1" if provider == "openai" else "openai/gpt-oss-120b"
+            # model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
+            model_name = "gpt-4.1" if provider == "openai" else "openai/gpt-oss-120b"
             config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider , eval_model_name=model_name, inference_backend=inference_backend)
 
             llm = get_eval_llm_from_config(config)
