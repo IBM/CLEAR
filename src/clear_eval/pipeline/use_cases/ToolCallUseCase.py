@@ -18,14 +18,14 @@ from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 
 logger = logging.getLogger(__name__)
 
-class ToolCallEvalUseCase(EvalUseCase):
 
+class ToolCallEvalUseCase(EvalUseCase):
     SPECS_COL = "api_spec"
     CONTEXT_COL = "context"
     RESPONSE_COL = "response"
     required_input_fields = [CONTEXT_COL, SPECS_COL]
 
-    def eval_records(self, df, llm, config, score_col = SCORE_COL):
+    def eval_records(self, df, llm, config, score_col=SCORE_COL):
         return run_async(self.eval_records_async(df, llm, config, score_col))
 
     async def eval_records_async(self, df, llm, config, score_col=SCORE_COL):
@@ -35,7 +35,8 @@ class ToolCallEvalUseCase(EvalUseCase):
         df[score_col] = pd.NA  # Use Pandas NA for missing scores
 
         # convert CLEAR llm to ALTK llm
-        altk_llm_client = self.clear_llm_client_to_altk_llm_client(llm, config.get("provider"), config.get("eval_model_name"))
+        altk_llm_client = self.clear_llm_client_to_altk_llm_client(llm, config.get("provider"),
+                                                                   config.get("eval_model_name"))
 
         # call sparc with pipeline over examples, results store sorted results over the examples
         results = await self.generate_sparc_evaluation_results(df=df, llm_client=altk_llm_client)
@@ -52,7 +53,6 @@ class ToolCallEvalUseCase(EvalUseCase):
         # Convert score column to nullable float type
         df[score_col] = df[score_col].astype('Float64')
         return df
-    
 
     def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str) -> BaseLLMClient:
         """Convert CLEAR's LLM object to ALTK's LLM Object."""
@@ -109,8 +109,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             return MetricsClientCls(**kwargs)
         else:
             raise ValueError(f"Unsupported provider '{provider}' for tool_call task. "
-                           f"Supported providers: openai, watsonx, or use_litellm=True.")
-
+                             f"Supported providers: openai, watsonx, or use_litellm=True.")
 
     @staticmethod
     def generate_evaluation_model_prompt(row, config):
@@ -139,46 +138,68 @@ class ToolCallEvalUseCase(EvalUseCase):
             logger.debug("=== DEBUG: Explanation Text ===")
             logger.debug(explanation_text)
             return f"Tool call is invalid. Reasons:\n{explanation_text}", 0.0
-    
 
-    async def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[SPARCReflectionResult]:
-        """Generates sparc evaluation results."""
-        has_spec = self.SPECS_COL in df.columns and df[self.SPECS_COL].notnull().any()
-        track = Track.SLOW_TRACK if has_spec else Track.SPEC_FREE
+    async def generate_results(self, df, llm_client, has_spec):
         sparc_component = SPARCReflectionComponent(
             config=ComponentConfig(llm_client=llm_client),
-            track=track,
+            track=Track.SLOW_TRACK if has_spec else Track.SPEC_FREE,
             execution_mode=SPARCExecutionMode.ASYNC,
         )
         reflection_results = []
         for _, example in tqdm(df.iterrows(), total=len(df), desc="Evaluating tool calls with SPARC"):
             run_input = SPARCReflectionRunInput(
-                    messages=json.loads(example[self.CONTEXT_COL]),
-                    tool_specs=json.loads(example[self.SPECS_COL]) if has_spec else [],
-                    tool_calls=[json.loads(example[self.RESPONSE_COL])],
-                )
+                messages=json.loads(example[self.CONTEXT_COL]),
+                tool_specs=json.loads(example[self.SPECS_COL]) if has_spec else [],
+                tool_calls=[json.loads(example[self.RESPONSE_COL])],
+            )
             reflection_result = await sparc_component.aprocess(run_input, phase=AgentPhase.RUNTIME)
             reflection_result = reflection_result.output.reflection_result
             reflection_results.append(reflection_result)
+        return reflection_results
+
+    async def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[
+        SPARCReflectionResult]:
+        """Generates sparc evaluation results."""
+        # Dictionary to store results with their original indices
+        results_dict = {}
+
+        if self.SPECS_COL in df.columns:
+            is_truth = lambda x: x is not None and not pd.isna(x) and bool(x)
+            mask = df.apply(lambda r:is_truth(r[self.SPECS_COL]),axis=1)
+            df_with_spec = df[mask]
+            if len(df_with_spec) > 0:
+                results_with_spec = await self.generate_results(df_with_spec, llm_client, has_spec=True)
+                # Store results with their original indices
+                for idx, result in zip(df_with_spec.index, results_with_spec):
+                    results_dict[idx] = result
+            df_no_spec = df[~mask]
+        else:
+            df_no_spec = df
         
+        if len(df_no_spec) > 0:
+            results_no_spec = await self.generate_results(df_no_spec, llm_client, has_spec=False)
+            # Store results with their original indices
+            for idx, result in zip(df_no_spec.index, results_no_spec):
+                results_dict[idx] = result
+
+        # Return results in the original dataframe order
+        reflection_results = [results_dict[idx] for idx in df.index]
         return reflection_results
 
 
 if __name__ == "__main__":
     DEFAULT_CONFIG_PATH = str(files("clear_eval.pipeline.setup").joinpath("default_config.yaml"))
-    # provider = "openai"
-    # model_name = "gpt-4o-mini"
-    provider = "watsonx"
-#    model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
-    model_name = "openai/gpt-oss-120b"
-    config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider)#, eval_model_name=model_name)
     sample_data_file = str(files("clear_eval.sample_data.tool_calls").joinpath("tool_calls_sample_data.csv"))
     df = pd.read_csv(sample_data_file)
-    spec_free = True
-    if spec_free:
-        df.drop(columns=["api_spec"], inplace=True)
-    llm = get_eval_llm_from_config(config)
 
-    tool_call_use_case = ToolCallEvalUseCase()
-    evaluated_df = tool_call_use_case.eval_records(df, llm, config)
-    evaluated_df.to_csv(sample_data_file.replace(".csv", "_eval.csv"), index=False)
+    for provider in ["openai", "watsonx"]:
+        for inference_backend in ["langchain", "litellm"]:
+            #model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
+            model_name = "Azure/gpt-4.1" if provider == "openai" else "openai/gpt-oss-120b"
+            config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider , eval_model_name=model_name, inference_backend=inference_backend)
+
+            llm = get_eval_llm_from_config(config)
+
+            tool_call_use_case = ToolCallEvalUseCase()
+            evaluated_df = tool_call_use_case.eval_records(df.copy(), llm, config)
+            evaluated_df.to_csv(sample_data_file.replace(".csv", f"_eval_{provider}_{inference_backend}.csv"), index=False)
