@@ -104,7 +104,7 @@ def _relax_freeform_object_types(schema: Dict[str, Any]) -> Dict[str, Any]:
         if (
             prop_schema.get("type") == "object"
             and "properties" not in prop_schema
-        ):
+        ) or _prop_name == "correction":
             prop_schema["type"] = ["object", "string"]
     return schema
 
