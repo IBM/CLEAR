@@ -258,7 +258,7 @@ _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx"}
 
 class ToolCallEvalUseCase(EvalUseCase):
     SPECS_COL = "api_spec"
-    CONTEXT_COL = "context"
+    CONTEXT_COL = "model_input"
     RESPONSE_COL = "response"
     required_input_fields = [CONTEXT_COL, SPECS_COL]
 

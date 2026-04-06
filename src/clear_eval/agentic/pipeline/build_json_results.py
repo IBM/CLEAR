@@ -179,12 +179,7 @@ def _process_results_dir(
         if not meta_data:
             meta_data = _parse_meta_data(traj_row.get('meta_data', ''))
 
-        # For tool eval CSVs the input column is "context"; fall back to model_input
-        model_input = (
-            row.get('model_input')
-            or row.get('context')
-            or traj_row.get('model_input', '')
-        )
+        model_input = row.get('model_input') or traj_row.get('model_input', '')
         response = row.get('response', traj_row.get('response', ''))
         eval_text = row.get('evaluation_text', '')
         eval_summary = row.get('evaluation_summary', '')

@@ -110,8 +110,7 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
     When the data contains tool rows (``tool_or_agent == "tool"``), each agent
     produces two CSVs:
     - ``{agent_name}.csv`` — reasoning (agent) rows
-    - ``{agent_name}__tool_calls.csv`` — tool-call rows, with ``model_input``
-      renamed to ``context`` (expected by :class:`ToolCallEvalUseCase`)
+    - ``{agent_name}__tool_calls.csv`` — tool-call rows
 
     Args:
         input_dir: Directory containing CSV files
@@ -176,8 +175,6 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
 
         if agent_name in tool_data:
             out_df = pd.DataFrame(tool_data[agent_name])
-            # ToolCallUseCase expects "context" instead of "model_input"
-            out_df.rename(columns={"model_input": "context"}, inplace=True)
             output_file = output_dir / f"{agent_name}{TOOL_CALLS_SUFFIX}.csv"
             out_df.to_csv(output_file, index=False)
             logger.info(f"  {agent_name}{TOOL_CALLS_SUFFIX}.csv ({len(out_df)} tool rows)")
