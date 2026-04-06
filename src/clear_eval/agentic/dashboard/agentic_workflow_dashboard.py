@@ -3137,18 +3137,23 @@ def main_page():
                             
                             filtered_df = filtered_data_ref["df"]
                             if not filtered_df.empty:
-                                display_cols = [c for c in ["model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns]
+                                display_cols = [c for c in ["intent", "model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns and filtered_df[c].dropna().astype(str).str.strip().ne("").any()]
                                 display_df = filtered_df[display_cols].head(100).copy()
 
                                 if "score" in display_df.columns:
                                     display_df["score"] = display_df["score"].round(2)
-                                if "model_input_preview" in display_df.columns:
-                                    display_df["model_input_preview"] = display_df["model_input_preview"].apply(
-                                        lambda x: str(x)[:100] + "..." if isinstance(x, str) and len(str(x)) > 100 else x
+                                for col in display_df.select_dtypes(include=["object"]).columns:
+                                    display_df[col] = display_df[col].apply(
+                                        lambda x: str(x)[:200] + "..." if isinstance(x, str) and len(str(x)) > 200 else x
                                     )
 
                                 rows = display_df.reset_index().to_dict("records")
                                 columns = [{"name": c, "label": c.replace("_", " ").title(), "field": c, "sortable": True, "align": "left"} for c in display_df.reset_index().columns]
+
+                                table = ui.table(
+                                    columns=columns, rows=rows, row_key="question_id",
+                                    pagination={"rowsPerPage": 15, "sortBy": "score"},
+                                ).classes("w-full").props("flat bordered dense")
 
                                 detail_container = ui.column().classes("w-full gap-2")
 
@@ -3168,17 +3173,21 @@ def main_page():
                                         with ui.card().classes("w-full custom-card"):
                                             ui.label(f"Record: {idx}").classes("text-lg font-semibold text-slate-700")
 
+                                            _exclude_detail = {"Name", "step_in_trace_node", "id", "agent_or_tool"}
                                             input_columns = get_input_columns(meta)
                                             for column in input_columns:
-                                                if column in orig_row:
+                                                if column in _exclude_detail or column not in orig_row:
+                                                    continue
+                                                val = orig_row[column]
+                                                if val is not None and not (isinstance(val, float) and pd.isna(val)) and str(val).strip():
                                                     with ui.expansion(column.replace("_", " ").title()).classes("w-full"):
-                                                        ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row[column])}</pre>')
-
-                                            with ui.expansion("Response").classes("w-full"):
-                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("response", "N/A"))}</pre>')
+                                                        ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(val)}</pre>')
 
                                             with ui.expansion("Model Input (Prompt)").classes("w-full"):
                                                 ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("model_input", "N/A"))}</pre>')
+
+                                            with ui.expansion("Response").classes("w-full"):
+                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("response", "N/A"))}</pre>')
 
                                             with ui.expansion("Full Evaluation Text").classes("w-full"):
                                                 ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("evaluation_text", "N/A"))}</pre>')
@@ -3198,10 +3207,6 @@ def main_page():
                                                 for iss in issues:
                                                     ui.html(f'<span class="agent-badge" style="margin:2px;">{iss}</span>')
 
-                                table = ui.table(
-                                    columns=columns, rows=rows, row_key="question_id",
-                                    pagination={"rowsPerPage": 15, "sortBy": "score"},
-                                ).classes("w-full").props("flat bordered dense")
                                 table.on("rowClick", on_row_click)
                             else:
                                 ui.html('<div style="text-align:center; padding:20px; color:#F59E0B;">No records match the selected filters</div>')
