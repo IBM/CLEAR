@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import numpy as np
@@ -433,8 +434,8 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
             (shortcomings_result, identified_shortcomings_names) = result.result
             for j in range(num_shortcomings):
                 df.iloc[i, df.columns.get_loc(f'{SHORTCOMING_PREFIX}{j + 1}')] = shortcomings_result[j]
-            df.iloc[i, df.columns.get_loc(IDENTIFIED_SHORTCOMING_COL)] = '; '.join(
-                    identified_shortcomings_names) if identified_shortcomings_names else ''
+            df.iloc[i, df.columns.get_loc(IDENTIFIED_SHORTCOMING_COL)] = json.dumps(
+                    identified_shortcomings_names) if identified_shortcomings_names else '[]'
         else:
             # Keep zeros for shortcomings, save error
             df.iloc[i, df.columns.get_loc(ERROR_COL)].append(result.error)
@@ -592,11 +593,12 @@ def convert_results_to_ui_input(df, config, task_data):
             ids_col = [c for c in r.keys() if c and isinstance(c, str) and c.startswith(SHORTCOMING_PREFIX)]
             return [int(c.replace(SHORTCOMING_PREFIX, "")) for c in ids_col if r[c]]
 
-        def get_recurring_issues_list(r, delimiter=";"):
+        def get_recurring_issues_list(r):
             shortcomings_list = r.get(IDENTIFIED_SHORTCOMING_COL)
             if not shortcomings_list or pd.isna(shortcomings_list):
-                return []
-            return [x.strip() for x in shortcomings_list.split(delimiter)]
+                return '[]'
+            # Already a JSON string from map_shortcomings_to_records
+            return shortcomings_list
 
         df.loc[:, "recurring_issues"] = df.apply(lambda r: get_recurring_issues_indices(r), axis=1)
         custom_output_df["recurring_issues"] = df["recurring_issues"]

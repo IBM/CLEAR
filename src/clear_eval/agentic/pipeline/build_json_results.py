@@ -8,6 +8,7 @@ Creates a structured JSON with all issues mapped to spans, including:
 - All span metadata from the preprocessed CSV
 """
 
+import ast
 import json
 import logging
 import math
@@ -74,11 +75,10 @@ def _parse_issues_list(recurring_issues_str):
         return recurring_issues_str
 
     if isinstance(recurring_issues_str, str) and recurring_issues_str.strip():
-        # Try to parse as Python list first
         if recurring_issues_str.startswith('['):
             try:
-                return eval(recurring_issues_str)
-            except:
+                return ast.literal_eval(recurring_issues_str)
+            except (ValueError, SyntaxError):
                 pass
         # Fall back to semicolon-separated
         return [x.strip() for x in recurring_issues_str.split(';') if x.strip()]
