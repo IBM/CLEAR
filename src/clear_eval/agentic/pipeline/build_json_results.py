@@ -24,6 +24,10 @@ from clear_eval.agentic.pipeline.utils import build_cli_overrides, load_pipeline
 
 logger = logging.getLogger(__name__)
 
+# Subdirectory name for tool-call evaluation results under each agent dir.
+# Must match the subdir name used in run_clear_step_analysis.run_analysis_for_agent.
+TOOL_CALLS_SUBDIR = "tool_calls"
+
 
 def _calc_std(values: List[float]) -> float:
     """Calculate standard deviation."""
@@ -275,12 +279,11 @@ def build_comprehensive_json_results(
 
     Structure:
     - metadata: pipeline info and statistics
-    - agents: per-agent data with:
-      - When only reasoning results exist (backward compat): flat structure
-        with ``summary``, ``issues_catalog``, ``issues``, ``no_issues``
-      - When tool evaluation results also exist: two sibling dicts
-        ``reasoning_eval`` and ``tools_eval``, each with the same structure
-    - fail_summary: pass/fail metrics per trace and agent
+    - agents: per-agent data with wrapper keys ``reasoning_eval`` and/or
+      ``tools_eval``, each containing ``summary``, ``issues_catalog``,
+      ``issues``, ``no_issues``
+    - fail_summary: pass/fail metrics per trace and per agent (agent metrics
+      are separated into ``reasoning_eval`` / ``tools_eval`` components)
 
     Args:
         clear_results_dir: Directory containing agent CLEAR result subdirectories
@@ -328,52 +331,50 @@ def build_comprehensive_json_results(
 
     all_traces: set = set()
     trace_metrics: Dict[str, Any] = defaultdict(lambda: {"scores": [], "has_issues": []})
-    agent_all_scores: Dict[str, List[float]] = {}
-    agent_weighted_severity: Dict[str, float] = {}
+    agent_component_scores: Dict[str, Dict[str, List[float]]] = {}
 
-    agent_dirs = [d for d in clear_results_path.iterdir() if d.is_dir()]
+    # Top-level dirs are agent dirs.  Component subdirs (e.g. tool_calls/)
+    # live *inside* each agent dir, not as siblings.
+    agent_dirs = [
+        d for d in clear_results_path.iterdir()
+        if d.is_dir()
+    ]
 
     for agent_dir in sorted(agent_dirs):
         agent_name = agent_dir.name
 
-        # Process main (reasoning) results
+        # Process main (reasoning) results — files at agent root
         reasoning_result = _process_results_dir(
             agent_dir, traj_data, config_dict, trace_metrics, all_traces,
         )
 
-        # Process tool evaluation results if they exist
-        tool_eval_dir = agent_dir / "tool_eval"
+        # Process tool evaluation results from tool_calls/ subdir
         tool_result = None
-        if tool_eval_dir.exists():
+        tool_calls_dir = agent_dir / TOOL_CALLS_SUBDIR
+        if tool_calls_dir.is_dir():
             tool_result = _process_results_dir(
-                tool_eval_dir, traj_data, config_dict, trace_metrics, all_traces,
+                tool_calls_dir, traj_data, config_dict, trace_metrics, all_traces,
             )
 
         if reasoning_result is None and tool_result is None:
             logger.warning(f"No analysis_results CSV found for agent {agent_name}")
             continue
 
-        # --- Build the agent entry ---
+        # --- Build the agent entry (always use wrapper keys) ---
+        agent_entry: Dict[str, Any] = {}
+        if reasoning_result is not None:
+            agent_entry["reasoning_eval"] = _strip_internal_keys(reasoning_result)
         if tool_result is not None:
-            # Separate-tools mode: sibling dicts
-            agent_entry: Dict[str, Any] = {}
-            if reasoning_result is not None:
-                agent_entry["reasoning_eval"] = _strip_internal_keys(reasoning_result)
             agent_entry["tools_eval"] = _strip_internal_keys(tool_result)
-        else:
-            # No tool rows: flat structure (backward compatible)
-            agent_entry = _strip_internal_keys(reasoning_result)
 
         results["agents"][agent_name] = agent_entry
 
         # --- Accumulate stats for pass/fail summary ---
-        combined_scores: List[float] = []
-        combined_severity = 0.0
-        for partial in (reasoning_result, tool_result):
+        component_scores: Dict[str, List[float]] = {}
+        for comp_key, partial in (("reasoning_eval", reasoning_result), ("tools_eval", tool_result)):
             if partial is None:
                 continue
-            combined_scores.extend(partial.get("_scores", []))
-            combined_severity += partial.get("_weighted_severity", 0.0)
+            component_scores[comp_key] = partial.get("_scores", [])
             results["metadata"]["statistics"]["total_interactions_analyzed"] += \
                 partial["agent_summary"]["total_interactions"]
             results["metadata"]["statistics"]["total_issues_discovered"] += \
@@ -383,8 +384,7 @@ def build_comprehensive_json_results(
             results["metadata"]["statistics"]["total_interactions_no_issues"] += \
                 partial["agent_summary"]["interactions_no_issues"]
 
-        agent_all_scores[agent_name] = combined_scores
-        agent_weighted_severity[agent_name] = combined_severity
+        agent_component_scores[agent_name] = component_scores
 
     # Global statistics
     results["metadata"]["statistics"]["total_traces"] = len(all_traces)
@@ -408,40 +408,33 @@ def build_comprehensive_json_results(
             "issue_free_ratio": round(issue_free_ratio, 4)
         }
 
-    for agent_name, scores in agent_all_scores.items():
-        if not scores:
-            continue
-        avg_score = sum(scores) / len(scores)
-        min_score = min(scores)
-        std = _calc_std(scores)
-        consistency = max(0.0, 1.0 - std)
-
-        # Derive issue_free_ratio from the agent entry
+    for agent_name, comp_scores in agent_component_scores.items():
         agent_data = results["agents"].get(agent_name, {})
-        # Handle both flat and split structures
-        if "agent_summary" in agent_data:
-            summary = agent_data["agent_summary"]
-        else:
-            # Combine from reasoning_eval + tools_eval
-            total = 0
-            no_issues = 0
-            for key in ("reasoning_eval", "tools_eval"):
-                sub = agent_data.get(key, {})
-                s = sub.get("agent_summary", {})
-                total += s.get("total_interactions", 0)
-                no_issues += s.get("interactions_no_issues", 0)
-            summary = {"total_interactions": total, "interactions_no_issues": no_issues}
+        agent_summary: Dict[str, Any] = {}
 
-        total = summary.get("total_interactions", 0)
-        no_issues = summary.get("interactions_no_issues", 0)
-        issue_free_ratio = no_issues / total if total > 0 else 1.0
+        for comp_key, scores in comp_scores.items():
+            if not scores:
+                continue
+            avg_score = sum(scores) / len(scores)
+            min_score = min(scores)
+            std = _calc_std(scores)
+            consistency = max(0.0, 1.0 - std)
 
-        result_summary["agents"][agent_name] = {
-            "avg_score": round(avg_score, 4),
-            "min_score": round(min_score, 4),
-            "issue_free_ratio": round(issue_free_ratio, 4),
-            "consistency": round(consistency, 4),
-        }
+            sub = agent_data.get(comp_key, {})
+            s = sub.get("agent_summary", {})
+            total = s.get("total_interactions", 0)
+            no_issues = s.get("interactions_no_issues", 0)
+            issue_free_ratio = no_issues / total if total > 0 else 1.0
+
+            agent_summary[comp_key] = {
+                "avg_score": round(avg_score, 4),
+                "min_score": round(min_score, 4),
+                "issue_free_ratio": round(issue_free_ratio, 4),
+                "consistency": round(consistency, 4),
+            }
+
+        if agent_summary:
+            result_summary["agents"][agent_name] = agent_summary
 
     results["fail_summary"] = result_summary
     return results

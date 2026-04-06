@@ -218,9 +218,19 @@ def run_analysis_for_agent(
     Run CLEAR analysis for a single agent CSV file.
 
     Tool-call CSVs (filename ending with ``__tool_calls``) are routed to
-    ``task="tool_call"`` (SPARC evaluation) and stored in a ``tool_eval/``
+    ``task="tool_call"`` (SPARC evaluation) and stored in a ``tool_calls/``
     subdirectory under the parent agent's results directory.  All other CSVs
-    use ``task="general"`` (standard CLEAR evaluation).
+    use ``task="general"`` (standard CLEAR evaluation) at the agent root.
+
+    Directory layout::
+
+        clear_results/
+          agent_1/                    # reasoning results at agent root
+            analysis_results_*.csv
+            tool_calls/               # tool eval results in subdir
+              analysis_results_*.csv
+          agent_2/                    # reasoning-only agent, no subdir
+            analysis_results_*.csv
 
     Args:
         csv_path: Path to the CSV file
@@ -235,10 +245,9 @@ def run_analysis_for_agent(
 
     stem = csv_path.stem
     is_tool_csv = stem.endswith(TOOL_CALLS_SUFFIX)
-
     if is_tool_csv:
         agent_name = stem[: -len(TOOL_CALLS_SUFFIX)]
-        output_dir = Path(results_dir) / agent_name / "tool_eval"
+        output_dir = Path(results_dir) / agent_name / "tool_calls"
         task = "tool_call"
         label = "tool-call"
     else:
