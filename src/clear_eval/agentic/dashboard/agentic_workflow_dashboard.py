@@ -614,6 +614,23 @@ def load_data_from_zip(file_bytes, progress_callback=None) -> Tuple[pd.DataFrame
     return trajectory_df, agent_results, metadata
 
 
+def _get_llm_call_sequence(traj_df: pd.DataFrame) -> pd.DataFrame:
+    """Return one row per LLM call when ``llm_call_index`` is available.
+
+    If the column is absent or all-null, returns the dataframe unchanged.
+    Otherwise deduplicates to one row per ``(task_id, llm_call_index)``,
+    keeping the first row (by ``step_in_trace_general``).
+    """
+    if ("llm_call_index" not in traj_df.columns
+            or traj_df["llm_call_index"].isnull().all()):
+        return traj_df
+    return (
+        traj_df
+        .sort_values("step_in_trace_general")
+        .drop_duplicates(subset=["task_id", "llm_call_index"], keep="first")
+    )
+
+
 def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
     """Build a directed graph representing the agent workflow."""
     G = nx.DiGraph()
@@ -621,20 +638,24 @@ def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
         lambda: {"count": 0, "tasks": set(), "tool_calls": 0, "agent_calls": 0}
     )
 
-    for task_id, task_group in traj_df.groupby("task_id"):
+    # tool_calls / agent_calls are counted from every row
+    for _, row in traj_df.iterrows():
+        agent = row["Name"]
+        if row.get("tool_or_agent") == "tool":
+            node_stats[agent]["tool_calls"] += 1
+        else:
+            node_stats[agent]["agent_calls"] += 1
+
+    # Graph structure and node count use one entry per LLM call
+    seq_df = _get_llm_call_sequence(traj_df)
+
+    for task_id, task_group in seq_df.groupby("task_id"):
         task_group = task_group.sort_values("step_in_trace_general")
         agents = task_group["Name"].tolist()
 
         for i, agent in enumerate(agents):
             node_stats[agent]["count"] += 1
             node_stats[agent]["tasks"].add(task_id)
-
-            if i < len(task_group):
-                row = task_group.iloc[i]
-                if row.get("tool_or_agent") == "tool":
-                    node_stats[agent]["tool_calls"] += 1
-                else:
-                    node_stats[agent]["agent_calls"] += 1
 
             if i < len(agents) - 1:
                 next_agent = agents[i + 1]
@@ -1249,48 +1270,49 @@ def visualize_workflow_graph(
     
     return fig
 
-
-def extract_trajectory_paths(traj_df: pd.DataFrame, include_partial: bool = True) -> Dict[str, Any]:
-    """Extract unique paths from traces.
-    
-    Args:
-        traj_df: DataFrame containing trace data
-        include_partial: If True, extract all subsequences; if False, only full traces
-    """
-    paths = {}
-    for task_id, task_group in traj_df.groupby("task_id"):
-        task_group = task_group.sort_values("step_in_trace_general")
-        agent_sequence = task_group["Name"].tolist()
-        
-        if include_partial:
-            # Extract all possible subsequences (partial paths)
-            for start_idx in range(len(agent_sequence)):
-                for end_idx in range(start_idx + 1, len(agent_sequence) + 1):
-                    partial_path = tuple(agent_sequence[start_idx:end_idx])
-                    path_str = " -> ".join(partial_path)
-                    path_length = len(partial_path)
-                    
-                    if path_str not in paths:
-                        paths[path_str] = {"path": partial_path, "count": 0, "task_ids": set(), "length": path_length}
-                    paths[path_str]["count"] += 1
-                    paths[path_str]["task_ids"].add(task_id)
-        else:
-            # Extract only full trace paths
-            full_path = tuple(agent_sequence)
-            path_str = " -> ".join(full_path)
-            path_length = len(full_path)
-            
-            if path_str not in paths:
-                paths[path_str] = {"path": full_path, "count": 0, "task_ids": set(), "length": path_length}
-            paths[path_str]["count"] += 1
-            paths[path_str]["task_ids"].add(task_id)
-    
-    # Convert task_ids sets to lists for JSON serialization
-    for path_data in paths.values():
-        path_data["task_ids"] = list(path_data["task_ids"])
-    
-    return paths
-
+#
+# def extract_trajectory_paths(traj_df: pd.DataFrame, include_partial: bool = True) -> Dict[str, Any]:
+#     """Extract unique paths from traces.
+#
+#     Args:
+#         traj_df: DataFrame containing trace data
+#         include_partial: If True, extract all subsequences; if False, only full traces
+#     """
+#     paths = {}
+#     seq_df = _get_llm_call_sequence(traj_df)
+#     for task_id, task_group in seq_df.groupby("task_id"):
+#         task_group = task_group.sort_values("step_in_trace_general")
+#         agent_sequence = task_group["Name"].tolist()
+#
+#         if include_partial:
+#             # Extract all possible subsequences (partial paths)
+#             for start_idx in range(len(agent_sequence)):
+#                 for end_idx in range(start_idx + 1, len(agent_sequence) + 1):
+#                     partial_path = tuple(agent_sequence[start_idx:end_idx])
+#                     path_str = " -> ".join(partial_path)
+#                     path_length = len(partial_path)
+#
+#                     if path_str not in paths:
+#                         paths[path_str] = {"path": partial_path, "count": 0, "task_ids": set(), "length": path_length}
+#                     paths[path_str]["count"] += 1
+#                     paths[path_str]["task_ids"].add(task_id)
+#         else:
+#             # Extract only full trace paths
+#             full_path = tuple(agent_sequence)
+#             path_str = " -> ".join(full_path)
+#             path_length = len(full_path)
+#
+#             if path_str not in paths:
+#                 paths[path_str] = {"path": full_path, "count": 0, "task_ids": set(), "length": path_length}
+#             paths[path_str]["count"] += 1
+#             paths[path_str]["task_ids"].add(task_id)
+#
+#     # Convert task_ids sets to lists for JSON serialization
+#     for path_data in paths.values():
+#         path_data["task_ids"] = list(path_data["task_ids"])
+#
+#     return paths
+#
 
 def calculate_path_scores(paths: Dict, all_agent_scores: Dict, traj_df: pd.DataFrame = None) -> Dict:
     """Calculate scores for paths. Prefers ground truth traj_score if available, falls back to agent scores."""
@@ -1330,26 +1352,28 @@ def calculate_path_scores(paths: Dict, all_agent_scores: Dict, traj_df: pd.DataF
             path_data["success_rate"] = None
     return paths
 
-
-def identify_dead_end_nodes(G: nx.DiGraph, traj_df: pd.DataFrame) -> List[Dict]:
-    final_nodes = []
-    for task_id, task_group in traj_df.groupby("task_id"):
-        task_group = task_group.sort_values("step_in_trace_general")
-        final_nodes.append(task_group.iloc[-1]["Name"])
-    final_node_counts = Counter(final_nodes)
-    total_trajectories = len(traj_df["task_id"].unique())
-    dead_ends = []
-    for node in G.nodes():
-        if node in final_node_counts:
-            rate = final_node_counts[node] / total_trajectories
-            if rate < 0.05:
-                dead_ends.append({"node": node, "completion_rate": rate, "completions": final_node_counts[node]})
-    return dead_ends
+#
+# def identify_dead_end_nodes(G: nx.DiGraph, traj_df: pd.DataFrame) -> List[Dict]:
+#     seq_df = _get_llm_call_sequence(traj_df)
+#     final_nodes = []
+#     for task_id, task_group in seq_df.groupby("task_id"):
+#         task_group = task_group.sort_values("step_in_trace_general")
+#         final_nodes.append(task_group.iloc[-1]["Name"])
+#     final_node_counts = Counter(final_nodes)
+#     total_trajectories = len(traj_df["task_id"].unique())
+#     dead_ends = []
+#     for node in G.nodes():
+#         if node in final_node_counts:
+#             rate = final_node_counts[node] / total_trajectories
+#             if rate < 0.05:
+#                 dead_ends.append({"node": node, "completion_rate": rate, "completions": final_node_counts[node]})
+#     return dead_ends
 
 
 def analyze_agent_positions(traj_df: pd.DataFrame) -> pd.DataFrame:
+    seq_df = _get_llm_call_sequence(traj_df)
     agent_positions = defaultdict(list)
-    for task_id, task_group in traj_df.groupby("task_id"):
+    for task_id, task_group in seq_df.groupby("task_id"):
         task_group = task_group.sort_values("step_in_trace_general")
         total_steps = len(task_group)
         for idx, row in enumerate(task_group.iterrows()):
@@ -1371,22 +1395,23 @@ def analyze_agent_positions(traj_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(agent_stats).sort_values("avg_normalized_position")
 
 
-def analyze_retry_patterns(traj_df: pd.DataFrame) -> pd.DataFrame:
-    retry_data = []
-    for task_id, task_group in traj_df.groupby("task_id"):
-        task_group = task_group.sort_values("step_in_trace_general")
-        agents = task_group["Name"].tolist()
-        agent_counts = Counter(agents)
-        for agent, count in agent_counts.items():
-            if count > 1:
-                positions = [i for i, a in enumerate(agents) if a == agent]
-                consecutive = all(positions[i + 1] - positions[i] == 1 for i in range(len(positions) - 1))
-                retry_data.append({
-                    "task_id": task_id, "agent": agent, "retry_count": count - 1,
-                    "total_calls": count, "consecutive": consecutive, "positions": positions,
-                })
-    return pd.DataFrame(retry_data) if retry_data else pd.DataFrame()
-
+# def analyze_retry_patterns(traj_df: pd.DataFrame) -> pd.DataFrame:
+#     seq_df = _get_llm_call_sequence(traj_df)
+#     retry_data = []
+#     for task_id, task_group in seq_df.groupby("task_id"):
+#         task_group = task_group.sort_values("step_in_trace_general")
+#         agents = task_group["Name"].tolist()
+#         agent_counts = Counter(agents)
+#         for agent, count in agent_counts.items():
+#             if count > 1:
+#                 positions = [i for i, a in enumerate(agents) if a == agent]
+#                 consecutive = all(positions[i + 1] - positions[i] == 1 for i in range(len(positions) - 1))
+#                 retry_data.append({
+#                     "task_id": task_id, "agent": agent, "retry_count": count - 1,
+#                     "total_calls": count, "consecutive": consecutive, "positions": positions,
+#                 })
+#     return pd.DataFrame(retry_data) if retry_data else pd.DataFrame()
+#
 
 def analyze_score_progression(traj_df: pd.DataFrame, all_agent_scores_df: Dict) -> Dict:
     progression_data = defaultdict(list)
@@ -3173,7 +3198,7 @@ def main_page():
                                         with ui.card().classes("w-full custom-card"):
                                             ui.label(f"Record: {idx}").classes("text-lg font-semibold text-slate-700")
 
-                                            _exclude_detail = {"Name", "step_in_trace_node", "id", "agent_or_tool"}
+                                            _exclude_detail = {"Name", "step_in_trace_node", "id", "agent_or_tool", "tool_or_agent"}
                                             input_columns = get_input_columns(meta)
                                             for column in input_columns:
                                                 if column in _exclude_detail or column not in orig_row:
@@ -3877,11 +3902,12 @@ def main_page():
                 # Create list of traces and their labels
                 traces = []
                 labels = []
-                
-                # Group by task_id to get one trace per task
-                for task_id in state.traj_df["task_id"].unique():
-                    task_data = state.traj_df[state.traj_df["task_id"] == task_id].sort_values("step_in_trace_general")
-                    
+
+                # Group by task_id to get one trace per task (one entry per LLM call)
+                seq_df = _get_llm_call_sequence(state.traj_df)
+                for task_id in seq_df["task_id"].unique():
+                    task_data = seq_df[seq_df["task_id"] == task_id].sort_values("step_in_trace_general")
+
                     # Extract agent sequence
                     agent_sequence = task_data["Name"].tolist()
                     traces.append(agent_sequence)
