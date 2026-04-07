@@ -4507,13 +4507,17 @@ def main_page():
         # Get rubric evaluation results if available
         rubric_eval_results = state.metadata.get("rubric_eval_results", {})
         
+        # Precompute LLM-call count per trace for traj_length
+        pred_seq_df = _get_llm_call_sequence(traj_scores_df)
+        llm_call_counts = pred_seq_df.groupby("task_id").size()
+
         # Group by task_id to get trace-level data
         traj_data = []
         for task_id in traj_scores_df["task_id"].unique():
             task_rows = traj_scores_df[traj_scores_df["task_id"] == task_id]
             if len(task_rows) > 0:
                 traj_score = task_rows["traj_score"].iloc[0]  # Ground truth
-                
+
                 # Get step scores if available
                 step_scores = None
                 min_score = None
@@ -4523,25 +4527,25 @@ def main_page():
                     if len(step_scores) > 0:
                         min_score = step_scores.min()
                         avg_score = step_scores.mean()
-                
+
                 # Try to get trace-level prediction from traj_eval_results
                 traj_prediction = None
                 if task_id in traj_eval_results:
                     traj_prediction = traj_eval_results[task_id].get("overall_score")
-                
+
                 # Try to get rubric score from rubric_eval_results
                 rubric_score = None
                 if task_id in rubric_eval_results:
                     rubric_score = rubric_eval_results[task_id].get("score")
-                
+
                 traj_data.append({
                     "task_id": task_id,
                     "traj_score": traj_score,
                     "min_score": min_score,
                     "avg_score": avg_score,
-                    "traj_length": len(task_rows),
-                    "traj_prediction": traj_prediction,  # Trace-level prediction
-                    "rubric_score": rubric_score  # Rubric evaluation score
+                    "traj_length": int(llm_call_counts.get(task_id, len(task_rows))),
+                    "traj_prediction": traj_prediction,
+                    "rubric_score": rubric_score,
                 })
         
         if not traj_data:
@@ -4820,7 +4824,7 @@ def main_page():
             ))
             fig.update_layout(
                 title="Success Rate by Trace Length",
-                xaxis_title="Trace Length (# of steps)",
+                xaxis_title="Trace Length (LLM Calls)",
                 yaxis_title="Success Rate (%)",
                 height=400,
                 yaxis=dict(range=[0, 105])
@@ -4841,12 +4845,12 @@ def main_page():
             if len(success_lengths) > 0:
                 with ui.card().classes("flex-1 custom-card"):
                     ui.html(f'<div class="metric-label">Mean Length (Success)</div>')
-                    ui.html(f'<div class="metric-value">{success_lengths.mean():.1f} steps</div>')
+                    ui.html(f'<div class="metric-value">{success_lengths.mean():.1f} LLM calls</div>')
                     ui.label(f"Std: {success_lengths.std():.1f}").classes("text-sm text-slate-500 mt-2")
             if len(failure_lengths) > 0:
                 with ui.card().classes("flex-1 custom-card"):
                     ui.html(f'<div class="metric-label">Mean Length (Failure)</div>')
-                    ui.html(f'<div class="metric-value">{failure_lengths.mean():.1f} steps</div>')
+                    ui.html(f'<div class="metric-value">{failure_lengths.mean():.1f} LLM calls</div>')
                     ui.label(f"Std: {failure_lengths.std():.1f}").classes("text-sm text-slate-500 mt-2")
             
             if len(success_lengths) > 0 and len(failure_lengths) > 0:
@@ -4854,7 +4858,7 @@ def main_page():
                 diff_pct = (diff / failure_lengths.mean()) * 100 if failure_lengths.mean() > 0 else 0
                 with ui.card().classes("flex-1 custom-card"):
                     ui.html(f'<div class="metric-label">Length Difference</div>')
-                    ui.html(f'<div class="metric-value">{diff:+.1f} steps</div>')
+                    ui.html(f'<div class="metric-value">{diff:+.1f} LLM calls</div>')
                     ui.label(f"{diff_pct:+.1f}% {'longer' if diff > 0 else 'shorter'}").classes("text-sm text-slate-500 mt-2")
         
         # Distribution comparison
@@ -4877,7 +4881,7 @@ def main_page():
             fig.update_layout(
                 barmode='overlay',
                 title="Distribution of Trace Lengths",
-                xaxis_title="Trace Length (# of steps)",
+                xaxis_title="Trace Length (LLM Calls)",
                 yaxis_title="Count",
                 height=400,
                 showlegend=True
