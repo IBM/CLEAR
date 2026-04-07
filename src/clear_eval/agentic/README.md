@@ -138,20 +138,39 @@ Each CSV file represents one trajectory (`task_id`). Each row represents one LLM
 
 For the full intermediate representation reference covering both `--separate-tools` modes, see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
 
-| Column | Type | Required | Description                                                                                                   |
-|--------|------|----------|---------------------------------------------------------------------------------------------------------------|
-| `id` | str | Yes | Unique row identifier: `{task_id}_{step_in_trace_general}`                                                    |
-| `Name` | str | Yes | Agent / node name (component that invoked the LLM)                                                            |
-| `intent` | str | No | Original user query / goal for this trajectory                                                                |
-| `task_id` | str | Yes | Trajectory identifier (groups all rows of one trace)                                                          |
-| `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed)                                                               |
-| `llm_call_index` | int | No | LLM invocation counter (1-indexed)                                                                            |
-| `model_input` | json/str | Yes | Normalised input messages sent to the LLM: [{"role":"...", "content":"...", "tool_calls":[]}...] or a string] |
-| `response` | str | Yes | LLM output — by default JSON `{"content": "...", "tool_calls": [...]}` when tool calls are present, plain text otherwise. Any string format is accepted. |
-| `tool_or_agent` | str | No | Always `"agent"` in this mode                                                                                 |
-| `api_spec` | json | No | JSON list of tool definitions available to the LLM call                                                       |
-| `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs                                                    |
-| `traj_score` | float | No | Optional ground-truth trajectory score (0-1)                                                                  |
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| `id` | str | Yes | Unique row identifier: `{task_id}_{step_in_trace_general}` |
+| `Name` | str | Yes | Agent / node name (component that invoked the LLM) |
+| `intent` | str | No | Original user query / goal for this trajectory |
+| `task_id` | str | Yes | Trajectory identifier (groups all rows of one trace) |
+| `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed) |
+| `llm_call_index` | int | No* | LLM invocation counter (1-indexed). Required when `--separate-tools` is `separate` or `tools_with_reasoning` |
+| `model_input` | json/str | Yes | Normalised input messages sent to the LLM: `[{"role":"...", "content":"...", "tool_calls":[]}...]` or a string |
+| `response` | str | Yes | LLM output — format depends on `--separate-tools` mode (see below) |
+| `tool_or_agent` | str | No* | `"agent"` for reasoning rows, `"tool"` for tool-call rows. Required when `--separate-tools` is not `combined` |
+| `api_spec` | json | No | JSON list of tool definitions available to the LLM call |
+| `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs |
+| `traj_score` | float | No | Optional ground-truth trajectory score (0-1) |
+
+### Separate Tools Modes (`--separate-tools`)
+
+Controls how LLM calls that produce tool calls are represented in the CSV and evaluated downstream.
+
+| Mode | Row granularity                                                                           | `tool_or_agent` | Evaluation |
+|------|-------------------------------------------------------------------------------------------|-----------------|------------|
+| `combined` (default) | One row per LLM call                                                                      | Always `"agent"` | Single CLEAR evaluation per call |
+| `separate` | One row per tool call + optional text row                                                 | `"tool"` or `"agent"` | Tool rows evaluated via SPARC; reasoning rows via CLEAR |
+| `tools_with_reasoning` | Like `separate`, but reasoning text folded into the input of the tool rows' `model_input` | `"tool"` or `"agent"` | Same as `separate`, fewer rows |
+
+When `separate` or `tools_with_reasoning` is used:
+
+- **`llm_call_index`** groups rows from the same LLM invocation. Multiple rows can share the same `llm_call_index` (e.g. 2 tool calls + 1 reasoning row from a single call), while each row has a unique `step_in_trace_general`.
+- **Tool rows** (`tool_or_agent="tool"`) are evaluated by SPARC (tool-call quality). Results are stored in a `tool_calls/` subdirectory under each agent.
+- **Reasoning rows** (`tool_or_agent="agent"`) are evaluated by standard CLEAR. Results are stored at the agent root directory.
+- The dashboard workflow graph, path analysis, and trace length metrics are computed at LLM-call granularity (deduplicated by `llm_call_index`), while per-row evaluations cover all rows.
+
+For the full intermediate representation reference, see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
 
 ---
 
@@ -225,6 +244,7 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | `run_step_by_step` | `--run-step-by-step` | `true` | Enable step-by-step analysis |
 | `run_full_trajectory` | `--run-full-trajectory` | `true` | Enable trajectory evaluation |
 | `from_raw_traces` | `--from-raw-traces` | `false` | `true` = process JSON traces, `false` = use CSV files |
+| `separate_tools` | `--separate-tools` | `combined` | Tool-call handling: `combined`, `separate`, `tools_with_reasoning` |
 
 ### Model Configuration
 
@@ -303,12 +323,16 @@ results/
     ├── step_by_step/             # Step-by-step CLEAR results
     │   ├── clear_data/           # CLEAR format grouped by agent
     │   │   ├── agent_1.csv
+    │   │   ├── agent_1__tool_calls.csv   # (only with --separate-tools separate|tools_with_reasoning)
     │   │   └── statistics.json
     │   ├── clear_results/        # CLEAR analysis per agent
-    │   │   ├── agent_1/
+    │   │   ├── agent_1/          # Reasoning evaluation results
     │   │   │   ├── analysis_results_*.csv
     │   │   │   ├── per_record_evaluations_*.csv
-    │   │   │   └── shortcoming_list_*_dedup.json
+    │   │   │   ├── shortcoming_list_*_dedup.json
+    │   │   │   └── tool_calls/   # Tool-call evaluation results (SPARC)
+    │   │   │       ├── analysis_results_*.csv
+    │   │   │       └── ...
     │   │   └── agent_2/
     │   └── clear_results.json    # Comprehensive JSON output
     │
@@ -330,7 +354,7 @@ results/
 | File | Description |
 |------|-------------|
 | `unified_ui_results.zip` | Dashboard-ready package containing all results |
-| `clear_results.json` | Comprehensive JSON with issues mapped to spans |
+| `clear_results.json` | Comprehensive JSON with issues mapped to spans. Per-agent data is wrapped in `reasoning_eval` and/or `tools_eval` keys. `fail_summary` metrics are split per component. |
 | `pipeline_summary.json` | Execution summary and configuration |
 | `analysis_results_*.csv` | Aggregated CLEAR analysis results |
 | `shortcoming_list_*_dedup.json` | Deduplicated list of discovered issues |
@@ -381,6 +405,22 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 python -m clear_eval.agentic.dashboard.launch_dashboard
 # Upload: results/my_experiment/unified_ui_results.zip
 ```
+
+### With Separate Tool-Call Evaluation
+
+Evaluate reasoning and tool calls independently using SPARC for tool-call quality:
+
+```bash
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
+    --data-dir data/traces \
+    --results-dir results \
+    --from-raw-traces true \
+    --separate-tools separate \
+    --eval-model-name gpt-4o \
+    --provider openai
+```
+
+This produces per-agent results split into reasoning (at the agent root) and tool-call evaluations (in `tool_calls/` subdirectories). The dashboard shows a toggle to switch between them per node.
 
 ### Rubric-Based Evaluation
 

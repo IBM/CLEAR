@@ -1,12 +1,12 @@
 ########################
 ### Modify as needed ###
 ########################
-data_dir: ""
-results_dir: ""
+data_dir: "" #  required: data dir with intermediate representation csvs
+results_dir: "" #  required
 overwrite: true
 max_workers: 10
 run_name: my_experiment
-separate_tools: true # true for spark evaluation
+separate_tools:  combined # combined, separate or tools_with_reasoning
 from_raw_traces: false # true for process from traces, false for process from intermediate representation
 
 # Model Configuration
