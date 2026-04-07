@@ -6,8 +6,15 @@ results_dir: "" #  required
 overwrite: true
 max_workers: 10
 run_name: my_experiment
-separate_tools:  combined # combined, separate or tools_with_reasoning
 from_raw_traces: false # true for process from traces, false for process from intermediate representation
+
+# separate_tools:
+# only relevant when from_raw_traces = True, the behavior is set in the preprocessing
+# combined (no sparc)
+# separate (separate evaluation rows for reasoning and for each tool row
+# tools_with_reasoning (like separate, but if the same call has both reasoning and tool calls,
+#                       reasoning is appended to tool_call context rather that evaluated separately
+separate_tools:  tools_with_reasoning
 
 # Model Configuration
 inference_backend: litellm
