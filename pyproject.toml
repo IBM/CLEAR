@@ -39,7 +39,7 @@ dependencies = [
     "nicegui>=2.0.0",
     "plotly",
     "networkx",
-    "litellm>=1.0.0",
+    "litellm>=1.83.0",
     "nest-asyncio",
     "scipy",
     'scikit-learn'
