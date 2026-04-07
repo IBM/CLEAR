@@ -2550,7 +2550,7 @@ def main_page():
                 full_traj_df, _ = load_clear_data_from_bytes(file_bytes, zip_name, trajectory_df)
                 
                 print(f"  Loaded {len(full_traj_df)} rows from full trace CLEAR results")
-                print(f"  Columns: {list(full_traj_df.columns)}")
+               # print(f"  Columns: {list(full_traj_df.columns)}")
                 
                 if not full_traj_df.empty and "recurring_issues_str" in full_traj_df.columns:
                     for issues_str in full_traj_df["recurring_issues_str"].dropna():
@@ -2676,7 +2676,17 @@ def main_page():
         has_full_traj = bool(state.full_traj_clear_results)
         
         # Build agent options list - add "Full Traj" if available
-        available_agents = list(state.agent_results.keys())
+        # Filter out __tool_calls entries; they are shown via a toggle per agent
+        TOOL_CALLS_SUFFIX = "__tool_calls"
+        # Collect unique base agent names: both direct entries and those
+        # implied by __tool_calls entries (strip the suffix).
+        base_agents = set()
+        for k in state.agent_results:
+            if k.endswith(TOOL_CALLS_SUFFIX):
+                base_agents.add(k[: -len(TOOL_CALLS_SUFFIX)])
+            else:
+                base_agents.add(k)
+        available_agents = sorted(base_agents)
         agent_options = []
         if has_full_traj:
             agent_options.append("Full Trace")
@@ -2709,559 +2719,587 @@ def main_page():
         # Check on tab visibility
         ui.timer(0.5, check_and_update_from_ref)
 
+        def _load_result(result_key: str):
+            """Load a df from agent_results by key. Returns (df, meta) or (None, None)."""
+            if result_key not in state.agent_results:
+                return None, None
+            try:
+                agent_data = state.agent_results[result_key]
+                file_bytes = agent_data["zip_bytes"]
+                zip_name = agent_data.get("zip_name", f"{result_key}.zip")
+                trajectory_df = state.metadata.get("trajectory_df")
+                df, meta = load_clear_data_from_bytes(file_bytes, zip_name, trajectory_df)
+                if df.empty:
+                    return None, None
+                return df, meta
+            except Exception:
+                return None, None
+
         def show_agent_analysis(agent_name):
             analysis_container.clear()
             with analysis_container:
-                # Load data based on selection
-                df = None
-                meta = {}
-                
                 # Handle "Full Traj" option
                 if agent_name == "Full Trace":
                     if not state.full_traj_clear_results:
                         ui.notify("No full trace CLEAR results available", type="warning")
                         return
-                    
                     try:
                         file_bytes = state.full_traj_clear_results["zip_bytes"]
                         zip_name = state.full_traj_clear_results.get("zip_name", "full_traj_clear_results.zip")
                         trajectory_df = state.metadata.get("trajectory_df")
                         df, meta = load_clear_data_from_bytes(file_bytes, zip_name, trajectory_df)
-                        
                         if df.empty:
                             ui.label("No data loaded from full trace CLEAR results").classes("text-slate-500")
                             return
-                        
                     except Exception as e:
                         ui.notify(f"Error loading full trace CLEAR results: {str(e)}", type="negative")
                         return
-                
-                elif agent_name not in state.agent_results:
+                    _render_agent_analysis_content(df, meta, "Full Trace CLEAR Analysis")
+                    return
+
+                # Check for reasoning and tool-calls results
+                tool_key = f"{agent_name}{TOOL_CALLS_SUFFIX}"
+                has_reasoning = agent_name in state.agent_results
+                has_tools = tool_key in state.agent_results
+
+                if not has_reasoning and not has_tools:
                     ui.notify(f"No CLEAR analysis results for {agent_name}", type="warning")
                     return
-                else:
-                    try:
-                        agent_data = state.agent_results[agent_name]
-                        file_bytes = agent_data["zip_bytes"]
-                        zip_name = agent_data.get("zip_name", f"{agent_name}.zip")
-                        # Pass trajectory_df for joining if needed
-                        trajectory_df = state.metadata.get("trajectory_df")
-                        df, meta = load_clear_data_from_bytes(file_bytes, zip_name, trajectory_df)
-                        
-                        if df.empty:
-                            ui.label("No data loaded from CLEAR results").classes("text-slate-500")
-                            return
-                    
-                    except Exception as e:
-                        ui.notify(f"Error loading agent results: {str(e)}", type="negative")
-                        return
 
-                # Common rendering logic for both Full Traj and agent-specific results
-                try:
-                    # Statistics header with gradient banner
-                    if agent_name == "Full Trace":
-                        render_section_header("Full Trace CLEAR Analysis", "Overall evaluation results across all traces")
-                    else:
-                        render_section_header(f"{agent_name} Statistics", "CLEAR evaluation results for this specific agent")
-                    
-                    # Calculate metrics
-                    total_evals = len(df)
-                    avg_score = f"{df['score'].mean():.2f}" if "score" in df.columns else "N/A"
-                    # Count unique issues (excluding NO_ISSUE and OTHER)
-                    unique_issues_count = 0
-                    if "recurring_issues_str" in df.columns:
-                        all_unique_issues = set()
-                        for issues_str in df["recurring_issues_str"].dropna():
-                            issues = extract_issues(issues_str)
-                            for issue in issues:
-                                if issue not in [NO_ISSUE, OTHER]:
-                                    all_unique_issues.add(issue)
-                        unique_issues_count = len(all_unique_issues)
-                    unique_tasks = df["task_id"].nunique() if "task_id" in df.columns else 0
-                    
-                    # Gradient banner for metrics
-                    ui.html(f'''
-                        <div style="
-                            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                            padding: 24px;
-                            border-radius: 12px;
-                            margin-bottom: 24px;
-                            box-shadow: 0 10px 25px rgba(240, 147, 251, 0.3);
-                        ">
-                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
-                                <div style="text-align: center; color: white;">
-                                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">📊 Evaluations</div>
-                                    <div style="font-size: 32px; font-weight: 700;">{total_evals}</div>
-                                </div>
-                                <div style="text-align: center; color: white;">
-                                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">⭐ Avg Score</div>
-                                    <div style="font-size: 32px; font-weight: 700;">{avg_score}</div>
-                                </div>
-                                <div style="text-align: center; color: white;">
-                                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">⚠️ Unique Issues</div>
-                                    <div style="font-size: 32px; font-weight: 700;">{unique_issues_count}</div>
-                                </div>
-                                <div style="text-align: center; color: white;">
-                                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">🎯 Tasks</div>
-                                    <div style="font-size: 32px; font-weight: 700;">{unique_tasks}</div>
-                                </div>
+                if has_reasoning and has_tools:
+                    # Show toggle between Reasoning and Tools
+                    toggle = ui.toggle(
+                        {"reasoning": "Reasoning", "tools": "Tool Calls"},
+                        value="reasoning",
+                    ).classes("mb-4")
+                    eval_content = ui.column().classes("w-full gap-4")
+
+                    def on_toggle_change():
+                        eval_content.clear()
+                        with eval_content:
+                            key = agent_name if toggle.value == "reasoning" else tool_key
+                            label = "Reasoning" if toggle.value == "reasoning" else "Tool Calls"
+                            df, meta = _load_result(key)
+                            if df is None:
+                                ui.label(f"No data loaded for {label}").classes("text-slate-500")
+                                return
+                            _render_agent_analysis_content(df, meta, f"{agent_name} — {label}")
+
+                    toggle.on_value_change(on_toggle_change)
+                    on_toggle_change()  # initial render
+                else:
+                    # Single result type
+                    result_key = agent_name if has_reasoning else tool_key
+                    label = "Reasoning" if has_reasoning else "Tool Calls"
+                    df, meta = _load_result(result_key)
+                    if df is None:
+                        ui.label("No data loaded from CLEAR results").classes("text-slate-500")
+                        return
+                    _render_agent_analysis_content(df, meta, f"{agent_name} — {label}")
+
+        def _render_agent_analysis_content(df, meta, header_title):
+            """Render the common analysis content for a given df."""
+            try:
+                render_section_header(header_title, "CLEAR evaluation results")
+
+                # Calculate metrics
+                total_evals = len(df)
+                avg_score = f"{df['score'].mean():.2f}" if "score" in df.columns else "N/A"
+                # Count unique issues (excluding NO_ISSUE and OTHER)
+                unique_issues_count = 0
+                if "recurring_issues_str" in df.columns:
+                    all_unique_issues = set()
+                    for issues_str in df["recurring_issues_str"].dropna():
+                        issues = extract_issues(issues_str)
+                        for issue in issues:
+                            if issue not in [NO_ISSUE, OTHER]:
+                                all_unique_issues.add(issue)
+                    unique_issues_count = len(all_unique_issues)
+                unique_tasks = df["task_id"].nunique() if "task_id" in df.columns else 0
+                
+                # Gradient banner for metrics
+                ui.html(f'''
+                    <div style="
+                        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                        padding: 24px;
+                        border-radius: 12px;
+                        margin-bottom: 24px;
+                        box-shadow: 0 10px 25px rgba(240, 147, 251, 0.3);
+                    ">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+                            <div style="text-align: center; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">📊 Evaluations</div>
+                                <div style="font-size: 32px; font-weight: 700;">{total_evals}</div>
+                            </div>
+                            <div style="text-align: center; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">⭐ Avg Score</div>
+                                <div style="font-size: 32px; font-weight: 700;">{avg_score}</div>
+                            </div>
+                            <div style="text-align: center; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">⚠️ Unique Issues</div>
+                                <div style="font-size: 32px; font-weight: 700;">{unique_issues_count}</div>
+                            </div>
+                            <div style="text-align: center; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">🎯 Tasks</div>
+                                <div style="font-size: 32px; font-weight: 700;">{unique_tasks}</div>
                             </div>
                         </div>
-                    ''')
+                    </div>
+                ''')
 
-                    render_divider()
+                render_divider()
 
-                    # Score Distribution
-                    if "score" in df.columns and not df["score"].empty:
-                        with ui.expansion("Score Distribution", icon="bar_chart").classes("w-full"):
-                            render_section_header("Score Distribution", "Distribution of evaluation scores for this agent")
-                            fig = px.histogram(
-                                df, x="score", nbins=20,
-                                color_discrete_sequence=[COLORS["primary"]],
-                                labels={"score": "Score", "count": "Count"},
-                            )
-                            fig.update_layout(showlegend=False, height=300, title="")
-                            ui.plotly(fig).classes("w-full")
+                # Score Distribution
+                if "score" in df.columns and not df["score"].empty:
+                    with ui.expansion("Score Distribution", icon="bar_chart").classes("w-full"):
+                        render_section_header("Score Distribution", "Distribution of evaluation scores for this agent")
+                        fig = px.histogram(
+                            df, x="score", nbins=20,
+                            color_discrete_sequence=[COLORS["primary"]],
+                            labels={"score": "Score", "count": "Count"},
+                        )
+                        fig.update_layout(showlegend=False, height=300, title="")
+                        ui.plotly(fig).classes("w-full")
 
-                    render_divider()
+                render_divider()
 
-                    # Issues Frequency (shown before filters)
-                    all_issues_list = []
-                    if "recurring_issues_str" in df.columns:
-                        render_section_header("Discovered Issues", "Recurring problems identified in this agent's outputs")
+                # Issues Frequency (shown before filters)
+                all_issues_list = []
+                if "recurring_issues_str" in df.columns:
+                    render_section_header("Discovered Issues", "Recurring problems identified in this agent's outputs")
 
-                        for issues_str in df["recurring_issues_str"].dropna():
-                            all_issues_list.extend(extract_issues(issues_str))
+                    for issues_str in df["recurring_issues_str"].dropna():
+                        all_issues_list.extend(extract_issues(issues_str))
 
-                        if all_issues_list:
-                            issue_counts = Counter(all_issues_list)
-                            issues_data = []
-                            for issue, count in issue_counts.most_common():
-                                issue_rows = df[df["recurring_issues_str"].apply(
-                                    lambda x: issue in extract_issues(x) if pd.notna(x) else False
-                                )]
-                                mean_score = issue_rows["score"].mean() if "score" in issue_rows.columns and not issue_rows["score"].empty else 0.5
-                                freq = round(100 * count / len(df), 1)
-                                severity = round(1 - mean_score, 2)
-                                issues_data.append({
-                                    "issue": issue, "count": count,
-                                    "freq": freq, "severity": severity,
-                                    "mean_score": mean_score,
-                                })
-
-                            # Build HTML table
-                            # Separate NO_ISSUE from other issues
-                            display_issues = [d for d in issues_data if d["issue"] not in [NO_ISSUE, OTHER]]
-                            no_issue_data = [d for d in issues_data if d["issue"] == NO_ISSUE]
-                            
-                            if display_issues or no_issue_data:
-                                max_freq = max(d["freq"] for d in display_issues) if display_issues else 1
-
-                                table_html = (
-                                    '<table class="issues-table" style="'
-                                    'width:100%; border-collapse:collapse; font-size:14px;'
-                                    'box-shadow:0 2px 8px rgba(0,0,0,0.07); border-radius:10px; overflow:hidden;">'
-                                    '<thead><tr style="background:#4F46E5; color:#fff;'
-                                    'font-size:12px; text-transform:uppercase; letter-spacing:0.05em;">'
-                                    '<th style="padding:11px 16px; text-align:left; font-weight:600;">Issue</th>'
-                                    '<th style="padding:11px 16px; text-align:center; font-weight:600;">Count</th>'
-                                    '<th style="padding:11px 16px; text-align:center; font-weight:600;">Frequency</th>'
-                                    '<th style="padding:11px 16px; text-align:center; font-weight:600;">Severity</th>'
-                                    '</tr></thead><tbody>'
-                                )
-
-                                # Add regular issues
-                                for i, d in enumerate(display_issues):
-                                    row_bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
-                                    t = min(d["freq"] / max_freq, 1.0) if max_freq > 0 else 0
-                                    if t >= 0.66:
-                                        freq_fg = "#DC2626"   # red (high freq)
-                                    elif t >= 0.33:
-                                        freq_fg = "#D97706"   # amber
-                                    else:
-                                        freq_fg = "#16A34A"   # green (low freq)
-                                    sev = d["severity"]
-                                    if sev >= 0.7:
-                                        sev_bg, sev_fg = "#FEE2E2", "#991B1B"
-                                    elif sev >= 0.4:
-                                        sev_bg, sev_fg = "#FEF9C3", "#854D0E"
-                                    else:
-                                        sev_bg, sev_fg = "#D1FAE5", "#065F46"
-                                    table_html += (
-                                        f'<tr style="background:{row_bg}; border-bottom:1px solid #E2E8F0;">'
-                                        f'<td style="padding:9px 16px; color:#1E293B;">{d["issue"]}</td>'
-                                        f'<td style="padding:9px 16px; text-align:center; font-weight:600; color:#334155;">{d["count"]}</td>'
-                                        f'<td style="padding:9px 16px; text-align:center; font-weight:700; color:{freq_fg};">{d["freq"]}%</td>'
-                                        f'<td style="padding:9px 16px; text-align:center;">'
-                                        f'<span style="background:{sev_bg}; color:{sev_fg}; padding:2px 10px;'
-                                        f'border-radius:999px; font-weight:600; font-size:13px;">{sev:.2f}</span></td>'
-                                        f'</tr>'
-                                    )
-
-                                # Add "No Issues" row at the end
-                                if no_issue_data:
-                                    d = no_issue_data[0]
-                                    table_html += (
-                                        f'<tr style="background:#F0FDF4; border-top:2px solid #BBF7D0;">'
-                                        f'<td style="padding:9px 16px; color:#15803D; font-weight:600;">✅ No Issues</td>'
-                                        f'<td style="padding:9px 16px; text-align:center; font-weight:600; color:#334155;">{d["count"]}</td>'
-                                        f'<td style="padding:9px 16px; text-align:center; font-weight:700; color:#065F46;">{d["freq"]}%</td>'
-                                        f'<td style="padding:9px 16px; text-align:center;">'
-                                        f'<span style="background:#D1FAE5; color:#065F46; padding:2px 10px;'
-                                        f'border-radius:999px; font-weight:600; font-size:13px;">0.00</span></td>'
-                                        f'</tr>'
-                                    )
-
-                                table_html += "</tbody></table>"
-                                ui.html(table_html)
-                            else:
-                                ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">All issues are generic ("Other Issues")</div>')
-                        else:
-                            ui.html('<div style="text-align:center; padding:20px; color:#10B981;">No issues discovered in this agent\'s outputs</div>')
-
-                    render_divider()
-
-                    # Filters Section - moved after issues list
-                    render_section_header("🔍 Filter Data", "Filter evaluation records by issues and score")
-                    
-                    # Get all unique issues for filter options
-                    all_issues_for_filter = []
                     if all_issues_list:
-                        issue_counts_temp = Counter(all_issues_list)
-                        all_issues_for_filter = [issue for issue in issue_counts_temp.keys() if issue not in [NO_ISSUE, OTHER]]
-                    
-                    with ui.column().classes("w-full gap-6"):
-                        ui.html('<div style="color:#475569; font-size:15px; margin-bottom:8px; font-weight:500;">Select issues using AND/OR/NOT logic, then click Apply Filter</div>')
-                        
-                        with ui.row().classes("w-full gap-6"):
-                            with ui.column().classes("flex-1 gap-3"):
-                                ui.label("Include ANY of (OR)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
-                                include_filter = ui.select(
-                                    all_issues_for_filter, multiple=True, label="At least one of these"
-                                ).classes("w-full").props("outlined use-chips")
-                            
-                            with ui.column().classes("flex-1 gap-3"):
-                                ui.label("Must ALSO have (AND)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
-                                must_have_filter = ui.select(
-                                    all_issues_for_filter, multiple=True, label="All of these"
-                                ).classes("w-full").props("outlined use-chips")
-                            
-                            with ui.column().classes("flex-1 gap-3"):
-                                ui.label("Exclude ANY of (NOT)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
-                                exclude_filter = ui.select(
-                                    all_issues_for_filter, multiple=True, label="None of these"
-                                ).classes("w-full").props("outlined use-chips")
-                        
-                        only_checkbox = ui.checkbox("Only selected issues (no other issues)", value=False).classes("mt-4")
-                        
-                        ui.label("Score Range").classes("text-sm font-bold text-slate-700 mt-6").style("margin-bottom: 12px;")
-                        if "score" in df.columns:
-                            score_filter = ui.range(
-                                min=0.0, max=1.0, step=0.05, value={"min": 0.0, "max": 1.0}
-                            ).classes("w-full").props("label-always color=deep-purple-6")
-                        else:
-                            score_filter = None
-                            ui.label("Score data not available").classes("text-slate-400 italic text-sm")
-                        
-                        with ui.row().classes("gap-3 mt-6"):
-                            apply_filter_btn = ui.button(
-                                "✅ Apply Filter",
-                                icon="filter_alt"
-                            ).props("color=positive no-caps").style("padding: 8px 20px;")
-                            
-                            clear_filter_btn = ui.button(
-                                "🧹 Clear Filters",
-                                icon="clear"
-                            ).props("color=grey no-caps").style("padding: 8px 20px;")
+                        issue_counts = Counter(all_issues_list)
+                        issues_data = []
+                        for issue, count in issue_counts.most_common():
+                            issue_rows = df[df["recurring_issues_str"].apply(
+                                lambda x: issue in extract_issues(x) if pd.notna(x) else False
+                            )]
+                            mean_score = issue_rows["score"].mean() if "score" in issue_rows.columns and not issue_rows["score"].empty else 0.5
+                            freq = round(100 * count / len(df), 1)
+                            severity = round(1 - mean_score, 2)
+                            issues_data.append({
+                                "issue": issue, "count": count,
+                                "freq": freq, "severity": severity,
+                                "mean_score": mean_score,
+                            })
 
-                    render_divider()
-
-                    # Issue Distribution Comparison Container
-                    distribution_container = ui.column().classes("w-full gap-4")
-                    
-                    # Data Explorer Container
-                    data_explorer_container = ui.column().classes("w-full gap-4")
-                    
-                    # Store filtered data
-                    filtered_data_ref = {"df": df}
-                    
-                    def apply_issue_filters():
-                        """Apply AND/OR/NOT logic to filter by issues"""
-                        include = include_filter.value or []
-                        must_have = must_have_filter.value or []
-                        exclude = exclude_filter.value or []
-                        only = only_checkbox.value
-                        score_range = score_filter.value if score_filter else {"min": 0.0, "max": 1.0}
+                        # Build HTML table
+                        # Separate NO_ISSUE from other issues
+                        display_issues = [d for d in issues_data if d["issue"] not in [NO_ISSUE, OTHER]]
+                        no_issue_data = [d for d in issues_data if d["issue"] == NO_ISSUE]
                         
-                        def issue_filter_func(text_issues_str):
-                            issues = extract_issues(text_issues_str)
-                            
-                            # OR logic
-                            if include:
-                                if not any(i in issues for i in include):
-                                    return False
-                            
-                            # AND logic
-                            if must_have:
-                                if not all(i in issues for i in must_have):
-                                    return False
-                            
-                            # NOT logic
-                            if exclude:
-                                if any(i in issues for i in exclude):
-                                    return False
-                            
-                            # "Only" logic
-                            if only:
-                                allowed = set(include + must_have)
-                                if any(i not in allowed for i in issues if i not in [NO_ISSUE, OTHER]):
-                                    return False
-                            
-                            return True
-                        
-                        # Apply issue filters
-                        if "recurring_issues_str" in df.columns:
-                            filtered_df = df[df["recurring_issues_str"].apply(issue_filter_func)]
-                        else:
-                            filtered_df = df.copy()
-                        
-                        # Apply score filter
-                        if "score" in filtered_df.columns:
-                            filtered_df = filtered_df[
-                                (filtered_df["score"] >= score_range["min"]) &
-                                (filtered_df["score"] <= score_range["max"])
-                            ]
-                        
-                        return filtered_df
-                    
-                    def update_visualizations():
-                        distribution_container.clear()
-                        with distribution_container:
-                            filtered_df = apply_issue_filters()
-                            filtered_data_ref["df"] = filtered_df
-                            
-                            render_section_header("Issue Distribution Comparison", "Comparing full dataset vs filtered subset")
-                            
-                            # Get issue frequencies
-                            full_issues = []
-                            for issues_str in df["recurring_issues_str"].dropna():
-                                full_issues.extend(extract_issues(issues_str))
-                            full_issue_counts = Counter(full_issues)
-                            
-                            filtered_issues = []
-                            for issues_str in filtered_df["recurring_issues_str"].dropna():
-                                filtered_issues.extend(extract_issues(issues_str))
-                            filtered_issue_counts = Counter(filtered_issues)
-                            
-                            # Remove NO_ISSUE and OTHER
-                            for issue_type in [NO_ISSUE, OTHER]:
-                                full_issue_counts.pop(issue_type, None)
-                                filtered_issue_counts.pop(issue_type, None)
-                            
-                            if not full_issue_counts:
-                                ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">No issues to display</div>')
-                            else:
-                                # Create comparison data — sort ascending so top issue appears at top of chart
-                                all_issue_names = sorted(full_issue_counts.keys(), key=lambda x: full_issue_counts[x], reverse=False)[-20:]
-                                full_counts = [full_issue_counts.get(issue, 0) for issue in all_issue_names]
-                                filtered_counts = [filtered_issue_counts.get(issue, 0) for issue in all_issue_names]
+                        if display_issues or no_issue_data:
+                            max_freq = max(d["freq"] for d in display_issues) if display_issues else 1
 
-                                # Wrap long labels for the y-axis (max ~40 chars per line)
-                                def wrap_label(text, max_chars=40):
-                                    if len(text) <= max_chars:
-                                        return text
-                                    words = text.split()
-                                    lines, line = [], []
-                                    for word in words:
-                                        if sum(len(w) for w in line) + len(line) + len(word) > max_chars and line:
-                                            lines.append(" ".join(line))
-                                            line = [word]
-                                        else:
-                                            line.append(word)
-                                    if line:
-                                        lines.append(" ".join(line))
-                                    return "<br>".join(lines)
+                            table_html = (
+                                '<table class="issues-table" style="'
+                                'width:100%; border-collapse:collapse; font-size:14px;'
+                                'box-shadow:0 2px 8px rgba(0,0,0,0.07); border-radius:10px; overflow:hidden;">'
+                                '<thead><tr style="background:#4F46E5; color:#fff;'
+                                'font-size:12px; text-transform:uppercase; letter-spacing:0.05em;">'
+                                '<th style="padding:11px 16px; text-align:left; font-weight:600;">Issue</th>'
+                                '<th style="padding:11px 16px; text-align:center; font-weight:600;">Count</th>'
+                                '<th style="padding:11px 16px; text-align:center; font-weight:600;">Frequency</th>'
+                                '<th style="padding:11px 16px; text-align:center; font-weight:600;">Severity</th>'
+                                '</tr></thead><tbody>'
+                            )
 
-                                wrapped_labels = [wrap_label(name) for name in all_issue_names]
-
-                                # Horizontal grouped bar chart
-                                fig = go.Figure()
-                                fig.add_trace(go.Bar(
-                                    name="Full Dataset",
-                                    y=wrapped_labels,
-                                    x=full_counts,
-                                    orientation="h",
-                                    customdata=all_issue_names,
-                                    hovertemplate="<b>%{customdata}</b><br>Full Dataset: %{x}<extra></extra>",
-                                    marker=dict(color=COLORS["primary"], opacity=0.85),
-                                    text=full_counts,
-                                    textposition="outside",
-                                    textangle=0,
-                                    textfont=dict(size=12, color=COLORS["text"]),
-                                    cliponaxis=False,
-                                ))
-                                fig.add_trace(go.Bar(
-                                    name="Filtered Subset",
-                                    y=wrapped_labels,
-                                    x=filtered_counts,
-                                    orientation="h",
-                                    customdata=all_issue_names,
-                                    hovertemplate="<b>%{customdata}</b><br>Filtered Subset: %{x}<extra></extra>",
-                                    marker=dict(color=COLORS["secondary"], opacity=0.85),
-                                    text=filtered_counts,
-                                    textposition="outside",
-                                    textangle=0,
-                                    textfont=dict(size=12, color=COLORS["text"]),
-                                    cliponaxis=False,
-                                ))
-
-                                n_issues = len(all_issue_names)
-                                bar_height = 34  # px per bar pair
-                                chart_height = max(400, n_issues * bar_height * 2 + 100)
-                                max_count = max(full_counts + [1])
-
-                                fig.update_layout(
-                                    barmode="group",
-                                    height=chart_height,
-                                    xaxis_title="Count",
-                                    yaxis_title="",
-                                    showlegend=True,
-                                    legend=dict(
-                                        orientation="h",
-                                        x=0.5, xanchor="center",
-                                        y=1.02, yanchor="bottom",
-                                        font=dict(size=12),
-                                    ),
-                                    margin=dict(l=340, r=80, t=50, b=60),
-                                    plot_bgcolor="white",
-                                    paper_bgcolor="white",
-                                    xaxis=dict(
-                                        gridcolor="#F1F5F9",
-                                        zerolinecolor="#E2E8F0",
-                                        tickfont=dict(size=12),
-                                        range=[0, max_count * 1.15],
-                                    ),
-                                    yaxis=dict(
-                                        tickfont=dict(size=12, color=COLORS["text"]),
-                                        automargin=True,
-                                        ticklabelposition="outside left",
-                                        ticklabeloverflow="allow",
-                                    ),
-                                    bargap=0.3,
-                                    bargroupgap=0.05,
-                                    uniformtext=dict(minsize=10, mode="hide"),
+                            # Add regular issues
+                            for i, d in enumerate(display_issues):
+                                row_bg = "#FFFFFF" if i % 2 == 0 else "#F8FAFC"
+                                t = min(d["freq"] / max_freq, 1.0) if max_freq > 0 else 0
+                                if t >= 0.66:
+                                    freq_fg = "#DC2626"   # red (high freq)
+                                elif t >= 0.33:
+                                    freq_fg = "#D97706"   # amber
+                                else:
+                                    freq_fg = "#16A34A"   # green (low freq)
+                                sev = d["severity"]
+                                if sev >= 0.7:
+                                    sev_bg, sev_fg = "#FEE2E2", "#991B1B"
+                                elif sev >= 0.4:
+                                    sev_bg, sev_fg = "#FEF9C3", "#854D0E"
+                                else:
+                                    sev_bg, sev_fg = "#D1FAE5", "#065F46"
+                                table_html += (
+                                    f'<tr style="background:{row_bg}; border-bottom:1px solid #E2E8F0;">'
+                                    f'<td style="padding:9px 16px; color:#1E293B;">{d["issue"]}</td>'
+                                    f'<td style="padding:9px 16px; text-align:center; font-weight:600; color:#334155;">{d["count"]}</td>'
+                                    f'<td style="padding:9px 16px; text-align:center; font-weight:700; color:{freq_fg};">{d["freq"]}%</td>'
+                                    f'<td style="padding:9px 16px; text-align:center;">'
+                                    f'<span style="background:{sev_bg}; color:{sev_fg}; padding:2px 10px;'
+                                    f'border-radius:999px; font-weight:600; font-size:13px;">{sev:.2f}</span></td>'
+                                    f'</tr>'
                                 )
-                                ui.plotly(fig).classes("w-full")
-                            
-                            ui.html(f'<div style="color:#64748B; font-size:14px; margin-top:10px;">Showing <strong>{len(filtered_df)}</strong> of {len(df)} records after filtering</div>')
+
+                            # Add "No Issues" row at the end
+                            if no_issue_data:
+                                d = no_issue_data[0]
+                                table_html += (
+                                    f'<tr style="background:#F0FDF4; border-top:2px solid #BBF7D0;">'
+                                    f'<td style="padding:9px 16px; color:#15803D; font-weight:600;">✅ No Issues</td>'
+                                    f'<td style="padding:9px 16px; text-align:center; font-weight:600; color:#334155;">{d["count"]}</td>'
+                                    f'<td style="padding:9px 16px; text-align:center; font-weight:700; color:#065F46;">{d["freq"]}%</td>'
+                                    f'<td style="padding:9px 16px; text-align:center;">'
+                                    f'<span style="background:#D1FAE5; color:#065F46; padding:2px 10px;'
+                                    f'border-radius:999px; font-weight:600; font-size:13px;">0.00</span></td>'
+                                    f'</tr>'
+                                )
+
+                            table_html += "</tbody></table>"
+                            ui.html(table_html)
+                        else:
+                            ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">All issues are generic ("Other Issues")</div>')
+                    else:
+                        ui.html('<div style="text-align:center; padding:20px; color:#10B981;">No issues discovered in this agent\'s outputs</div>')
+
+                render_divider()
+
+                # Filters Section - moved after issues list
+                render_section_header("🔍 Filter Data", "Filter evaluation records by issues and score")
+                
+                # Get all unique issues for filter options
+                all_issues_for_filter = []
+                if all_issues_list:
+                    issue_counts_temp = Counter(all_issues_list)
+                    all_issues_for_filter = [issue for issue in issue_counts_temp.keys() if issue not in [NO_ISSUE, OTHER]]
+                
+                with ui.column().classes("w-full gap-6"):
+                    ui.html('<div style="color:#475569; font-size:15px; margin-bottom:8px; font-weight:500;">Select issues using AND/OR/NOT logic, then click Apply Filter</div>')
                     
-                    def update_data_explorer():
-                        data_explorer_container.clear()
-                        with data_explorer_container:
-                            render_section_header("Data Explorer", "Browse individual evaluation records (filtered)")
-                            
-                            filtered_df = filtered_data_ref["df"]
-                            if not filtered_df.empty:
-                                display_cols = [c for c in ["intent", "model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns and filtered_df[c].dropna().astype(str).str.strip().ne("").any()]
-                                display_df = filtered_df[display_cols].head(100).copy()
-
-                                if "score" in display_df.columns:
-                                    display_df["score"] = display_df["score"].round(2)
-                                for col in display_df.select_dtypes(include=["object"]).columns:
-                                    display_df[col] = display_df[col].apply(
-                                        lambda x: str(x)[:200] + "..." if isinstance(x, str) and len(str(x)) > 200 else x
-                                    )
-
-                                rows = display_df.reset_index().to_dict("records")
-                                columns = [{"name": c, "label": c.replace("_", " ").title(), "field": c, "sortable": True, "align": "left"} for c in display_df.reset_index().columns]
-
-                                table = ui.table(
-                                    columns=columns, rows=rows, row_key="question_id",
-                                    pagination={"rowsPerPage": 15, "sortBy": "score"},
-                                ).classes("w-full").props("flat bordered dense")
-
-                                detail_container = ui.column().classes("w-full gap-2")
-
-                                def on_row_click(e):
-                                    row_data = e.args[1]
-                                    detail_container.clear()
-                                    with detail_container:
-                                        render_divider()
-                                        render_section_header("Record Details")
-                                        idx = row_data.get("question_id", row_data.get("index", ""))
-                                        if idx in filtered_df.index:
-                                            orig_row = filtered_df.loc[idx]
-                                        else:
-                                            ui.label("Could not find original record").classes("text-slate-500")
-                                            return
-
-                                        with ui.card().classes("w-full custom-card"):
-                                            ui.label(f"Record: {idx}").classes("text-lg font-semibold text-slate-700")
-
-                                            _exclude_detail = {"Name", "step_in_trace_node", "id", "agent_or_tool", "tool_or_agent"}
-                                            input_columns = get_input_columns(meta)
-                                            for column in input_columns:
-                                                if column in _exclude_detail or column not in orig_row:
-                                                    continue
-                                                val = orig_row[column]
-                                                if val is not None and not (isinstance(val, float) and pd.isna(val)) and str(val).strip():
-                                                    with ui.expansion(column.replace("_", " ").title()).classes("w-full"):
-                                                        ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(val)}</pre>')
-
-                                            with ui.expansion("Model Input (Prompt)").classes("w-full"):
-                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("model_input", "N/A"))}</pre>')
-
-                                            with ui.expansion("Response").classes("w-full"):
-                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("response", "N/A"))}</pre>')
-
-                                            with ui.expansion("Full Evaluation Text").classes("w-full"):
-                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("evaluation_text", "N/A"))}</pre>')
-
-                                            eval_summary = orig_row.get("evaluation_summary")
-                                            if eval_summary and not pd.isna(eval_summary):
-                                                ui.label("Evaluation Summary").classes("font-semibold text-slate-600 mt-2")
-                                                ui.label(str(eval_summary)).classes("text-sm text-slate-500")
-
-                                            score_val = orig_row.get("score", "N/A")
-                                            ui.html(f'<div class="mt-2"><strong>Score:</strong> {score_badge_html(float(score_val)) if isinstance(score_val, (int, float)) else score_val}</div>')
-
-                                            recurring = orig_row.get("recurring_issues_str")
-                                            if recurring and not pd.isna(recurring):
-                                                issues = extract_issues(recurring)
-                                                ui.label("Recurring Issues").classes("font-semibold text-slate-600 mt-2")
-                                                for iss in issues:
-                                                    ui.html(f'<span class="agent-badge" style="margin:2px;">{iss}</span>')
-
-                                table.on("rowClick", on_row_click)
-                            else:
-                                ui.html('<div style="text-align:center; padding:20px; color:#F59E0B;">No records match the selected filters</div>')
+                    with ui.row().classes("w-full gap-6"):
+                        with ui.column().classes("flex-1 gap-3"):
+                            ui.label("Include ANY of (OR)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
+                            include_filter = ui.select(
+                                all_issues_for_filter, multiple=True, label="At least one of these"
+                            ).classes("w-full").props("outlined use-chips")
+                        
+                        with ui.column().classes("flex-1 gap-3"):
+                            ui.label("Must ALSO have (AND)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
+                            must_have_filter = ui.select(
+                                all_issues_for_filter, multiple=True, label="All of these"
+                            ).classes("w-full").props("outlined use-chips")
+                        
+                        with ui.column().classes("flex-1 gap-3"):
+                            ui.label("Exclude ANY of (NOT)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
+                            exclude_filter = ui.select(
+                                all_issues_for_filter, multiple=True, label="None of these"
+                            ).classes("w-full").props("outlined use-chips")
                     
-                    def on_apply_filters():
-                        update_visualizations()
-                        update_data_explorer()
-                        ui.notify(f"Filters applied: {len(filtered_data_ref['df'])} records match", type="positive")
+                    only_checkbox = ui.checkbox("Only selected issues (no other issues)", value=False).classes("mt-4")
                     
-                    def on_clear_filters():
-                        include_filter.value = []
-                        must_have_filter.value = []
-                        exclude_filter.value = []
-                        only_checkbox.value = False
-                        if score_filter:
-                            score_filter.value = {"min": 0.0, "max": 1.0}
-                        filtered_data_ref["df"] = df
-                        update_visualizations()
-                        update_data_explorer()
-                        ui.notify("Filters cleared", type="info")
+                    ui.label("Score Range").classes("text-sm font-bold text-slate-700 mt-6").style("margin-bottom: 12px;")
+                    if "score" in df.columns:
+                        score_filter = ui.range(
+                            min=0.0, max=1.0, step=0.05, value={"min": 0.0, "max": 1.0}
+                        ).classes("w-full").props("label-always color=deep-purple-6")
+                    else:
+                        score_filter = None
+                        ui.label("Score data not available").classes("text-slate-400 italic text-sm")
                     
-                    apply_filter_btn.on_click(on_apply_filters)
-                    clear_filter_btn.on_click(on_clear_filters)
+                    with ui.row().classes("gap-3 mt-6"):
+                        apply_filter_btn = ui.button(
+                            "✅ Apply Filter",
+                            icon="filter_alt"
+                        ).props("color=positive no-caps").style("padding: 8px 20px;")
+                        
+                        clear_filter_btn = ui.button(
+                            "🧹 Clear Filters",
+                            icon="clear"
+                        ).props("color=grey no-caps").style("padding: 8px 20px;")
+
+                render_divider()
+
+                # Issue Distribution Comparison Container
+                distribution_container = ui.column().classes("w-full gap-4")
+                
+                # Data Explorer Container
+                data_explorer_container = ui.column().classes("w-full gap-4")
+                
+                # Store filtered data
+                filtered_data_ref = {"df": df}
+                
+                def apply_issue_filters():
+                    """Apply AND/OR/NOT logic to filter by issues"""
+                    include = include_filter.value or []
+                    must_have = must_have_filter.value or []
+                    exclude = exclude_filter.value or []
+                    only = only_checkbox.value
+                    score_range = score_filter.value if score_filter else {"min": 0.0, "max": 1.0}
                     
-                    # Initial render
+                    def issue_filter_func(text_issues_str):
+                        issues = extract_issues(text_issues_str)
+                        
+                        # OR logic
+                        if include:
+                            if not any(i in issues for i in include):
+                                return False
+                        
+                        # AND logic
+                        if must_have:
+                            if not all(i in issues for i in must_have):
+                                return False
+                        
+                        # NOT logic
+                        if exclude:
+                            if any(i in issues for i in exclude):
+                                return False
+                        
+                        # "Only" logic
+                        if only:
+                            allowed = set(include + must_have)
+                            if any(i not in allowed for i in issues if i not in [NO_ISSUE, OTHER]):
+                                return False
+                        
+                        return True
+                    
+                    # Apply issue filters
+                    if "recurring_issues_str" in df.columns:
+                        filtered_df = df[df["recurring_issues_str"].apply(issue_filter_func)]
+                    else:
+                        filtered_df = df.copy()
+                    
+                    # Apply score filter
+                    if "score" in filtered_df.columns:
+                        filtered_df = filtered_df[
+                            (filtered_df["score"] >= score_range["min"]) &
+                            (filtered_df["score"] <= score_range["max"])
+                        ]
+                    
+                    return filtered_df
+                
+                def update_visualizations():
+                    distribution_container.clear()
+                    with distribution_container:
+                        filtered_df = apply_issue_filters()
+                        filtered_data_ref["df"] = filtered_df
+                        
+                        render_section_header("Issue Distribution Comparison", "Comparing full dataset vs filtered subset")
+                        
+                        # Get issue frequencies
+                        full_issues = []
+                        for issues_str in df["recurring_issues_str"].dropna():
+                            full_issues.extend(extract_issues(issues_str))
+                        full_issue_counts = Counter(full_issues)
+                        
+                        filtered_issues = []
+                        for issues_str in filtered_df["recurring_issues_str"].dropna():
+                            filtered_issues.extend(extract_issues(issues_str))
+                        filtered_issue_counts = Counter(filtered_issues)
+                        
+                        # Remove NO_ISSUE and OTHER
+                        for issue_type in [NO_ISSUE, OTHER]:
+                            full_issue_counts.pop(issue_type, None)
+                            filtered_issue_counts.pop(issue_type, None)
+                        
+                        if not full_issue_counts:
+                            ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">No issues to display</div>')
+                        else:
+                            # Create comparison data — sort ascending so top issue appears at top of chart
+                            all_issue_names = sorted(full_issue_counts.keys(), key=lambda x: full_issue_counts[x], reverse=False)[-20:]
+                            full_counts = [full_issue_counts.get(issue, 0) for issue in all_issue_names]
+                            filtered_counts = [filtered_issue_counts.get(issue, 0) for issue in all_issue_names]
+
+                            # Wrap long labels for the y-axis (max ~40 chars per line)
+                            def wrap_label(text, max_chars=40):
+                                if len(text) <= max_chars:
+                                    return text
+                                words = text.split()
+                                lines, line = [], []
+                                for word in words:
+                                    if sum(len(w) for w in line) + len(line) + len(word) > max_chars and line:
+                                        lines.append(" ".join(line))
+                                        line = [word]
+                                    else:
+                                        line.append(word)
+                                if line:
+                                    lines.append(" ".join(line))
+                                return "<br>".join(lines)
+
+                            wrapped_labels = [wrap_label(name) for name in all_issue_names]
+
+                            # Horizontal grouped bar chart
+                            fig = go.Figure()
+                            fig.add_trace(go.Bar(
+                                name="Full Dataset",
+                                y=wrapped_labels,
+                                x=full_counts,
+                                orientation="h",
+                                customdata=all_issue_names,
+                                hovertemplate="<b>%{customdata}</b><br>Full Dataset: %{x}<extra></extra>",
+                                marker=dict(color=COLORS["primary"], opacity=0.85),
+                                text=full_counts,
+                                textposition="outside",
+                                textangle=0,
+                                textfont=dict(size=12, color=COLORS["text"]),
+                                cliponaxis=False,
+                            ))
+                            fig.add_trace(go.Bar(
+                                name="Filtered Subset",
+                                y=wrapped_labels,
+                                x=filtered_counts,
+                                orientation="h",
+                                customdata=all_issue_names,
+                                hovertemplate="<b>%{customdata}</b><br>Filtered Subset: %{x}<extra></extra>",
+                                marker=dict(color=COLORS["secondary"], opacity=0.85),
+                                text=filtered_counts,
+                                textposition="outside",
+                                textangle=0,
+                                textfont=dict(size=12, color=COLORS["text"]),
+                                cliponaxis=False,
+                            ))
+
+                            n_issues = len(all_issue_names)
+                            bar_height = 34  # px per bar pair
+                            chart_height = max(400, n_issues * bar_height * 2 + 100)
+                            max_count = max(full_counts + [1])
+
+                            fig.update_layout(
+                                barmode="group",
+                                height=chart_height,
+                                xaxis_title="Count",
+                                yaxis_title="",
+                                showlegend=True,
+                                legend=dict(
+                                    orientation="h",
+                                    x=0.5, xanchor="center",
+                                    y=1.02, yanchor="bottom",
+                                    font=dict(size=12),
+                                ),
+                                margin=dict(l=340, r=80, t=50, b=60),
+                                plot_bgcolor="white",
+                                paper_bgcolor="white",
+                                xaxis=dict(
+                                    gridcolor="#F1F5F9",
+                                    zerolinecolor="#E2E8F0",
+                                    tickfont=dict(size=12),
+                                    range=[0, max_count * 1.15],
+                                ),
+                                yaxis=dict(
+                                    tickfont=dict(size=12, color=COLORS["text"]),
+                                    automargin=True,
+                                    ticklabelposition="outside left",
+                                    ticklabeloverflow="allow",
+                                ),
+                                bargap=0.3,
+                                bargroupgap=0.05,
+                                uniformtext=dict(minsize=10, mode="hide"),
+                            )
+                            ui.plotly(fig).classes("w-full")
+                        
+                        ui.html(f'<div style="color:#64748B; font-size:14px; margin-top:10px;">Showing <strong>{len(filtered_df)}</strong> of {len(df)} records after filtering</div>')
+                
+                def update_data_explorer():
+                    data_explorer_container.clear()
+                    with data_explorer_container:
+                        render_section_header("Data Explorer", "Browse individual evaluation records (filtered)")
+                        
+                        filtered_df = filtered_data_ref["df"]
+                        if not filtered_df.empty:
+                            display_cols = [c for c in ["intent", "model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns and filtered_df[c].dropna().astype(str).str.strip().ne("").any()]
+                            display_df = filtered_df[display_cols].head(100).copy()
+
+                            if "score" in display_df.columns:
+                                display_df["score"] = display_df["score"].round(2)
+                            for col in display_df.select_dtypes(include=["object"]).columns:
+                                display_df[col] = display_df[col].apply(
+                                    lambda x: str(x)[:200] + "..." if isinstance(x, str) and len(str(x)) > 200 else x
+                                )
+
+                            rows = display_df.reset_index().to_dict("records")
+                            columns = [{"name": c, "label": c.replace("_", " ").title(), "field": c, "sortable": True, "align": "left"} for c in display_df.reset_index().columns]
+
+                            table = ui.table(
+                                columns=columns, rows=rows, row_key="question_id",
+                                pagination={"rowsPerPage": 15, "sortBy": "score"},
+                            ).classes("w-full").props("flat bordered dense")
+
+                            detail_container = ui.column().classes("w-full gap-2")
+
+                            def on_row_click(e):
+                                row_data = e.args[1]
+                                detail_container.clear()
+                                with detail_container:
+                                    render_divider()
+                                    render_section_header("Record Details")
+                                    idx = row_data.get("question_id", row_data.get("index", ""))
+                                    if idx in filtered_df.index:
+                                        orig_row = filtered_df.loc[idx]
+                                    else:
+                                        ui.label("Could not find original record").classes("text-slate-500")
+                                        return
+
+                                    with ui.card().classes("w-full custom-card"):
+                                        ui.label(f"Record: {idx}").classes("text-lg font-semibold text-slate-700")
+
+                                        _exclude_detail = {"Name", "step_in_trace_node", "id", "agent_or_tool", "tool_or_agent"}
+                                        input_columns = get_input_columns(meta)
+                                        for column in input_columns:
+                                            if column in _exclude_detail or column not in orig_row:
+                                                continue
+                                            val = orig_row[column]
+                                            if val is not None and not (isinstance(val, float) and pd.isna(val)) and str(val).strip():
+                                                with ui.expansion(column.replace("_", " ").title()).classes("w-full"):
+                                                    ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(val)}</pre>')
+
+                                        with ui.expansion("Model Input (Prompt)").classes("w-full"):
+                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("model_input", "N/A"))}</pre>')
+
+                                        with ui.expansion("Response").classes("w-full"):
+                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("response", "N/A"))}</pre>')
+
+                                        with ui.expansion("Full Evaluation Text").classes("w-full"):
+                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("evaluation_text", "N/A"))}</pre>')
+
+                                        eval_summary = orig_row.get("evaluation_summary")
+                                        if eval_summary and not pd.isna(eval_summary):
+                                            ui.label("Evaluation Summary").classes("font-semibold text-slate-600 mt-2")
+                                            ui.label(str(eval_summary)).classes("text-sm text-slate-500")
+
+                                        score_val = orig_row.get("score", "N/A")
+                                        ui.html(f'<div class="mt-2"><strong>Score:</strong> {score_badge_html(float(score_val)) if isinstance(score_val, (int, float)) else score_val}</div>')
+
+                                        recurring = orig_row.get("recurring_issues_str")
+                                        if recurring and not pd.isna(recurring):
+                                            issues = extract_issues(recurring)
+                                            ui.label("Recurring Issues").classes("font-semibold text-slate-600 mt-2")
+                                            for iss in issues:
+                                                ui.html(f'<span class="agent-badge" style="margin:2px;">{iss}</span>')
+
+                            table.on("rowClick", on_row_click)
+                        else:
+                            ui.html('<div style="text-align:center; padding:20px; color:#F59E0B;">No records match the selected filters</div>')
+                
+                def on_apply_filters():
                     update_visualizations()
                     update_data_explorer()
+                    ui.notify(f"Filters applied: {len(filtered_data_ref['df'])} records match", type="positive")
+                
+                def on_clear_filters():
+                    include_filter.value = []
+                    must_have_filter.value = []
+                    exclude_filter.value = []
+                    only_checkbox.value = False
+                    if score_filter:
+                        score_filter.value = {"min": 0.0, "max": 1.0}
+                    filtered_data_ref["df"] = df
+                    update_visualizations()
+                    update_data_explorer()
+                    ui.notify("Filters cleared", type="info")
+                
+                apply_filter_btn.on_click(on_apply_filters)
+                clear_filter_btn.on_click(on_clear_filters)
+                
+                # Initial render
+                update_visualizations()
+                update_data_explorer()
 
-                except Exception as ex:
-                    ui.label(f"Error loading CLEAR analysis: {ex}").classes("text-red-500")
+            except Exception as ex:
+                ui.label(f"Error loading CLEAR analysis: {ex}").classes("text-red-500")
 
         def on_select_change():
             show_agent_analysis(agent_select.value)
@@ -3579,44 +3617,49 @@ def main_page():
                 # Gather scores first (needed for metrics)
                 trajectory_scores = []
                 scores_by_step = {}
+
+                def _find_score(result_key, composite_id, task_id_val, step_num):
+                    """Try to find a score in a specific agent_scores_df entry."""
+                    if result_key not in state.all_agent_scores_df:
+                        return None, None
+                    df_agent = state.all_agent_scores_df[result_key]
+                    match = pd.DataFrame()
+                    if "id" in df_agent.columns and composite_id:
+                        match = df_agent[df_agent["id"] == composite_id]
+                    if match.empty and "task_id" in df_agent.columns:
+                        step_col = "step_in_trace_general" if "step_in_trace_general" in df_agent.columns else "step_in_trace"
+                        if step_col in df_agent.columns and task_id_val:
+                            match = df_agent[(df_agent["task_id"].astype(str) == task_id_val) & (df_agent[step_col] == step_num)]
+                    if match.empty and composite_id and composite_id in df_agent.index:
+                        match = df_agent.loc[[composite_id]]
+                    if match.empty:
+                        return None, None
+                    s_val = None
+                    es_val = None
+                    if "score" in match.columns:
+                        s = match.iloc[0]["score"]
+                        if pd.notna(s):
+                            try:
+                                s_val = float(s)
+                            except (ValueError, TypeError):
+                                pass
+                    if "evaluation_summary" in match.columns:
+                        es = match.iloc[0]["evaluation_summary"]
+                        if pd.notna(es) and str(es).strip():
+                            es_val = str(es).strip()
+                    return s_val, es_val
+
                 for idx, row in task_data.iterrows():
                     agent_name = row["Name"]
                     step_num = row.get("step_in_trace_general", idx)
                     task_id_val = str(row.get("task_id", ""))
-                    score_val = None
-                    eval_summary_val = None
-
-                    # Construct the composite id used in CLEAR results: "{task_id}_{step_in_trace_general}"
                     composite_id = f"{task_id_val}_{step_num}" if task_id_val else ""
 
-                    if agent_name in state.all_agent_scores_df:
-                        df_agent = state.all_agent_scores_df[agent_name]
-
-                        match = pd.DataFrame()
-                        # Strategy 1: match by composite id column
-                        if "id" in df_agent.columns and composite_id:
-                            match = df_agent[df_agent["id"] == composite_id]
-                        # Strategy 2: match by task_id + step_in_trace_general columns
-                        if match.empty and "task_id" in df_agent.columns:
-                            step_col = "step_in_trace_general" if "step_in_trace_general" in df_agent.columns else "step_in_trace"
-                            if step_col in df_agent.columns and task_id_val:
-                                match = df_agent[(df_agent["task_id"].astype(str) == task_id_val) & (df_agent[step_col] == step_num)]
-                        # Strategy 3: match by index (question_id) if it equals composite_id
-                        if match.empty and composite_id and composite_id in df_agent.index:
-                            match = df_agent.loc[[composite_id]]
-
-                        if not match.empty:
-                            if "score" in match.columns:
-                                s = match.iloc[0]["score"]
-                                if pd.notna(s):
-                                    try:
-                                        score_val = float(s)
-                                    except (ValueError, TypeError):
-                                        pass
-                            if "evaluation_summary" in match.columns:
-                                es = match.iloc[0]["evaluation_summary"]
-                                if pd.notna(es) and str(es).strip():
-                                    eval_summary_val = str(es).strip()
+                    # Try the base agent key first, then the __tool_calls key for tool rows
+                    score_val, eval_summary_val = _find_score(agent_name, composite_id, task_id_val, step_num)
+                    if score_val is None:
+                        tool_key = f"{agent_name}__tool_calls"
+                        score_val, eval_summary_val = _find_score(tool_key, composite_id, task_id_val, step_num)
 
                     if score_val is not None:
                         trajectory_scores.append(score_val)
@@ -3634,10 +3677,12 @@ def main_page():
 
                 # Metrics - Display at the top with gradient banner
                 unique_agents = task_data["Name"].nunique()
-                steps_count = len(task_data)
+                total_evals = len(task_data)
+                has_llm_call_idx = "llm_call_index" in task_data.columns and task_data["llm_call_index"].notna().any()
+                llm_calls_count = int(task_data["llm_call_index"].nunique()) if has_llm_call_idx else total_evals
                 min_score = f"{min(trajectory_scores):.2f}" if trajectory_scores else "N/A"
                 avg_score = f"{sum(trajectory_scores) / len(trajectory_scores):.2f}" if trajectory_scores else "N/A"
-                
+
                 ui.html(f'''
                     <div style="
                         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -3646,10 +3691,14 @@ def main_page():
                         margin-bottom: 24px;
                         box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
                     ">
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px;">
                             <div style="text-align: center; color: white;">
-                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">📍 Steps</div>
-                                <div style="font-size: 32px; font-weight: 700;">{steps_count}</div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">📍 LLM Calls</div>
+                                <div style="font-size: 32px; font-weight: 700;">{llm_calls_count}</div>
+                            </div>
+                            <div style="text-align: center; color: white;">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">📝 Evaluations</div>
+                                <div style="font-size: 32px; font-weight: 700;">{total_evals}</div>
                             </div>
                             <div style="text-align: center; color: white;">
                                 <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">👥 Agents</div>
@@ -3751,6 +3800,10 @@ def main_page():
                 for idx, row in task_data.iterrows():
                     step_num = int(row["step_in_trace_general"])
                     agent_name = row["Name"]
+                    tool_or_agent = row.get("tool_or_agent", "agent")
+                    llm_idx = row.get("llm_call_index", None)
+                    llm_idx_str = f"  |  LLM Call: {int(llm_idx)}" if pd.notna(llm_idx) else ""
+                    type_label = "tool" if tool_or_agent == "tool" else "reasoning"
                     # Build score label for expansion header
                     step_score = scores_by_step.get(step_num, {}).get("score")
                     if step_score is not None:
@@ -3768,7 +3821,7 @@ def main_page():
                         score_text = "N/A"
 
                     with ui.expansion(
-                        f"Step {step_num}: {agent_name}  |  Score: {score_text}",
+                        f"Step {step_num}: {agent_name} [{type_label}]  |  Score: {score_text}{llm_idx_str}",
                         icon="play_circle_outline",
                     ).classes("w-full").style(f"border-left: 4px solid {score_color}; margin-bottom: 4px;"):
 
@@ -4216,8 +4269,9 @@ def main_page():
 
         traj_lengths = {}
         traj_scores = {}
-        for task_id in state.traj_df["task_id"].unique():
-            task_data = state.traj_df[state.traj_df["task_id"] == task_id]
+        seq_df = _get_llm_call_sequence(state.traj_df)
+        for task_id in seq_df["task_id"].unique():
+            task_data = seq_df[seq_df["task_id"] == task_id]
             traj_lengths[task_id] = len(task_data)
             for agent_name, agent_data in state.all_agent_scores.items():
                 if "id_to_score" in agent_data and task_id in agent_data["id_to_score"]:
@@ -4268,10 +4322,10 @@ def main_page():
             with ui.column().classes("flex-1"):
                 fig_dist = px.histogram(
                     length_df, x="length", nbins=20,
-                    labels={"length": "Number of Steps", "count": "Traces"},
+                    labels={"length": "LLM Calls", "count": "Traces"},
                     color_discrete_sequence=[COLORS["primary"]],
                 )
-                fig_dist.update_layout(showlegend=False, height=350, title=dict(text="Distribution of Trace Lengths"))
+                fig_dist.update_layout(showlegend=False, height=350, title=dict(text="Distribution of Trace Lengths (by LLM Calls)"))
                 ui.plotly(fig_dist).classes("w-full")
 
             with ui.column().classes("flex-1"):
@@ -4283,11 +4337,11 @@ def main_page():
                         mode="lines+markers", name="Average Score",
                         line=dict(color=COLORS["primary"], width=2.5),
                         marker=dict(size=8, color=COLORS["primary"]),
-                        hovertemplate="<b>Length:</b> %{x} steps<br><b>Avg Score:</b> %{y:.3f}<extra></extra>",
+                        hovertemplate="<b>Length:</b> %{x} LLM calls<br><b>Avg Score:</b> %{y:.3f}<extra></extra>",
                     ))
                     fig_score.update_layout(
                         title=dict(text="Average Score by Trace Length"),
-                        xaxis_title="Number of Steps", yaxis_title="Average Score",
+                        xaxis_title="LLM Calls", yaxis_title="Average Score",
                         showlegend=False, height=350, hovermode="closest",
                     )
                     ui.plotly(fig_score).classes("w-full")
@@ -4331,45 +4385,45 @@ def main_page():
             ui.table(columns=cols, rows=rows, row_key="Agent", pagination={"rowsPerPage": 10}).classes("w-full shadow-md").props("flat bordered").style("border-radius: 8px; overflow: hidden;")
 
         # Score Progression
-        if state.all_agent_scores_df:
-            render_divider()
-            render_section_header("Score Progression Through Traces", "How do scores change as traces progress?")
-
-            progression_data = analyze_score_progression(state.traj_df, state.all_agent_scores_df)
-
-            if progression_data and len(progression_data["score_change"]) > 0:
-                position_changes = defaultdict(list)
-                for pos, change in zip(progression_data["position"], progression_data["score_change"]):
-                    position_changes[pos].append(change)
-                avg_changes = {pos: sum(changes) / len(changes) for pos, changes in position_changes.items()}
-
-                positions = sorted(avg_changes.keys())
-                changes = [avg_changes[p] for p in positions]
-
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=positions, y=changes, mode="lines+markers",
-                    name="Avg Score Change",
-                    line=dict(color=COLORS["success"] if sum(changes) > 0 else COLORS["danger"], width=2.5),
-                    marker=dict(size=8),
-                ))
-                fig.add_hline(y=0, line_dash="dash", line_color="#CBD5E1", annotation_text="No Change")
-                fig.update_layout(
-                    title=dict(text="Average Score Change by Position in Trace"),
-                    xaxis_title="Step Position", yaxis_title="Average Score Change", height=400,
-                )
-                ui.plotly(fig).classes("w-full")
-
-                improving = sum(1 for x in progression_data["improving"] if x)
-                total = len(progression_data["improving"])
-                avg_change = sum(progression_data["score_change"]) / len(progression_data["score_change"])
-
-                with ui.row().classes("w-full gap-4 justify-center"):
-                    render_metric_card("Improving Steps", f"{improving}/{total} ({improving / total * 100:.1f}%)")
-                    render_metric_card("Avg Score Change", f"{avg_change:+.4f}")
-                    render_metric_card("Total Transitions", len(progression_data["score_change"]))
-            else:
-                ui.html('<div style="text-align:center; padding:20px; color:#0EA5E9;">Not enough score data to analyze progression</div>')
+        # if state.all_agent_scores_df:
+        #     render_divider()
+        #     render_section_header("Score Progression Through Traces", "How do scores change as traces progress?")
+        #
+        #     progression_data = analyze_score_progression(state.traj_df, state.all_agent_scores_df)
+        #
+        #     if progression_data and len(progression_data["score_change"]) > 0:
+        #         position_changes = defaultdict(list)
+        #         for pos, change in zip(progression_data["position"], progression_data["score_change"]):
+        #             position_changes[pos].append(change)
+        #         avg_changes = {pos: sum(changes) / len(changes) for pos, changes in position_changes.items()}
+        #
+        #         positions = sorted(avg_changes.keys())
+        #         changes = [avg_changes[p] for p in positions]
+        #
+        #         fig = go.Figure()
+        #         fig.add_trace(go.Scatter(
+        #             x=positions, y=changes, mode="lines+markers",
+        #             name="Avg Score Change",
+        #             line=dict(color=COLORS["success"] if sum(changes) > 0 else COLORS["danger"], width=2.5),
+        #             marker=dict(size=8),
+        #         ))
+        #         fig.add_hline(y=0, line_dash="dash", line_color="#CBD5E1", annotation_text="No Change")
+        #         fig.update_layout(
+        #             title=dict(text="Average Score Change by Position in Trace"),
+        #             xaxis_title="Step Position", yaxis_title="Average Score Change", height=400,
+        #         )
+        #         ui.plotly(fig).classes("w-full")
+        #
+        #         improving = sum(1 for x in progression_data["improving"] if x)
+        #         total = len(progression_data["improving"])
+        #         avg_change = sum(progression_data["score_change"]) / len(progression_data["score_change"])
+        #
+        #         with ui.row().classes("w-full gap-4 justify-center"):
+        #             render_metric_card("Improving Steps", f"{improving}/{total} ({improving / total * 100:.1f}%)")
+        #             render_metric_card("Avg Score Change", f"{avg_change:+.4f}")
+        #             render_metric_card("Total Transitions", len(progression_data["score_change"]))
+        #     else:
+        #         ui.html('<div style="text-align:center; padding:20px; color:#0EA5E9;">Not enough score data to analyze progression</div>')
 
 
 
@@ -4443,9 +4497,9 @@ def main_page():
         else:
             print(f"  ⚠️  No agent scores found to merge")
         
-        print(f"  📊 Final traj_scores_df: {traj_scores_df.shape} rows")
-        print(f"  📊 Columns: {list(traj_scores_df.columns)}")
-        print(f"  📊 Unique task_ids: {len(traj_scores_df['task_id'].unique()) if 'task_id' in traj_scores_df.columns else 0}")
+        #print(f"  📊 Final traj_scores_df: {traj_scores_df.shape} rows")
+        #print(f"  📊 Columns: {list(traj_scores_df.columns)}")
+        #print(f"  📊 Unique task_ids: {len(traj_scores_df['task_id'].unique()) if 'task_id' in traj_scores_df.columns else 0}")
         
         # Get trace evaluation results if available
         traj_eval_results = state.metadata.get("traj_eval_results", {})
