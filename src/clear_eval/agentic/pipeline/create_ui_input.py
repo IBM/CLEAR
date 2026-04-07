@@ -199,8 +199,9 @@ def create_ui_input_zip(
 
         for agent_dir in sorted(agent_dirs):
             agent_name = agent_dir.name
-            zip_files = list(agent_dir.glob("analysis_results_*.zip"))
 
+            # Process reasoning results at agent root
+            zip_files = list(agent_dir.glob("analysis_results_*.zip"))
             if zip_files:
                 for zip_file in zip_files:
                     arcname = f"agent_results/{agent_name}.zip"
@@ -212,7 +213,6 @@ def create_ui_input_zip(
                         dedup_buffer.seek(0)
                         zf.writestr(arcname, dedup_buffer.read())
 
-                        # Accumulate stats
                         total_agent_stats['original_size'] += stats['original_size']
                         total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
                         total_agent_stats['files_processed'] += stats['files_processed']
@@ -221,6 +221,28 @@ def create_ui_input_zip(
                         logger.debug(f"  Size: {stats['original_size']/1024:.1f}KB -> {stats['deduplicated_size']/1024:.1f}KB ({stats['reduction_pct']:.1f}% reduction)")
                     except Exception as e:
                         logger.warning(f"Deduplication failed for {agent_name}, using original: {e}")
+                        zf.write(zip_file, arcname=arcname)
+
+                    agent_count += 1
+
+            # Process tool_calls subdir results
+            tool_calls_dir = agent_dir / "tool_calls"
+            if tool_calls_dir.is_dir():
+                tc_zip_files = list(tool_calls_dir.glob("analysis_results_*.zip"))
+                for zip_file in tc_zip_files:
+                    arcname = f"agent_results/{agent_name}__tool_calls.zip"
+                    logger.debug(f"Processing {agent_name}__tool_calls.zip")
+                    dedup_buffer = BytesIO()
+                    try:
+                        stats = deduplicate_agent_result_zip(zip_file, dedup_buffer)
+                        dedup_buffer.seek(0)
+                        zf.writestr(arcname, dedup_buffer.read())
+
+                        total_agent_stats['original_size'] += stats['original_size']
+                        total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
+                        total_agent_stats['files_processed'] += stats['files_processed']
+                    except Exception as e:
+                        logger.warning(f"Deduplication failed for {agent_name}__tool_calls, using original: {e}")
                         zf.write(zip_file, arcname=arcname)
 
                     agent_count += 1
@@ -344,8 +366,9 @@ def create_unified_ui_zip(
             
             for agent_dir in sorted(agent_dirs):
                 agent_name = agent_dir.name
+
+                # Reasoning results at agent root
                 zip_files = list(agent_dir.glob("analysis_results_*.zip"))
-                
                 if zip_files:
                     for zip_file in zip_files:
                         arcname = f"agent_results/{agent_name}.zip"
@@ -359,7 +382,24 @@ def create_unified_ui_zip(
                             logger.warning(f"Deduplication failed for {agent_name}, using original: {e}")
                             zf.write(zip_file, arcname=arcname)
                             agent_count += 1
-            
+
+                # Tool-calls subdir results
+                tool_calls_dir = agent_dir / "tool_calls"
+                if tool_calls_dir.is_dir():
+                    tc_zip_files = list(tool_calls_dir.glob("analysis_results_*.zip"))
+                    for zip_file in tc_zip_files:
+                        arcname = f"agent_results/{agent_name}__tool_calls.zip"
+                        dedup_buffer = BytesIO()
+                        try:
+                            deduplicate_agent_result_zip(zip_file, dedup_buffer)
+                            dedup_buffer.seek(0)
+                            zf.writestr(arcname, dedup_buffer.read())
+                            agent_count += 1
+                        except Exception as e:
+                            logger.warning(f"Deduplication failed for {agent_name}__tool_calls, using original: {e}")
+                            zf.write(zip_file, arcname=arcname)
+                            agent_count += 1
+
             logger.info(f"Added {agent_count} step-by-step agent results")
         
         # 3. Add full trajectory results if provided
