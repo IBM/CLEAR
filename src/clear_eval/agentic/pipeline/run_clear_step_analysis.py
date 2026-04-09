@@ -102,16 +102,30 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
 ##########################################
 ## Convert shared data to clear format ###
 ##########################################
-def convert_to_clear_format(input_dir: str, output_dir: str):
+def convert_to_clear_format(input_dir: str, output_dir: str, overwrite: bool = True) -> None:
     """
     Convert CSV files to CLEAR format grouped by agent.
 
     Args:
         input_dir: Directory containing CSV files
         output_dir: Directory to save CLEAR format files
+        overwrite: If False, skip conversion if output files already exist
     """
     output_dir = Path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Check if conversion already done (statistics.json exists and has content)
+    stats_file = output_dir / "statistics.json"
+    if not overwrite and stats_file.exists():
+        try:
+            with open(stats_file, 'r') as f:
+                stats = json.load(f)
+                if stats.get('unique_agents', 0) > 0:
+                    logger.info(f"Skipping conversion (already exists): {output_dir}")
+                    logger.info(f"  Found {stats['unique_agents']} agent types, {stats['total_rows']} interactions")
+                    return
+        except Exception:
+            pass  # If we can't read stats, proceed with conversion
 
     agent_data = defaultdict(list)
     total_rows = 0
@@ -121,7 +135,7 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
     input_path = Path(input_dir)
     csv_files = list(input_path.glob('*.csv'))
 
-    logger.info(f"Processing {len(csv_files)} CSV files from {input_dir}")
+    logger.info(f"Converting {len(csv_files)} CSV files to CLEAR format...")
 
     for csv_file in csv_files:
         try:
@@ -165,9 +179,7 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
     with open(stats_file, 'w', encoding='utf-8') as f:
         json.dump(statistics, f, indent=2)
 
-    logger.info("statistics.json created")
-    logger.info("CONVERSION SUMMARY")
-    logger.info(f"Total interactions: {total_rows}, unique agents: {len(agent_counter)}, unique tasks: {len(task_counter)}")
+    logger.info(f"✓ Converted to CLEAR format: {len(agent_counter)} agent types, {total_rows} interactions")
     logger.info("Agent distribution:")
     for agent, count in agent_counter.most_common():
         logger.info(f"  {agent:40} : {count:4} interactions")
@@ -372,7 +384,7 @@ def run_step_analysis_pipeline(
         clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
 
         logger.info("Converting trajectory data to CLEAR format...")
-        convert_to_clear_format(traces_data_dir, clear_data_dir)
+        convert_to_clear_format(traces_data_dir, clear_data_dir, overwrite=overwrite)
 
         run_clear_analysis(
             clear_data_dir,
