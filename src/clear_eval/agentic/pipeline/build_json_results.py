@@ -25,6 +25,64 @@ from clear_eval.agentic.pipeline.utils import build_cli_overrides, load_pipeline
 logger = logging.getLogger(__name__)
 
 
+def build_workflow_graph(traj_df):
+    """Build workflow graph data from trajectory dataframe."""
+    node_stats = defaultdict(
+        lambda: {"count": 0, "tasks": set(), "tool_calls": 0, "agent_calls": 0}
+    )
+
+    for _, row in traj_df.iterrows():
+        agent = row.get("Name") or row.get("agent_name")
+        if not agent:
+            continue
+        if row.get("tool_or_agent") == "tool":
+            node_stats[agent]["tool_calls"] += 1
+        else:
+            node_stats[agent]["agent_calls"] += 1
+
+    # Deduplicate by llm_call_index if available
+    seq_df = traj_df
+    if "llm_call_index" in traj_df.columns and not traj_df["llm_call_index"].isnull().all():
+        seq_df = (
+            traj_df
+            .sort_values("step_in_trace_general")
+            .drop_duplicates(subset=["task_id", "llm_call_index"], keep="first")
+        )
+
+    edges = defaultdict(int)
+
+    for task_id, task_group in seq_df.groupby("task_id"):
+        task_group = task_group.sort_values("step_in_trace_general")
+        agents = task_group["Name"].tolist()
+
+        for i, agent in enumerate(agents):
+            node_stats[agent]["count"] += 1
+            node_stats[agent]["tasks"].add(task_id)
+            if i < len(agents) - 1:
+                edges[(agent, agents[i + 1])] += 1
+
+    # Convert to serializable format
+    result_stats = {}
+    for agent, stats in node_stats.items():
+        result_stats[agent] = {
+            "count": stats["count"],
+            "unique_tasks": len(stats["tasks"]),
+            "tasks": sorted(str(task_id) for task_id in stats["tasks"]),
+            "tool_calls": stats["tool_calls"],
+            "agent_calls": stats["agent_calls"],
+        }
+
+    result_edges = [
+        {"src": src, "tgt": tgt, "weight": w}
+        for (src, tgt), w in edges.items()
+    ]
+
+    graph = {
+        "edges": result_edges,
+        "node_stats": result_stats,
+    }
+    return graph
+
 def _calc_std(values: List[float]) -> float:
     """Calculate standard deviation."""
     if len(values) < 2:
@@ -138,9 +196,11 @@ def build_comprehensive_json_results(
 
     # Load trajectory data for additional context (keyed by task_id_step)
     traj_data = {}
+    traj_dfs = []
     for csv_file in traces_data_path.glob("*.csv"):
         try:
             df = pd.read_csv(csv_file)
+            traj_dfs.append(df)
             if 'trace_id' in df.columns and 'task_id' not in df.columns:
                 df = df.rename(columns={"trace_id": "task_id"})
 
@@ -152,6 +212,7 @@ def build_comprehensive_json_results(
         except Exception as e:
             logger.warning(f"Could not load trajectory data {csv_file}: {e}")
 
+    traj_df = pd.concat(traj_dfs)
     all_traces = set()
     total_with_issues = 0
     total_no_issues = 0
@@ -361,6 +422,7 @@ def build_comprehensive_json_results(
     results["metadata"]["statistics"]["total_issues_discovered"] = total_issues_discovered
     results["metadata"]["statistics"]["total_interactions_with_issues"] = total_with_issues
     results["metadata"]["statistics"]["total_interactions_no_issues"] = total_no_issues
+    results["metadata"]["workflow_graph"] = build_workflow_graph(traj_df)
 
     # Build pass/fail summary
     result_summary = {
