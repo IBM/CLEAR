@@ -204,17 +204,22 @@ def create_ui_input_zip(
 ) -> Path:
     """
     Create optimized UI input zip from trajectory data and CLEAR results.
+    
+    This is a convenience wrapper around create_unified_ui_zip() for backward compatibility.
+    It enforces that both traces_data_dir and clear_results_dir are required and exist.
 
     Args:
         output_dir: Directory to save the output zip
-        traces_data_dir: Directory containing trajectory CSV files
-        clear_results_dir: Directory containing agent CLEAR result subdirectories
+        traces_data_dir: Directory containing trajectory CSV files (required)
+        clear_results_dir: Directory containing agent CLEAR result subdirectories (required)
         output_zip_name: Name of the output zip file
 
     Returns:
         Path to the created zip file
+        
+    Raises:
+        FileNotFoundError: If traces_data_dir or clear_results_dir don't exist
     """
-    output_dir = Path(output_dir)
     traj_data_dir = Path(traces_data_dir)
     clear_results_dir = Path(clear_results_dir)
 
@@ -223,60 +228,14 @@ def create_ui_input_zip(
     if not clear_results_dir.exists():
         raise FileNotFoundError(f"CLEAR results directory not found: {clear_results_dir}")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    result_zip = output_dir / output_zip_name
-
-    if result_zip.exists():
-        result_zip.unlink()
-
-    logger.info("=" * 80)
-    logger.info("CREATING OPTIMIZED UI INPUT ZIP")
-    logger.info("=" * 80)
-    logger.info(f"Trajectory data: {traj_data_dir}")
-    logger.info(f"CLEAR results: {clear_results_dir}")
-    logger.info(f"Output: {result_zip}")
-
-    with zipfile.ZipFile(result_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        # 1. Add trajectory data
-        traj_count = _add_trajectory_data_to_zip(zf, traj_data_dir)
-        
-        # 2. Add agent CLEAR results
-        agent_count, agent_stats = _add_agent_results_to_zip(zf, clear_results_dir)
-        
-        # 3. Create and add metadata
-        logger.info("Creating metadata")
-        agent_dirs = [d for d in clear_results_dir.iterdir() if d.is_dir()]
-        metadata = {
-            "created_at": datetime.now().isoformat(),
-            "traj_data_dir": str(traj_data_dir),
-            "clear_results_dir": str(clear_results_dir),
-            "agent_count": agent_count,
-            "trajectory_count": traj_count,
-            "agents": [d.name for d in agent_dirs],
-            "structure": {
-                "agent_results/": "CLEAR analysis results (model_input & response removed)",
-                "trajectory_data.zip": "Trajectory data as Parquet (keeps model_input & response)",
-                "metadata.json": "This file - information about the zip contents"
-            },
-            "optimization": {
-                "enabled": True,
-                "description": "model_input & response stored only in trajectory_data.zip",
-                "join_key": "(task_id, step_in_trace_general)",
-                "trajectory_format": "Parquet (compressed)",
-                "clear_results_format": "CSV/Parquet (deduplicated)"
-            },
-            "format_version": "4.0"
-        }
-        zf.writestr("metadata.json", json.dumps(metadata, indent=2))
-        logger.info("Added metadata.json")
-
-    final_size = result_zip.stat().st_size
-    logger.info("=" * 80)
-    logger.info(f"Successfully created: {result_zip}")
-    logger.info(f"Final zip size: {final_size / (1024*1024):.2f} MB")
-    logger.info("=" * 80)
-
-    return result_zip
+    # Delegate to the unified function
+    return create_unified_ui_zip(
+        output_dir=output_dir,
+        traces_data_dir=traj_data_dir,
+        step_by_step_clear_results_dir=clear_results_dir,
+        full_trajectory_results_dir=None,
+        output_zip_name=output_zip_name
+    )
 
 
 def create_unified_ui_zip(
