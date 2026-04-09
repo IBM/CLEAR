@@ -293,7 +293,8 @@ def run_step_by_step_pipeline(
             traces_data_dir=str(traces_data_dir),
             results_dir=str(output_dir),
             config_dict=config,
-            overwrite=config.get('overwrite')
+            overwrite=config.get('overwrite'),
+            create_ui_zip=False  # Don't create individual zip; unified zip will be created later
         )
         
         logger.info("Step-by-step pipeline completed successfully")
@@ -479,12 +480,6 @@ def main():
     
     # Create pipeline summary
     create_pipeline_summary(output_paths['base'], config, results)
-    
-    # Create unified UI zip if both pipelines ran
-    logger.info("=" * 80)
-    logger.info("Creating unified UI zip...")
-    logger.info("=" * 80)
-    
     from clear_eval.agentic.pipeline.create_ui_input import create_unified_ui_zip
     
     # Determine paths for unified zip

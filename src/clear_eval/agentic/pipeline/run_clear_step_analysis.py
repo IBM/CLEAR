@@ -19,6 +19,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -27,6 +28,7 @@ from typing import Optional, Dict, Any
 import pandas as pd
 
 from clear_eval.analysis_runner import run_clear_eval_evaluation
+from clear_eval.agentic.dashboard.generate_static_dashboard import generate_html
 from clear_eval.agentic.pipeline.utils import (
     build_cli_overrides,
     load_pipeline_config,
@@ -352,7 +354,8 @@ def run_step_analysis_pipeline(
     results_dir: str,
     config_dict: dict,
     overwrite: bool = True,
-    intermediate_output_dir: Optional[str] = None
+    intermediate_output_dir: Optional[str] = None,
+    create_ui_zip: bool = True
 ) -> dict:
     """
     Run pipeline from trajectory data to CLEAR results.
@@ -369,6 +372,8 @@ def run_step_analysis_pipeline(
         config_dict: Configuration dictionary with CLEAR params
         overwrite: Whether to overwrite existing results
         intermediate_output_dir: Optional directory for intermediate files
+        create_ui_zip: Whether to create ui_results.zip (default: True).
+                      Set to False when called from unified pipeline to avoid duplicate zips.
 
     Returns:
         Dictionary with JSON results
@@ -408,27 +413,32 @@ def run_step_analysis_pipeline(
 
         # Build JSON results (returns dict)
         from clear_eval.agentic.pipeline.build_json_results import build_comprehensive_json_results, save_json_to_file
-        json_results = save_comprehensive_json_results(
+        json_results_path = save_comprehensive_json_results(
             clear_results_dir=clear_results_dir,
             traces_data_dir=traces_data_dir,
             config_dict=config_dict,
             output_dir=results_dir,
         )
 
-        # Create UI results zip directly in final output directory
-        ui_results_path = create_ui_input_zip(
-            output_dir=Path(results_dir),
-            traces_data_dir=Path(traces_data_dir),
-            clear_results_dir=Path(clear_results_dir),
-            output_zip_name="ui_results.zip"
-        )
-        logger.info(f"Saved UI results to: {ui_results_path}")
+        # generate static HTML report of results
+        generate_html(json_results_path)
+
+
+        # Create UI results zip directly in final output directory (if requested)
+        if create_ui_zip:
+            ui_results_path = create_ui_input_zip(
+                output_dir=Path(results_dir),
+                traces_data_dir=Path(traces_data_dir),
+                clear_results_dir=Path(clear_results_dir),
+                output_zip_name="ui_results.zip"
+            )
+            logger.info(f"Saved UI results to: {ui_results_path}")
 
         if memory_only:
             logger.info("Memory-only mode: Intermediate files will be cleaned up")
 
         logger.info("Pipeline complete!")
-        return json_results
+        return json_results_path
 
     finally:
         # Clean up temporary directory if used
