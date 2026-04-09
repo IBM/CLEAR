@@ -13,6 +13,8 @@ Produces a self-contained HTML file with embedded data that displays:
 import json
 import sys
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 # ─── Constants (from agentic_workflow_dashboard.py) ──────────────────────
 NO_ISSUE = "No Issues"
@@ -43,7 +45,6 @@ def _maybe_parse_json_text(value):
 def load_json_data(json_path, include_examples=True):
     """Load all dashboard data from clear_results.json and map it to the HTML data shape."""
     json_path = Path(json_path)
-    print(f"Reading {json_path}...")
 
     raw_data = json.loads(json_path.read_text(encoding="utf-8"))
     metadata = raw_data.get("metadata", {})
@@ -568,6 +569,7 @@ function toggleIssueExamples(id, rowEl){
 def generate_html(json_path, output_path=None, include_examples=False):
     """Generate static HTML dashboard from a clear_results.json file."""
     data = load_json_data(json_path, include_examples=include_examples)
+    logging.info(f"Generating Static HTML report  from {json_path}")
 
     input_path = Path(json_path)
     if output_path is None:
@@ -580,13 +582,13 @@ def generate_html(json_path, output_path=None, include_examples=False):
     html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", data_json)
 
     output_path_obj.write_text(html, encoding="utf-8")
-    print(f"Dashboard written to {output_path_obj}")
+    logging.info(f"Static HTML report written to {output_path_obj}")
     return output_path_obj
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python generate_static_dashboard.py <clear_results.json> [output.html]")
+        logging.info("Usage: python generate_static_dashboard.py <clear_results.json> [output.html]")
         sys.exit(1)
 
     json_pth = sys.argv[1]
