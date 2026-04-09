@@ -148,13 +148,10 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
             logger.error(f"Error processing {csv_file}: {e}")
             continue
 
-    logger.info(f"Writing {len(agent_data)} agent CSV files")
-
     for agent_name, rows in agent_data.items():
         output_file = output_dir / f"{agent_name}.csv"
         out_df = pd.DataFrame(rows)
         out_df.to_csv(output_file, index=False)
-        logger.info(f"  {agent_name}.csv ({len(rows)} rows)")
 
     statistics = {
         "total_rows": total_rows,
@@ -169,12 +166,8 @@ def convert_to_clear_format(input_dir: str, output_dir: str):
         json.dump(statistics, f, indent=2)
 
     logger.info("statistics.json created")
-    logger.info("=" * 80)
     logger.info("CONVERSION SUMMARY")
-    logger.info("=" * 80)
-    logger.info(f"Total interactions: {total_rows}")
-    logger.info(f"Unique agents: {len(agent_counter)}")
-    logger.info(f"Unique tasks: {len(task_counter)}")
+    logger.info(f"Total interactions: {total_rows}, unique agents: {len(agent_counter)}, unique tasks: {len(task_counter)}")
     logger.info("Agent distribution:")
     for agent, count in agent_counter.most_common():
         logger.info(f"  {agent:40} : {count:4} interactions")
@@ -270,13 +263,7 @@ def run_clear_analysis(
         return ""
 
     eval_model_name = config_dict.get("eval_model_name", "unknown")
-    logger.info("Configuration:")
-    logger.info(f"  Results directory: {results_dir}")
-    logger.info(f"  Eval model: {eval_model_name}")
-    logger.info(f"Found {len(csv_files)} agent CSV files:")
-    for csv_file in csv_files:
-        logger.info(f"  - {csv_file.name}")
-    logger.info("=" * 80)
+    logger.info(f"Running CLEAR analysis on {len(csv_files)} agent types (eval model: {eval_model_name})")
 
     stats = {"total": len(csv_files), "processed": 0, "skipped": 0, "errors": 0}
 
@@ -294,24 +281,8 @@ def run_clear_analysis(
         else:
             stats["errors"] += 1
 
-    logger.info("=" * 80)
-    logger.info("ANALYSIS SUMMARY")
-    logger.info("=" * 80)
-    logger.info(f"  Total agent types: {stats['total']}")
-    logger.info(f"  Processed: {stats['processed']}")
-    logger.info(f"  Skipped: {stats['skipped']}")
-    if stats['errors'] > 0:
-        logger.warning(f"  Errors: {stats['errors']}")
-    logger.info("=" * 80)
-
-    logger.info("Results Directory Structure:")
-    logger.info(f"   {results_dir}/")
-    for csv_file in csv_files[:3]:
-        logger.info(f"           ├── {csv_file.stem}/")
-    if len(csv_files) > 3:
-        logger.info(f"           └── ... ({len(csv_files) - 3} more agents)")
-    logger.info("           └── ui_results.zip")
-    logger.info("=" * 80)
+    logger.info(f"✓ Analysis complete: {stats['processed']} processed, {stats['skipped']} skipped" +
+               (f", {stats['errors']} errors" if stats['errors'] > 0 else ""))
 
 
 def create_comprehensive_ui_results(
@@ -403,7 +374,6 @@ def run_step_analysis_pipeline(
         logger.info("Converting trajectory data to CLEAR format...")
         convert_to_clear_format(traces_data_dir, clear_data_dir)
 
-        logger.info("Running CLEAR analysis for each agent...")
         run_clear_analysis(
             clear_data_dir,
             clear_results_dir,

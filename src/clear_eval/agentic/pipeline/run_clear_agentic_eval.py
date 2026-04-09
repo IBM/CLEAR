@@ -226,14 +226,9 @@ def prepare_traces_data(
     else:
         traces_data_dir = output_paths['base'] / 'traces_data'
     
-    logger.info("=" * 80)
-    logger.info("PREPROCESSING TRACES")
-    logger.info("=" * 80)
-    
     if from_raw_traces:
         # Process raw JSON traces
-        logger.info(f"Processing raw JSON traces from: {data_dir}")
-        logger.info(f"Output directory: {traces_data_dir}")
+        logger.info(f"Preprocessing raw traces from: {data_dir}")
         
         try:
             process_traces_to_traj_data(
@@ -244,21 +239,20 @@ def prepare_traces_data(
                 separate_tools=config.get('separate_tools'),
                 overwrite=config.get('overwrite', True),
             )
-            logger.info(f"✓ Processed traces successfully")
+            logger.info(f"✓ Traces preprocessed")
             return traces_data_dir
         except Exception as e:
-            logger.error(f"Failed to process traces: {e}", exc_info=True)
+            logger.error(f"Failed to preprocess traces: {e}", exc_info=True)
             return None
     else:
         # Copy existing CSV files
-        logger.info(f"Using existing CSV files from: {data_dir}")
-        logger.info(f"Copying to: {traces_data_dir}")
+        logger.info(f"Using trajectory CSVs from: {data_dir}")
         
         try:
             if traces_data_dir.exists():
                 shutil.rmtree(traces_data_dir)
             shutil.copytree(data_dir, traces_data_dir)
-            logger.info(f"✓ Copied CSV files successfully")
+            logger.info(f"✓ Trajectory CSVs ready")
             return traces_data_dir
         except Exception as e:
             logger.error(f"Failed to copy CSV files: {e}", exc_info=True)
@@ -281,14 +275,8 @@ def run_step_by_step_pipeline(
     Returns:
         True if successful, False otherwise
     """
-    logger.info("=" * 80)
-    logger.info("RUNNING STEP-BY-STEP CLEAR ANALYSIS")
-    logger.info("=" * 80)
-    logger.info(f"Using traces_data from: {traces_data_dir}")
-    
     try:
-        # Call run_step_analysis_pipeline for steps 2-4
-        logger.info("Calling run_step_analysis_pipeline")
+        logger.info("Running step-by-step CLEAR analysis...")
         run_step_analysis_pipeline(
             traces_data_dir=str(traces_data_dir),
             results_dir=str(output_dir),
@@ -297,7 +285,7 @@ def run_step_by_step_pipeline(
             create_ui_zip=False  # Don't create individual zip; unified zip will be created later
         )
         
-        logger.info("Step-by-step pipeline completed successfully")
+        logger.info("✓ Step-by-step analysis complete")
         return True
         
     except Exception as e:
@@ -325,12 +313,8 @@ def run_full_trajectory_pipeline(
         logger.error("Full trajectory evaluation components not available")
         return False
     
-    logger.info("=" * 80)
-    logger.info("RUNNING FULL TRAJECTORY EVALUATION")
-    logger.info("=" * 80)
-    logger.info(f"Using traces_data from: {traces_data_dir}")
-    
     try:
+        logger.info("Running full trajectory evaluation...")
         
         # Prepare rubric_dir
         rubric_dir = None
@@ -352,12 +336,7 @@ def run_full_trajectory_pipeline(
             max_files=config.get('max_files'),
         )
         
-        logger.info("=" * 80)
-        logger.info("FULL TRAJECTORY PIPELINE SUMMARY")
-        logger.info("=" * 80)
-        logger.info(f"Completed evaluations: {completed_evals or 'None'}")
-        logger.info(f"Failed evaluations: {failed_evals or 'None'}")
-        
+        logger.info(f"✓ Full trajectory evaluation complete (completed: {completed_evals or 0}, failed: {failed_evals or 0})")
         return len(failed_evals) == 0
         
     except Exception as e:
@@ -480,22 +459,21 @@ def main():
     
     # Create pipeline summary
     create_pipeline_summary(output_paths['base'], config, results)
+    
+    # Create unified zip
     from clear_eval.agentic.pipeline.create_ui_input import create_unified_ui_zip
     
-    # Determine paths for unified zip
     step_by_step_results_path = None
     full_traj_results_path = None
     
-    # Check for step-by-step results
     if results.get('step_by_step_success'):
         step_by_step_results_path = output_paths['step_by_step'] / 'clear_results'
     
-    # Check for full trajectory results
     if results.get('full_trajectory_success'):
         full_traj_results_path = output_paths['full_trajectory']
     
-    # Create unified zip
     try:
+        logger.info("Creating unified UI zip...")
         unified_zip = create_unified_ui_zip(
             output_dir=output_paths['base'],
             traces_data_dir=traces_data_dir,
@@ -503,7 +481,7 @@ def main():
             full_trajectory_results_dir=full_traj_results_path,
             output_zip_name="unified_ui_results.zip"
         )
-        logger.info(f"✓ Created unified UI zip: {unified_zip}")
+        logger.info(f"✓ Unified zip created: {unified_zip}")
     except Exception as e:
         logger.error(f"Failed to create unified UI zip: {e}", exc_info=True)
     

@@ -244,7 +244,6 @@ def build_comprehensive_json_results(
             try:
                 with open(shortcoming_files[0], 'r', encoding='utf-8') as f:
                     agent_shortcomings = json.load(f)
-                logger.info(f"Loaded {len(agent_shortcomings)} shortcomings for {agent_name}")
             except Exception as e:
                 logger.warning(f"Could not load shortcomings for {agent_name}: {e}")
         else:
@@ -257,7 +256,6 @@ def build_comprehensive_json_results(
         for csv_file in csv_files:
             try:
                 results_df = pd.read_csv(csv_file)
-                logger.info(f"Loaded {len(results_df)} rows from {csv_file.name}")
                 break
             except Exception as e:
                 logger.warning(f"Could not load results from {csv_file}: {e}")
