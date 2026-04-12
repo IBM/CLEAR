@@ -64,61 +64,69 @@ def load_json_data(json_path, include_examples=True):
 
     agents_data = {}
     for agent_name, agent_payload in raw_data.get("agents", {}).items():
-        summary = agent_payload.get("agent_summary", {})
-        issues = agent_payload.get("issues", [])
-        no_issues = agent_payload.get("no_issues", [])
+        for agent_type in ["reasoning", "tools"]:
+            agent_type_payload = agent_payload.get(f"{agent_type}_eval", {})
+            if not agent_type_payload:
+                continue
 
-        issues_table = []
-        for issue in issues:
-            issue_text = issue.get("issue_text") or issue.get("issue_id") or ""
-            examples = []
-            if include_examples:
-                for occurrence in issue.get("occurrences", [])[:3]:
-                    span_reference = occurrence.get("span_reference", {})
-                    input_output_pair = occurrence.get("input_output_pair", {})
-                    evaluation = occurrence.get("evaluation", {})
-                    examples.append({
-                        "trace_id": occurrence.get("trace_id", ""),
-                        "step_in_trace": span_reference.get("step_in_trace", ""),
-                        "model_input": _maybe_parse_json_text(input_output_pair.get("model_input", "")),
-                        "response": _maybe_parse_json_text(input_output_pair.get("response", "")),
-                        "score": input_output_pair.get("score", ""),
-                        "evaluation_summary": _maybe_parse_json_text(evaluation.get("evaluation_summary", "")),
-                    })
+            agent_label = f"{agent_name}:{agent_type}"
+            summary = agent_type_payload.get("agent_summary", {})
+            issues = agent_type_payload.get("issues", [])
+            no_issues = agent_type_payload.get("no_issues", [])
 
-            issues_table.append({
-                "issue": issue_text,
-                "count": int(issue.get("occurrence_count", 0)),
-                "freq": round(float(issue.get("frequency", 0)) * 100, 1) if isinstance(issue.get("frequency", 0), (int, float)) and float(issue.get("frequency", 0)) <= 1 else round(float(issue.get("frequency", 0)), 1),
-                "severity": round(float(issue.get("severity", 0)), 2),
-                "is_no_issue": False,
-                "examples": examples,
-            })
+            issues_table = []
+            tasks_list = set()
+            for issue in issues:
+                issue_text = issue.get("issue_text") or issue.get("issue_id") or ""
+                examples = []
+                if include_examples:
+                    for occurrence in issue.get("occurrences", [])[:3]:
+                        tasks_list.add(occurrence.get("trace_id"))
+                        span_reference = occurrence.get("span_reference", {})
+                        input_output_pair = occurrence.get("input_output_pair", {})
+                        evaluation = occurrence.get("evaluation", {})
+                        examples.append({
+                            "trace_id": occurrence.get("trace_id", ""),
+                            "step_in_trace": span_reference.get("step_in_trace", ""),
+                            "model_input": _maybe_parse_json_text(input_output_pair.get("model_input", "")),
+                            "response": _maybe_parse_json_text(input_output_pair.get("response", "")),
+                            "score": input_output_pair.get("score", ""),
+                            "evaluation_summary": _maybe_parse_json_text(evaluation.get("evaluation_summary", "")),
+                        })
 
-        if no_issues:
-            total_interactions = int(summary.get("total_interactions", 0))
-            no_issue_count = len(no_issues)
-            no_issue_freq = round((100 * no_issue_count / total_interactions), 1) if total_interactions else 0.0
-            issues_table.append({
-                "issue": NO_ISSUE,
-                "count": no_issue_count,
-                "freq": no_issue_freq,
-                "severity": 0.0,
-                "is_no_issue": True,
-            })
+                issues_table.append({
+                    "issue": issue_text,
+                    "count": int(issue.get("occurrence_count", 0)),
+                    "freq": round(float(issue.get("frequency", 0)) * 100, 1) if isinstance(issue.get("frequency", 0), (int, float)) and float(issue.get("frequency", 0)) <= 1 else round(float(issue.get("frequency", 0)), 1),
+                    "severity": round(float(issue.get("severity", 0)), 2),
+                    "is_no_issue": False,
+                    "examples": examples,
+                })
 
-        issues_table = sorted(
-            [row for row in issues_table if not row["is_no_issue"]],
-            key=lambda row: -row["count"],
-        ) + [row for row in issues_table if row["is_no_issue"]]
+            if no_issues:
+                total_interactions = int(summary.get("total_interactions", 0))
+                no_issue_count = len(no_issues)
+                no_issue_freq = round((100 * no_issue_count / total_interactions), 1) if total_interactions else 0.0
+                issues_table.append({
+                    "issue": NO_ISSUE,
+                    "count": no_issue_count,
+                    "freq": no_issue_freq,
+                    "severity": 0.0,
+                    "is_no_issue": True,
+                })
 
-        agents_data[agent_name] = {
-            "total_evals": int(summary.get("total_interactions", 0)),
-            "avg_score": round(float(summary["avg_score"]), 2) if summary.get("avg_score") is not None else None,
-            "unique_issues": len(issues),
-            "unique_tasks": node_stats.get(agent_name, {}).get("unique_tasks", 0),
-            "issues_table": issues_table,
-        }
+            issues_table = sorted(
+                [row for row in issues_table if not row["is_no_issue"]],
+                key=lambda row: -row["count"],
+            ) + [row for row in issues_table if row["is_no_issue"]]
+
+            agents_data[agent_label] = {
+                "total_evals": int(summary.get("total_interactions", 0)),
+                "avg_score": round(float(summary["avg_score"]), 2) if summary.get("avg_score") is not None else None,
+                "unique_issues": len(issues),
+                "unique_tasks": len(tasks_list),
+                "issues_table": issues_table,
+            }
 
     return {
         "unique_tasks": int(stats.get("total_traces", 0)),
@@ -566,7 +574,7 @@ function toggleIssueExamples(id, rowEl){
 </html>"""
 
 
-def generate_html(json_path, output_path=None, include_examples=False):
+def generate_html(json_path, output_path=None, include_examples=True):
     """Generate static HTML dashboard from a clear_results.json file."""
     data = load_json_data(json_path, include_examples=include_examples)
     logging.info(f"Generating Static HTML report  from {json_path}")
