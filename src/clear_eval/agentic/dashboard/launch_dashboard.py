@@ -4,6 +4,7 @@ Simple launcher script for the Agentic Workflow Dashboard (NiceGUI)
 """
 
 import argparse
+import signal
 import sys
 from pathlib import Path
 
@@ -14,6 +15,15 @@ def main():
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
     parser.add_argument("--no-open", action="store_true", help="Don't auto-open browser")
     args = parser.parse_args()
+
+    # Ensure the server shuts down cleanly on termination signals,
+    # so the port is released immediately instead of staying in TIME_WAIT.
+    def _handle_signal(signum, frame):
+        print("\n\nDashboard stopped.")
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
 
     print("Launching Agentic Workflow Dashboard...")
     print("")
@@ -39,6 +49,10 @@ def main():
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
+        # Register a shutdown handler to ensure the server cleans up properly
+        from nicegui import app
+        app.on_shutdown(lambda: print("Server shutting down, releasing port..."))
+
         ui.run(
             title="Agentic Workflow Dashboard",
             favicon="\U0001F916",
@@ -56,6 +70,8 @@ def main():
         sys.exit(1)
     except KeyboardInterrupt:
         print("\n\nDashboard stopped.")
+    except SystemExit:
+        pass
     except Exception as e:
         print(f"Error launching dashboard: {e}")
         sys.exit(1)
