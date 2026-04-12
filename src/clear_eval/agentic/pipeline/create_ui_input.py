@@ -141,6 +141,57 @@ def _add_trajectory_data_to_zip(zf: zipfile.ZipFile, traces_data_dir: Path) -> i
     return traj_count
 
 
+def _process_and_add_results_from_dir(
+    zf: zipfile.ZipFile,
+    results_dir: Path,
+    agent_label: str,
+    total_agent_stats: dict
+) -> bool:
+    """
+    Find, process, and add CLEAR results zip from a directory.
+
+    This helper function eliminates code duplication between processing
+    regular agent results and tool-call results.
+
+    Args:
+        zf: ZipFile object to write to
+        results_dir: Directory containing analysis_results_*.zip file
+        agent_label: Label for logging (e.g., "agent_name" or "agent_name__tool_calls")
+        total_agent_stats: Dictionary to accumulate statistics
+
+    Returns:
+        True if a zip file was found and processed, False otherwise
+    """
+    # Find the analysis results zip file (at most one per directory)
+    zip_files = list(results_dir.glob("analysis_results_*.zip"))
+    if not zip_files:
+        return False
+    
+    # Each directory produces exactly one analysis_results_*.zip file
+    zip_file = zip_files[0]
+    arcname = f"agent_results/{agent_label}.zip"
+    dedup_buffer = BytesIO()
+    
+    try:
+        stats = deduplicate_agent_result_zip(zip_file, dedup_buffer)
+        dedup_buffer.seek(0)
+        zf.writestr(arcname, dedup_buffer.read())
+
+        # Accumulate stats
+        total_agent_stats['original_size'] += stats['original_size']
+        total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
+        total_agent_stats['files_processed'] += stats['files_processed']
+
+        logger.debug(f"  {agent_label}: {stats['files_processed']} files, "
+                    f"{stats['original_size']/1024:.1f}KB -> {stats['deduplicated_size']/1024:.1f}KB")
+        return True
+
+    except Exception as e:
+        logger.warning(f"Deduplication failed for {agent_label}, using original: {e}")
+        zf.write(zip_file, arcname=arcname)
+        return True
+
+
 def _add_agent_results_to_zip(zf: zipfile.ZipFile, clear_results_dir: Path) -> tuple[int, dict]:
     """
     Add deduplicated agent CLEAR results to zip file.
@@ -162,56 +213,17 @@ def _add_agent_results_to_zip(zf: zipfile.ZipFile, clear_results_dir: Path) -> t
 
     for agent_dir in sorted(agent_dirs):
         agent_name = agent_dir.name
-        zip_files = list(agent_dir.glob("analysis_results_*.zip"))
+        
+        # Process main agent results
+        if _process_and_add_results_from_dir(zf, agent_dir, agent_name, total_agent_stats):
+            agent_count += 1
 
-        if zip_files:
-            for zip_file in zip_files:
-                arcname = f"agent_results/{agent_name}.zip"
-                dedup_buffer = BytesIO()
-                try:
-                    stats = deduplicate_agent_result_zip(zip_file, dedup_buffer)
-                    dedup_buffer.seek(0)
-                    zf.writestr(arcname, dedup_buffer.read())
-
-                    # Accumulate stats
-                    total_agent_stats['original_size'] += stats['original_size']
-                    total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
-                    total_agent_stats['files_processed'] += stats['files_processed']
-
-                    logger.debug(f"  {agent_name}: {stats['files_processed']} files, "
-                               f"{stats['original_size']/1024:.1f}KB -> {stats['deduplicated_size']/1024:.1f}KB")
-
-                except Exception as e:
-                    logger.warning(f"Deduplication failed for {agent_name}, using original: {e}")
-                    zf.write(zip_file, arcname=arcname)
-
+        # Process tool-calls subdir results
+        tool_calls_dir = agent_dir / "tool_calls"
+        if tool_calls_dir.is_dir():
+            agent_label = f"{agent_name}__tool_calls"
+            if _process_and_add_results_from_dir(zf, tool_calls_dir, agent_label, total_agent_stats):
                 agent_count += 1
-
-            # Tool-calls subdir results
-            tool_calls_dir = agent_dir / "tool_calls"
-            if tool_calls_dir.is_dir():
-                tc_zip_files = list(tool_calls_dir.glob("analysis_results_*.zip"))
-                for zip_file in tc_zip_files:
-                    arcname = f"agent_results/{agent_name}__tool_calls.zip"
-                    dedup_buffer = BytesIO()
-                    try:
-                        stats = deduplicate_agent_result_zip(zip_file, dedup_buffer)
-                        dedup_buffer.seek(0)
-                        zf.writestr(arcname, dedup_buffer.read())
-
-                        # Accumulate stats
-                        total_agent_stats['original_size'] += stats['original_size']
-                        total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
-                        total_agent_stats['files_processed'] += stats['files_processed']
-
-                        logger.debug(f"  {agent_name}: {stats['files_processed']} files, "
-                                     f"{stats['original_size'] / 1024:.1f}KB -> {stats['deduplicated_size'] / 1024:.1f}KB")
-
-                    except Exception as e:
-                        logger.warning(f"Deduplication failed for {agent_name}__tool_calls, using original: {e}")
-                        zf.write(zip_file, arcname=arcname)
-
-                    agent_count += 1
 
     if agent_count > 0:
         logger.info(f"  ✓ Agent results: {agent_count} agents")
