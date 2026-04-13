@@ -136,7 +136,7 @@ Use `--from-raw-traces false` to use existing CSV files directly.
 
 Each CSV file represents one trajectory (`task_id`). Each row represents one LLM call. The `Name` column identifies the component (agent/node) that made the call — CLEAR analysis is performed separately for each unique component.
 
-For the full intermediate representation reference covering both `--separate-tools` modes, see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
+For the full intermediate representation reference see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
 
 | Column | Type | Required | Description                                                                                                   |
 |--------|------|----------|---------------------------------------------------------------------------------------------------------------|
