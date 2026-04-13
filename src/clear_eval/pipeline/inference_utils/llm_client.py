@@ -90,31 +90,43 @@ class LLMClient(ABC):
         """Async invoke. Default implementation wraps sync invoke."""
         return await asyncio.to_thread(self.invoke, messages, **kwargs)
 
+    def disable_temperature(self) -> None:
+        """Disable forced temperature=0. Subclasses override as needed."""
+        pass
+
 
 class LangChainClient(LLMClient):
     """LLM client wrapping LangChain chat models."""
 
-    def __init__(self, llm):
+    def __init__(self, llm, eval_mode: bool = True):
         """
         Args:
             llm: LangChain chat model (ChatOpenAI, AzureChatOpenAI, ChatWatsonx, etc.)
+            eval_mode: If True, inject temperature=0 at call time
         """
         self.llm = llm
+        self.eval_mode = eval_mode
+
+    def disable_temperature(self) -> None:
+        """Stop injecting temperature=0 on future calls."""
+        self.eval_mode = False
+
+    def _get_invoke_kwargs(self, **kwargs) -> dict:
+        if self.eval_mode and "temperature" not in kwargs:
+            kwargs["temperature"] = 0
+        return kwargs
 
     def invoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
-        # LangChain accepts string or list of BaseMessage objects
-        # For simplicity, pass through - LangChain handles string prompts
         normalized = normalize_messages(messages)
-        response = self.llm.invoke(normalized, **kwargs)
+        response = self.llm.invoke(normalized, **self._get_invoke_kwargs(**kwargs))
         if response is None:
             return ""
         return response.content.strip()
 
     async def ainvoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
         """Native async invoke using LangChain's ainvoke."""
-
         normalized = normalize_messages(messages)
-        response = await self.llm.ainvoke(normalized, **kwargs)
+        response = await self.llm.ainvoke(normalized, **self._get_invoke_kwargs(**kwargs))
         if response is None:
             return ""
         return response.content.strip()
@@ -202,6 +214,10 @@ class LiteLLMClient(LLMClient):
         # Other providers: trust user has set credentials per litellm docs
         logger.debug(f"Configured {self.provider} provider")
 
+    def disable_temperature(self) -> None:
+        """Stop injecting temperature=0 on future calls."""
+        self.eval_mode = False
+
     def _get_params(self, **kwargs) -> dict:
         """Get merged parameters for the call."""
         params = {**self.params, **kwargs}
@@ -259,17 +275,12 @@ class EndpointClient(LLMClient):
         """
         self.backend = backend
 
+    def disable_temperature(self) -> None:
+        """Stop injecting temperature=0 on the backend."""
+        if hasattr(self.backend, "eval_mode"):
+            self.backend.eval_mode = False
+
     def invoke(self, messages: Union[str, List[Dict[str, str]]], **kwargs) -> str:
-        """
-        Invoke the backend's chat method.
-        
-        Args:
-            messages: String prompt or list of message dicts
-            **kwargs: Additional parameters passed to backend
-            
-        Returns:
-            Response content as string
-        """
         normalized = normalize_messages(messages)
         response = self.backend.chat(normalized, stream=False, **kwargs)
         return response.strip() if response else ""
@@ -497,11 +508,40 @@ def get_llm_client(
         else:  # langchain
             from clear_eval.pipeline.inference_utils.langchain_chat_models import get_chat_llm
             llm = get_chat_llm(provider, model, parameters=parameters, eval_mode=eval_mode)
-            llm_client = LangChainClient(llm)
+            llm_client = LangChainClient(llm, eval_mode=eval_mode)
     except Exception as e:
         raise Exception(f"Error initializing LLM ({provider}, {model}). Details: {e}")
     
     if llm_client is None:
         raise ValueError(f"Error initializing LLM ({provider}, {model}).")
 
+    if eval_mode:
+        _validate_temperature_support(llm_client)
+
     return llm_client
+
+
+_TEMPERATURE_ERROR_KEYWORDS = ("temperature", "unsupported parameter", "not supported")
+
+
+def _validate_temperature_support(client: LLMClient) -> None:
+    """Make a short test call to verify temperature=0 is accepted.
+
+    If the model rejects it, call ``client.disable_temperature()`` and retry.
+    If the retry also fails, the exception propagates and the pipeline exits.
+    """
+    probe = [{"role": "user", "content": "Say OK"}]
+    try:
+        client.invoke(probe)
+    except Exception as e:
+        error_msg = str(e).lower()
+        if any(kw in error_msg for kw in _TEMPERATURE_ERROR_KEYWORDS):
+            logger.warning(
+                f"Model does not support temperature=0. "
+                f"Disabling forced temperature for all subsequent calls."
+            )
+            client.disable_temperature()
+            # Retry to confirm the client works without temperature=0
+            client.invoke(probe)
+        else:
+            raise

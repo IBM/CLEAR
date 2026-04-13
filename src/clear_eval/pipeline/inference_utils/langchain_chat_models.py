@@ -44,8 +44,6 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
         raise KeyError("Either WATSONX_SPACE_ID or WATSONX_PROJECT_ID must be specified for watsonx inference.")
     if provider == "rits":
         model_base = get_rits_base(model_id)
-        if eval_mode:
-            parameters["temperature"] = 0
         return ChatOpenAI(
             model=model_id,
             api_key='/',
@@ -55,14 +53,10 @@ def get_chat_llm(provider, model_id, parameters=None, eval_mode = True):
             **parameters
         )
     if provider == "openai":
-        if eval_mode:
-            parameters["temperature"] = 0
-        model_id = model_id
         return ChatOpenAI(
             model=model_id,
             max_retries=2,
             **parameters
-
         )
     raise ValueError(f"Unknown provider '{provider}'. Built-in providers: openai, watsonx, rits. "
                      f"For other providers, set inference_provider=litellm to use litellm.")

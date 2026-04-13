@@ -163,7 +163,7 @@ class OpenAIStyleHTTPBackend(LLMBackend):
             "messages": messages,
             **({"stream": True} if stream else {}),
         }
-        if self.eval_mode:
+        if self.eval_mode and "temperature" not in self.gen_params:
             body["temperature"] = 0
         if self.gen_params:
             body.update(**self.gen_params)
