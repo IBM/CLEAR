@@ -156,7 +156,7 @@ class LiteLLMClient(LLMClient):
             model: Model identifier
             eval_mode: If True, sets temperature=0 for deterministic output
             max_retries: Number of retries on failure
-            **params: Additional model parameters
+            **params: Additional model parameters (can include api_base for custom endpoints)
         """
         self.provider = provider
         self.model = model
@@ -189,10 +189,15 @@ class LiteLLMClient(LLMClient):
             rits_api_key = os.getenv("RITS_API_KEY")
             if not rits_api_key:
                 raise KeyError("RITS_API_KEY env var required for RITS.")
-            model_base = get_rits_base(self.model)
-            litellm.api_base = f"https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/{model_base}/v1"
+            
+            # Only set global api_base if not provided in params
+            # (params will be passed directly to completion() call)
+            if "api_base" not in self.params:
+                # Construct URL from model name
+                model_base = get_rits_base(self.model)
+                litellm.api_base = f"https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/{model_base}/v1"
+            
             litellm.headers = {"RITS_API_KEY": rits_api_key}
-
         elif self.provider == "watsonx":
             if not os.getenv("WATSONX_URL"):
                 raise KeyError("WATSONX_URL env var required.")
