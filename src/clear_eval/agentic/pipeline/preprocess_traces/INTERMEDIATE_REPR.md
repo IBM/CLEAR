@@ -44,7 +44,7 @@ Each row represents **one LLM invocation**.
 | Column | Type | Description |
 |--------|------|-------------|
 | `intent` | str | The user's original query / goal for this trajectory. |
-| `api_spec` | str | JSON string of tool definitions available to the LLM call, in OpenAI format (see [format](#api_spec-format)). When the response contains tool calls, this is automatically appended to `model_input` at evaluation time so the judge can assess tool selection quality. |
+| `api_spec` | str | JSON string of tool definitions available to the LLM call, in OpenAI format (see [format](#api_spec-format)). When present, automatically appended to `model_input` at evaluation time so the judge can assess tool selection quality. |
 | `meta_data` | json/str | Free-form JSON string for any metadata you want to log (model name, token counts, latency, span IDs, etc.). |
 | `traj_score` | float | Ground-truth trajectory score (0-1).  All rows in a trajectory should share the same value. |
 

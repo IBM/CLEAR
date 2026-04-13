@@ -147,7 +147,7 @@ For the full intermediate representation reference, see [Intermediate Representa
 | `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed) |
 | `model_input` | json/str | Yes | Normalised input messages sent to the LLM: `[{"role":"...", "content":"...", "tool_calls":[]}...]` or a string |
 | `response` | str | Yes | LLM output — any string format is accepted. The built-in preprocessors use JSON `{"content": "...", "tool_calls": [...]}` when tool calls are present. |
-| `api_spec` | json | No | JSON list of tool definitions available to the LLM call. Appended to `model_input` at evaluation time when tool calls are present in the response. |
+| `api_spec` | json | No | JSON list of tool definitions available to the LLM call. When present, appended to `model_input` at evaluation time so the judge can assess tool selection. |
 | `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs |
 | `traj_score` | float | No | Optional ground-truth trajectory score (0-1) |
 
