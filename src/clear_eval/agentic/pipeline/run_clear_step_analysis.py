@@ -144,10 +144,9 @@ def convert_to_clear_format(input_dir: str, output_dir: str, overwrite: bool = T
                 df = df.rename(columns={"trace_id": "task_id"}, inplace=False)
                 if 'Name' not in df.columns:
                     df["Name"] = df["agent_name"]
-                if "id" not in df.columns:
-                    df.loc[:, "id"] = df.apply(
-                        lambda row: f"{row['task_id']}_{row['step_in_trace_general']}", axis=1
-                    )
+                df.loc[:, "id"] = df.apply(
+                    lambda row: f"{row['task_id']}_{row['step_in_trace_general']}", axis=1
+                )
                 for i, row in df.iterrows():
                     agent_name = row['Name']
                     task_id = row['task_id']
