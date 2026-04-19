@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import os
@@ -5,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from clear_eval.pipeline.constants import SCORE_COL
+from clear_eval.pipeline.constants import SCORE_COL, ERROR_COL
 logger = logging.getLogger(__name__)
 
 
@@ -48,6 +49,9 @@ def load_dataframe_from_cache(path, expected_rows=None):
             # Convert potential string "NA" back to actual pd.NA for score columns
             if SCORE_COL in df.columns:
                 df[SCORE_COL] = df[SCORE_COL].astype('Float64')
+            # Convert ERROR_COL from string representation back to list
+            if ERROR_COL in df.columns:
+                df[ERROR_COL] = df[ERROR_COL].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.strip() else [])
             return df
         except Exception as e:
             logger.error(f"Error loading DataFrame from cache {path}: {e}. Recomputing.")
