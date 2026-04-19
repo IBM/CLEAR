@@ -223,7 +223,7 @@ def process_traces_to_traj_data(
                 total_llm_calls += len(llm_calls)
 
                 trace_info = f"trace {trace_idx + 1}" if len(traces) > 1 else ""
-                logger.info(f"Processed {json_file.name} {trace_info} -> {csv_filename} ({len(llm_calls)} LLM calls)")
+                logger.debug(f"Processed {json_file.name} {trace_info} -> {csv_filename} ({len(llm_calls)} LLM calls)")
 
         except Exception as e:
             logger.error(f"Error processing {json_file.name}: {e}")
