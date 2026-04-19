@@ -720,9 +720,6 @@ def format_compact_trace(
     first_row = df.iloc[0]
     task_id = first_row.get("task_id", "unknown")
     intent = first_row.get("intent", "")
-    traj_score = first_row.get("traj_score")
-    if pd.isna(traj_score):
-        traj_score = "N/A"
 
     # Collect all unique tools from the trace
     all_tools = collect_all_tools(df)
@@ -731,7 +728,7 @@ def format_compact_trace(
     header_parts = [
         f"## Trace: {task_id}",
         f"**User Query:** {intent}",
-        f"**Total Steps:** {len(df)} | **Trajectory Score:** {traj_score}",
+        f"**Total Steps:** {len(df)}",
         "",
     ]
     
