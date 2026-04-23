@@ -137,20 +137,6 @@ Use `--from-raw-traces false` to use existing CSV files directly.
 Each CSV file represents one trajectory (`task_id`). Each row represents one LLM call. The `Name` column identifies the component (agent/node) that made the call — CLEAR analysis is performed separately for each unique component.
 
 For the full intermediate representation reference, see [Intermediate Representation Reference](pipeline/preprocess_traces/INTERMEDIATE_REPR.md).
-
-| Column | Type | Required | Description |
-|--------|------|----------|-------------|
-| `id` | str | Yes | Unique row identifier: `{task_id}_{step_in_trace_general}` |
-| `Name` | str | Yes | Agent / node name (component that invoked the LLM) |
-| `intent` | str | No | Original user query / goal for this trajectory |
-| `task_id` | str | Yes | Trajectory identifier (groups all rows of one trace) |
-| `step_in_trace_general` | int | Yes | Global row counter across the trace (1-indexed) |
-| `model_input` | json/str | Yes | Normalised input messages sent to the LLM: `[{"role":"...", "content":"...", "tool_calls":[]}...]` or a string |
-| `response` | str | Yes | LLM output — any string format is accepted. The built-in preprocessors use JSON `{"content": "...", "tool_calls": [...]}` when tool calls are present. |
-| `api_spec` | json | No | JSON list of tool definitions available to the LLM call. When present, appended to `model_input` at evaluation time so the judge can assess tool selection. |
-| `meta_data` | json | No | Span metadata: model name, token counts, latency, span IDs |
-| `traj_score` | float | No | Optional ground-truth trajectory score (0-1) |
-
 ---
 
 ## Running the Pipeline

@@ -34,7 +34,6 @@ endpoint_url: null              # Required for inference_backend=endpoint
 provider: openai                # openai | watsonx | anthropic | etc.
 eval_model_name: gpt-4o         # Model identifier
 eval_model_params:
-  temperature: 0.0
   max_tokens: 8096
 
 # ============================================================================

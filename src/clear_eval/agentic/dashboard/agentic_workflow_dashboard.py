@@ -2440,7 +2440,8 @@ def main_page():
                 # Collect dimension scores - check both dimension_scores and parsed_evaluation
                 dimension_scores = eval_data.get("dimension_scores", {})
                 parsed_eval = eval_data.get("parsed_evaluation", {})
-                
+                if not parsed_eval:
+                    parsed_eval = {}
                 # Try to get dimensions from parsed_evaluation first (preferred structure)
                 step_quality = parsed_eval.get("step_quality_dimensions", {})
                 trajectory_dims = parsed_eval.get("trajectory_dimensions", {})

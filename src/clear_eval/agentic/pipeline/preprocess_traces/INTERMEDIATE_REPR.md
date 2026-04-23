@@ -32,8 +32,6 @@ Each row represents **one LLM invocation**.
 | Column                  | Type     | Description                                                                                                          |
 |-------------------------|----------|----------------------------------------------------------------------------------------------------------------------|
 | `Name`                  | str      | Agent or node name.  CLEAR groups and evaluates rows by this value, so set it to the component that invoked the LLM. |
-| `id` | str | Unique row identifier. Defaults to `{task_id}_{step_in_trace_general}`. |
-
 | `task_id`               | str      | Trajectory identifier.  All rows from the same trace must share this value.                                          |
 | `step_in_trace_general` | int      | Row ordering (1-indexed, unique per row within the file).                                                            |
 | `model_input`           | json/str | The messages sent to the LLM (see [format](#model_input-format)).                                                    |
