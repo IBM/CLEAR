@@ -469,7 +469,7 @@ def load_data_from_zip(file_bytes, progress_callback=None) -> Tuple[pd.DataFrame
         # Add "Name" column if it doesn't exist but "agent_name" does
         if "agent_name" in trajectory_df.columns and "Name" not in trajectory_df.columns:
             trajectory_df["Name"] = trajectory_df["agent_name"]
-            print("  ℹ️  Added 'Name' column from 'agent_name'")
+    #        print("  ℹ️  Added 'Name' column from 'agent_name'")
 
         # Store trace data for joining with CLEAR results
         metadata["trajectory_df"] = trajectory_df
@@ -510,7 +510,7 @@ def load_data_from_zip(file_bytes, progress_callback=None) -> Tuple[pd.DataFrame
                 try:
                     with zf.open(clear_data_file) as f:
                         df = pd.read_csv(f)
-                        print(f"  📄 {clear_data_file}: {len(df)} rows, columns: {list(df.columns)[:5]}...")
+             #           print(f"  📄 {clear_data_file}: {len(df)} rows, columns: {list(df.columns)[:5]}...")
                         if "task_id" in df.columns and "traj_score" in df.columns:
                             # Extract task_id -> traj_score mapping
                             score_mapping = df[["task_id", "traj_score"]].drop_duplicates(subset=["task_id"])
@@ -530,7 +530,7 @@ def load_data_from_zip(file_bytes, progress_callback=None) -> Tuple[pd.DataFrame
                     traceback.print_exc()
             
             if task_id_to_traj_score:
-                print(f"  ✓ Extracted traj_score for {len(task_id_to_traj_score)} tasks from clear_data CSVs")
+        #        print(f"  ✓ Extracted traj_score for {len(task_id_to_traj_score)} tasks from clear_data CSVs")
                 metadata["task_id_to_traj_score"] = task_id_to_traj_score
             else:
                 print(f"  ⚠️  No traj_scores extracted from clear_data CSVs")
@@ -673,258 +673,6 @@ def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
 
     return G, dict(node_stats)
 
-
-def visualize_workflow_graph_d3(
-    G: nx.DiGraph, node_stats: Dict, selected_node: str = None
-) -> tuple:
-    """Create an interactive D3.js force-directed graph with draggable nodes.
-    Returns (html_content, script_content) tuple."""
-    import json
-    import random
-    
-    # Generate unique container ID
-    container_id = f"d3-graph-{random.randint(1000, 9999)}"
-    
-    # Convert graph to D3-compatible format
-    nodes_data = []
-    for node in G.nodes():
-        stats = node_stats.get(node, {})
-        count = stats.get("count", 0)
-        unique_tasks = stats.get("unique_tasks", 0)
-        
-        nodes_data.append({
-            "id": node,
-            "label": node,
-            "count": count,
-            "unique_tasks": unique_tasks,
-            "tool_calls": stats.get("tool_calls", 0),
-            "agent_calls": stats.get("agent_calls", 0),
-        })
-    
-    links_data = []
-    for source, target, data in G.edges(data=True):
-        links_data.append({
-            "source": source,
-            "target": target,
-            "weight": data.get("weight", 1),
-        })
-    
-    # HTML content (no script tags)
-    html_content = f"""
-    <div id="{container_id}" style="width:100%; height:800px; background:white; border-radius:16px; position:relative;"></div>
-    """
-    
-    # JavaScript content (to be added via ui.add_body_html)
-    script_content = f"""
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script>
-    // Wait for D3 to load and DOM to be ready
-    (function initGraph() {{
-        if (typeof d3 === 'undefined') {{
-            setTimeout(initGraph, 100);
-            return;
-        }}
-        
-        const container = document.getElementById('{container_id}');
-        if (!container) {{
-            setTimeout(initGraph, 100);
-            return;
-        }}
-        const nodes = {json.dumps(nodes_data)};
-        const links = {json.dumps(links_data)};
-        const selectedNode = {json.dumps(selected_node)};
-        
-        const width = container.clientWidth;
-        const height = 800;
-        
-        // Clear any existing SVG
-        d3.select('#{container_id}').selectAll('*').remove();
-        
-        // Create SVG
-        const svg = d3.select('#{container_id}')
-            .append('svg')
-            .attr('width', width)
-            .attr('height', height)
-            .call(d3.zoom()
-                .scaleExtent([0.1, 4])
-                .on('zoom', (event) => {{
-                    g.attr('transform', event.transform);
-                }})
-            );
-        
-        const g = svg.append('g');
-        
-        // Define arrow markers
-        svg.append('defs').selectAll('marker')
-            .data(['arrow', 'arrow-selected'])
-            .enter().append('marker')
-            .attr('id', d => d)
-            .attr('viewBox', '0 -5 10 10')
-            .attr('refX', 25)
-            .attr('refY', 0)
-            .attr('markerWidth', 6)
-            .attr('markerHeight', 6)
-            .attr('orient', 'auto')
-            .append('path')
-            .attr('d', 'M0,-5L10,0L0,5')
-            .attr('fill', d => d === 'arrow-selected' ? '#6366F1' : '#94A3B8');
-        
-        // Create force simulation
-        const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(150))
-            .force('charge', d3.forceManyBody().strength(-800))
-            .force('center', d3.forceCenter(width / 2, height / 2))
-            .force('collision', d3.forceCollide().radius(60));
-        
-        // Create links
-        const link = g.append('g')
-            .selectAll('path')
-            .data(links)
-            .enter().append('path')
-            .attr('class', 'link')
-            .attr('stroke', '#94A3B8')
-            .attr('stroke-width', d => Math.min(d.weight / 2, 8))
-            .attr('fill', 'none')
-            .attr('marker-end', 'url(#arrow)')
-            .style('opacity', 0.6);
-        
-        // Create link labels
-        const linkLabel = g.append('g')
-            .selectAll('text')
-            .data(links)
-            .enter().append('text')
-            .attr('class', 'link-label')
-            .attr('font-size', '12px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#475569')
-            .attr('text-anchor', 'middle')
-            .text(d => d.weight);
-        
-        // Create nodes
-        const node = g.append('g')
-            .selectAll('g')
-            .data(nodes)
-            .enter().append('g')
-            .attr('class', 'node')
-            .call(d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended)
-            )
-            .on('click', (event, d) => {{
-                // Emit custom event for node click
-                window.parent.postMessage({{
-                    type: 'node-click',
-                    node: d.id
-                }}, '*');
-            }});
-        
-        // Add rectangles to nodes
-        node.append('rect')
-            .attr('width', 140)
-            .attr('height', 40)
-            .attr('x', -70)
-            .attr('y', -20)
-            .attr('rx', 8)
-            .attr('ry', 8)
-            .attr('fill', d => d.id === selectedNode ? '#F59E0B' : '#6B9BD1')
-            .attr('stroke', '#fff')
-            .attr('stroke-width', 3)
-            .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))')
-            .style('cursor', 'move');
-        
-        // Add text to nodes
-        node.append('text')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '0.35em')
-            .attr('font-size', '13px')
-            .attr('font-weight', 'bold')
-            .attr('fill', '#1E293B')
-            .attr('pointer-events', 'none')
-            .text(d => d.label.length > 18 ? d.label.substring(0, 15) + '...' : d.label);
-        
-        // Add hover effects
-        node.on('mouseover', function(event, d) {{
-            d3.select(this).select('rect')
-                .transition().duration(200)
-                .attr('stroke-width', 4)
-                .style('filter', 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))');
-            
-            // Show tooltip
-            const tooltip = d3.select('body').append('div')
-                .attr('class', 'node-tooltip')
-                .style('position', 'absolute')
-                .style('background', 'white')
-                .style('padding', '12px')
-                .style('border-radius', '8px')
-                .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
-                .style('pointer-events', 'none')
-                .style('font-size', '13px')
-                .style('z-index', '1000')
-                .html(`
-                    <strong>${{d.label}}</strong><br>
-                    Total calls: ${{d.count}}<br>
-                    Unique tasks: ${{d.unique_tasks}}<br>
-                    Agent calls: ${{d.agent_calls}}
-                `)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 10) + 'px');
-        }})
-        .on('mouseout', function() {{
-            d3.select(this).select('rect')
-                .transition().duration(200)
-                .attr('stroke-width', 3)
-                .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
-            
-            d3.selectAll('.node-tooltip').remove();
-        }})
-        .on('mousemove', function(event) {{
-            d3.selectAll('.node-tooltip')
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 10) + 'px');
-        }});
-        
-        // Update positions on simulation tick
-        simulation.on('tick', () => {{
-            link.attr('d', d => {{
-                const dx = d.target.x - d.source.x;
-                const dy = d.target.y - d.source.y;
-                const dr = Math.sqrt(dx * dx + dy * dy) * 2;
-                return `M${{d.source.x}},${{d.source.y}}A${{dr}},${{dr}} 0 0,1 ${{d.target.x}},${{d.target.y}}`;
-            }});
-            
-            linkLabel
-                .attr('x', d => (d.source.x + d.target.x) / 2)
-                .attr('y', d => (d.source.y + d.target.y) / 2);
-            
-            node.attr('transform', d => `translate(${{d.x}},${{d.y}})`);
-        }});
-        
-        // Drag functions
-        function dragstarted(event, d) {{
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }}
-        
-        function dragged(event, d) {{
-            d.fx = event.x;
-            d.fy = event.y;
-        }}
-        
-        function dragended(event, d) {{
-            if (!event.active) simulation.alphaTarget(0);
-            // Keep node fixed after drag
-            // d.fx = null;
-            // d.fy = null;
-        }}
-    }})();
-    </script>
-    """
-    
-    return html_content, script_content
-
-
 def visualize_workflow_graph(
     G: nx.DiGraph, node_stats: Dict, selected_node: str = None, layout: str = "shell"
 ) -> go.Figure:
@@ -960,7 +708,6 @@ def visualize_workflow_graph(
 
     # Enhanced edge colors with better visual hierarchy
     edge_color = "#CBD5E1"  # Softer gray for edges
-    edge_active_color = "#818CF8"  # Lighter indigo for active edges
     label_color = "#1E293B"  # Darker for better readability
     label_bg_color = "rgba(255, 255, 255, 0.98)"  # More opaque background
 
@@ -968,6 +715,60 @@ def visualize_workflow_graph(
         source, target = edge[0], edge[1]
         if (target, source) in processed_edges:
             continue
+
+        if source == target:
+            processed_edges.add((source, target))
+            x0, y0 = pos[source]
+            weight = G[source][target]["weight"]
+
+            loop_top_y = y0 + 0.42
+            loop_right_x = x0 + 0.34
+            loop_mid_x = x0 + 0.18
+            loop_label_x = x0 + 0.40
+            loop_label_y = y0 + 0.26
+
+            edge_traces.append(
+                go.Scatter(
+                    x=[x0, loop_mid_x, loop_right_x, loop_mid_x, x0],
+                    y=[y0, loop_top_y, y0 + 0.36, y0 + 0.12, y0],
+                    mode="lines",
+                    line=dict(width=min(weight / 2, 8), color=edge_color, shape="spline"),
+                    hoverinfo="skip", showlegend=False, name="",
+                )
+            )
+            edge_traces.append(
+                go.Scatter(
+                    x=[x0, loop_mid_x, loop_right_x, loop_mid_x, x0],
+                    y=[y0, loop_top_y, y0 + 0.36, y0 + 0.12, y0],
+                    mode="lines",
+                    line=dict(width=20, color="rgba(0,0,0,0)", shape="spline"),
+                    hovertemplate=f"<b>{source} -> {target}</b><br>Transitions: {weight}<extra></extra>",
+                    showlegend=False, name="",
+                )
+            )
+            edge_labels.append(
+                go.Scatter(
+                    x=[loop_label_x], y=[loop_label_y], mode="text",
+                    text=[f"<b>{weight}</b>"],
+                    textfont=dict(size=12, color=label_color, family="Inter, sans-serif"),
+                    textposition="middle center", hoverinfo="skip", showlegend=False,
+                    marker=dict(
+                        size=18,
+                        color=label_bg_color,
+                        line=dict(width=0),
+                        symbol="square",
+                    ),
+                )
+            )
+            arrow_traces.append(dict(
+                x=x0 + 0.22, y=y0 + 0.18,
+                ax=x0 + 0.30, ay=y0 + 0.28,
+                xref="x", yref="y", axref="x", ayref="y",
+                showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=2,
+                arrowcolor=edge_color, text="",
+            ))
+            continue
+
         has_reverse = G.has_edge(target, source)
 
         if has_reverse:
@@ -1115,9 +916,9 @@ def visualize_workflow_graph(
                     showlegend=False, name="",
                 )
             )
-            # Position label with offset to avoid overlap with arrow
+            # Position label above the edge; label trace is rendered after edge traces so it stays on top
             lx = x0 + 0.5 * dx
-            ly = y0 + 0.5 * dy + 0.12
+            ly = y0 + 0.5 * dy + 0.16
             edge_labels.append(
                 go.Scatter(
                     x=[lx], y=[ly], mode="text",
@@ -1259,116 +1060,8 @@ def visualize_workflow_graph(
     # Configure interaction modes - allow zoom and pan
     fig.update_xaxes(fixedrange=False)
     fig.update_yaxes(fixedrange=False)
-    
-    # Additional config to ensure smooth dragging
-    config = {
-        'displayModeBar': True,
-        'displaylogo': False,
-        'modeBarButtonsToRemove': ['select2d', 'lasso2d'],  # Remove selection tools
-        'scrollZoom': True,  # Enable scroll to zoom
-    }
-    
+
     return fig
-
-#
-# def extract_trajectory_paths(traj_df: pd.DataFrame, include_partial: bool = True) -> Dict[str, Any]:
-#     """Extract unique paths from traces.
-#
-#     Args:
-#         traj_df: DataFrame containing trace data
-#         include_partial: If True, extract all subsequences; if False, only full traces
-#     """
-#     paths = {}
-#     seq_df = _get_llm_call_sequence(traj_df)
-#     for task_id, task_group in seq_df.groupby("task_id"):
-#         task_group = task_group.sort_values("step_in_trace_general")
-#         agent_sequence = task_group["Name"].tolist()
-#
-#         if include_partial:
-#             # Extract all possible subsequences (partial paths)
-#             for start_idx in range(len(agent_sequence)):
-#                 for end_idx in range(start_idx + 1, len(agent_sequence) + 1):
-#                     partial_path = tuple(agent_sequence[start_idx:end_idx])
-#                     path_str = " -> ".join(partial_path)
-#                     path_length = len(partial_path)
-#
-#                     if path_str not in paths:
-#                         paths[path_str] = {"path": partial_path, "count": 0, "task_ids": set(), "length": path_length}
-#                     paths[path_str]["count"] += 1
-#                     paths[path_str]["task_ids"].add(task_id)
-#         else:
-#             # Extract only full trace paths
-#             full_path = tuple(agent_sequence)
-#             path_str = " -> ".join(full_path)
-#             path_length = len(full_path)
-#
-#             if path_str not in paths:
-#                 paths[path_str] = {"path": full_path, "count": 0, "task_ids": set(), "length": path_length}
-#             paths[path_str]["count"] += 1
-#             paths[path_str]["task_ids"].add(task_id)
-#
-#     # Convert task_ids sets to lists for JSON serialization
-#     for path_data in paths.values():
-#         path_data["task_ids"] = list(path_data["task_ids"])
-#
-#     return paths
-#
-
-def calculate_path_scores(paths: Dict, all_agent_scores: Dict, traj_df: pd.DataFrame = None) -> Dict:
-    """Calculate scores for paths. Prefers ground truth traj_score if available, falls back to agent scores."""
-    # Check if ground truth trace scores are available
-    has_traj_score = traj_df is not None and "traj_score" in traj_df.columns and not traj_df["traj_score"].isnull().all()
-    
-    for path_str, path_data in paths.items():
-        scores = []
-        for task_id in path_data["task_ids"]:
-            score_found = False
-            
-            # Try to use ground truth trace score first
-            if has_traj_score:
-                task_rows = traj_df[traj_df["task_id"] == task_id]
-                if not task_rows.empty:
-                    traj_score = task_rows["traj_score"].iloc[0]
-                    if pd.notna(traj_score):
-                        scores.append(float(traj_score))
-                        score_found = True
-            
-            # Fall back to agent scores if no ground truth
-            if not score_found:
-                for agent_name, agent_data in all_agent_scores.items():
-                    if "id_to_score" in agent_data and task_id in agent_data["id_to_score"]:
-                        scores.append(agent_data["id_to_score"][task_id])
-                        break
-        
-        if scores:
-            path_data["avg_score"] = sum(scores) / len(scores)
-            path_data["score_count"] = len(scores)
-            # Calculate success rate (scores >= 0.7)
-            success_count = sum(1 for s in scores if s >= 0.7)
-            path_data["success_rate"] = success_count / len(scores) if scores else 0
-        else:
-            path_data["avg_score"] = None
-            path_data["score_count"] = 0
-            path_data["success_rate"] = None
-    return paths
-
-#
-# def identify_dead_end_nodes(G: nx.DiGraph, traj_df: pd.DataFrame) -> List[Dict]:
-#     seq_df = _get_llm_call_sequence(traj_df)
-#     final_nodes = []
-#     for task_id, task_group in seq_df.groupby("task_id"):
-#         task_group = task_group.sort_values("step_in_trace_general")
-#         final_nodes.append(task_group.iloc[-1]["Name"])
-#     final_node_counts = Counter(final_nodes)
-#     total_trajectories = len(traj_df["task_id"].unique())
-#     dead_ends = []
-#     for node in G.nodes():
-#         if node in final_node_counts:
-#             rate = final_node_counts[node] / total_trajectories
-#             if rate < 0.05:
-#                 dead_ends.append({"node": node, "completion_rate": rate, "completions": final_node_counts[node]})
-#     return dead_ends
-
 
 def analyze_agent_positions(traj_df: pd.DataFrame) -> pd.DataFrame:
     seq_df = _get_llm_call_sequence(traj_df)
@@ -1395,24 +1088,6 @@ def analyze_agent_positions(traj_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(agent_stats).sort_values("avg_normalized_position")
 
 
-# def analyze_retry_patterns(traj_df: pd.DataFrame) -> pd.DataFrame:
-#     seq_df = _get_llm_call_sequence(traj_df)
-#     retry_data = []
-#     for task_id, task_group in seq_df.groupby("task_id"):
-#         task_group = task_group.sort_values("step_in_trace_general")
-#         agents = task_group["Name"].tolist()
-#         agent_counts = Counter(agents)
-#         for agent, count in agent_counts.items():
-#             if count > 1:
-#                 positions = [i for i, a in enumerate(agents) if a == agent]
-#                 consecutive = all(positions[i + 1] - positions[i] == 1 for i in range(len(positions) - 1))
-#                 retry_data.append({
-#                     "task_id": task_id, "agent": agent, "retry_count": count - 1,
-#                     "total_calls": count, "consecutive": consecutive, "positions": positions,
-#                 })
-#     return pd.DataFrame(retry_data) if retry_data else pd.DataFrame()
-#
-
 def analyze_score_progression(traj_df: pd.DataFrame, all_agent_scores_df: Dict) -> Dict:
     progression_data = defaultdict(list)
     for task_id, task_group in traj_df.groupby("task_id"):
@@ -1436,23 +1111,6 @@ def analyze_score_progression(traj_df: pd.DataFrame, all_agent_scores_df: Dict) 
                 progression_data["score_change"].append(change)
                 progression_data["improving"].append(change > 0)
     return progression_data
-
-
-def get_issue_analysis(df, max_num_issues=None):
-    if "recurring_issues_str" not in df.columns or df["recurring_issues_str"].isnull().all():
-        return pd.DataFrame()
-    issues_per_row = df["recurring_issues_str"].apply(extract_issues)
-    issues_score_df = pd.DataFrame({"issue": issues_per_row, "score": df["score"]})
-    issues_score_df_flat = issues_score_df.explode("issue")
-    total_stats = len(df)
-    issues_stats = issues_score_df_flat.groupby("issue")["score"].agg(["mean", "std"]).round(2)
-    issues_stats.index.name = "issue"
-    issues_stats["issue_count"] = issues_score_df_flat["issue"].value_counts()
-    issues_stats["issue_freq"] = issues_stats.apply(
-        lambda r: round(100 * r["issue_count"] / total_stats, 1), axis=1
-    )
-    return issues_stats
-
 
 # ─── Global Styles ───────────────────────────────────────────────────────────
 
@@ -1953,7 +1611,7 @@ class DashboardState:
                             if agent_name == "EvaluationResult" and "traj_score" in df.columns:
                                 traj_score_mapping = dict(zip(df["task_id"], df["traj_score"]))
                                 task_id_to_traj_score.update(traj_score_mapping)
-                                print(f"  📊 Found traj_score in {agent_name}: {len(traj_score_mapping)} task scores")
+                     #           print(f"  📊 Found traj_score in {agent_name}: {len(traj_score_mapping)} task scores")
             except Exception as e:
                 print(f"  ⚠️  Error loading {agent_name}: {e}")
                 pass
@@ -1962,14 +1620,14 @@ class DashboardState:
         if "task_id_to_traj_score" in self.metadata and "task_id" in self.traj_df.columns:
             task_id_to_traj_score_from_clear_data = self.metadata["task_id_to_traj_score"]
             if task_id_to_traj_score_from_clear_data:
-                print(f"📊 Populating traj_score from clear_data CSVs ({len(task_id_to_traj_score_from_clear_data)} tasks)...")
+              #  print(f"📊 Populating traj_score from clear_data CSVs ({len(task_id_to_traj_score_from_clear_data)} tasks)...")
                 self.traj_df["traj_score"] = self.traj_df["task_id"].map(task_id_to_traj_score_from_clear_data)
                 # Fill any remaining NaN values with 0
                 self.traj_df["traj_score"] = self.traj_df["traj_score"].fillna(0.0)
                 non_zero_count = (self.traj_df["traj_score"] > 0).sum()
                 total_mapped = self.traj_df["traj_score"].notna().sum()
-                print(f"  ✓ Mapped {len(task_id_to_traj_score_from_clear_data)} scores to trace data")
-                print(f"  ✓ Updated traj_score for {total_mapped} trace rows ({non_zero_count} with non-zero scores)")
+              #  print(f"  ✓ Mapped {len(task_id_to_traj_score_from_clear_data)} scores to trace data")
+             #   print(f"  ✓ Updated traj_score for {total_mapped} trace rows ({non_zero_count} with non-zero scores)")
         
         # Fallback: Populate traj_score from agent results CSVs if not already populated
         elif task_id_to_traj_score and "task_id" in self.traj_df.columns:
@@ -2551,7 +2209,7 @@ def main_page():
                 full_traj_df, _ = load_clear_data_from_bytes(file_bytes, zip_name, trajectory_df)
                 
                 print(f"  Loaded {len(full_traj_df)} rows from full trace CLEAR results")
-               # print(f"  Columns: {list(full_traj_df.columns)}")
+          #      print(f"  Columns: {list(full_traj_df.columns)}")
                 
                 if not full_traj_df.empty and "recurring_issues_str" in full_traj_df.columns:
                     for issues_str in full_traj_df["recurring_issues_str"].dropna():
@@ -2817,7 +2475,7 @@ def main_page():
                                 all_unique_issues.add(issue)
                     unique_issues_count = len(all_unique_issues)
                 unique_tasks = df["task_id"].nunique() if "task_id" in df.columns else 0
-                
+
                 # Gradient banner for metrics
                 ui.html(f'''
                     <div style="
@@ -2892,7 +2550,7 @@ def main_page():
                         # Separate NO_ISSUE from other issues
                         display_issues = [d for d in issues_data if d["issue"] not in [NO_ISSUE, OTHER]]
                         no_issue_data = [d for d in issues_data if d["issue"] == NO_ISSUE]
-                        
+
                         if display_issues or no_issue_data:
                             max_freq = max(d["freq"] for d in display_issues) if display_issues else 1
 
@@ -2962,37 +2620,37 @@ def main_page():
 
                 # Filters Section - moved after issues list
                 render_section_header("🔍 Filter Data", "Filter evaluation records by issues and score")
-                
+
                 # Get all unique issues for filter options
                 all_issues_for_filter = []
                 if all_issues_list:
                     issue_counts_temp = Counter(all_issues_list)
                     all_issues_for_filter = [issue for issue in issue_counts_temp.keys() if issue not in [NO_ISSUE, OTHER]]
-                
+
                 with ui.column().classes("w-full gap-6"):
                     ui.html('<div style="color:#475569; font-size:15px; margin-bottom:8px; font-weight:500;">Select issues using AND/OR/NOT logic, then click Apply Filter</div>')
-                    
+
                     with ui.row().classes("w-full gap-6"):
                         with ui.column().classes("flex-1 gap-3"):
                             ui.label("Include ANY of (OR)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
                             include_filter = ui.select(
                                 all_issues_for_filter, multiple=True, label="At least one of these"
                             ).classes("w-full").props("outlined use-chips")
-                        
+
                         with ui.column().classes("flex-1 gap-3"):
                             ui.label("Must ALSO have (AND)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
                             must_have_filter = ui.select(
                                 all_issues_for_filter, multiple=True, label="All of these"
                             ).classes("w-full").props("outlined use-chips")
-                        
+
                         with ui.column().classes("flex-1 gap-3"):
                             ui.label("Exclude ANY of (NOT)").classes("text-sm font-bold text-slate-700").style("margin-bottom: 8px;")
                             exclude_filter = ui.select(
                                 all_issues_for_filter, multiple=True, label="None of these"
                             ).classes("w-full").props("outlined use-chips")
-                    
+
                     only_checkbox = ui.checkbox("Only selected issues (no other issues)", value=False).classes("mt-4")
-                    
+
                     ui.label("Score Range").classes("text-sm font-bold text-slate-700 mt-6").style("margin-bottom: 12px;")
                     if "score" in df.columns:
                         score_filter = ui.range(
@@ -3001,13 +2659,13 @@ def main_page():
                     else:
                         score_filter = None
                         ui.label("Score data not available").classes("text-slate-400 italic text-sm")
-                    
+
                     with ui.row().classes("gap-3 mt-6"):
                         apply_filter_btn = ui.button(
                             "✅ Apply Filter",
                             icon="filter_alt"
                         ).props("color=positive no-caps").style("padding: 8px 20px;")
-                        
+
                         clear_filter_btn = ui.button(
                             "🧹 Clear Filters",
                             icon="clear"
@@ -3017,13 +2675,13 @@ def main_page():
 
                 # Issue Distribution Comparison Container
                 distribution_container = ui.column().classes("w-full gap-4")
-                
+
                 # Data Explorer Container
                 data_explorer_container = ui.column().classes("w-full gap-4")
-                
+
                 # Store filtered data
                 filtered_data_ref = {"df": df}
-                
+
                 def apply_issue_filters():
                     """Apply AND/OR/NOT logic to filter by issues"""
                     include = include_filter.value or []
@@ -3031,72 +2689,72 @@ def main_page():
                     exclude = exclude_filter.value or []
                     only = only_checkbox.value
                     score_range = score_filter.value if score_filter else {"min": 0.0, "max": 1.0}
-                    
+
                     def issue_filter_func(text_issues_str):
                         issues = extract_issues(text_issues_str)
-                        
+
                         # OR logic
                         if include:
                             if not any(i in issues for i in include):
                                 return False
-                        
+
                         # AND logic
                         if must_have:
                             if not all(i in issues for i in must_have):
                                 return False
-                        
+
                         # NOT logic
                         if exclude:
                             if any(i in issues for i in exclude):
                                 return False
-                        
+
                         # "Only" logic
                         if only:
                             allowed = set(include + must_have)
                             if any(i not in allowed for i in issues if i not in [NO_ISSUE, OTHER]):
                                 return False
-                        
+
                         return True
-                    
+
                     # Apply issue filters
                     if "recurring_issues_str" in df.columns:
                         filtered_df = df[df["recurring_issues_str"].apply(issue_filter_func)]
                     else:
                         filtered_df = df.copy()
-                    
+
                     # Apply score filter
                     if "score" in filtered_df.columns:
                         filtered_df = filtered_df[
                             (filtered_df["score"] >= score_range["min"]) &
                             (filtered_df["score"] <= score_range["max"])
                         ]
-                    
+
                     return filtered_df
-                
+
                 def update_visualizations():
                     distribution_container.clear()
                     with distribution_container:
                         filtered_df = apply_issue_filters()
                         filtered_data_ref["df"] = filtered_df
-                        
+
                         render_section_header("Issue Distribution Comparison", "Comparing full dataset vs filtered subset")
-                        
+
                         # Get issue frequencies
                         full_issues = []
                         for issues_str in df["recurring_issues_str"].dropna():
                             full_issues.extend(extract_issues(issues_str))
                         full_issue_counts = Counter(full_issues)
-                        
+
                         filtered_issues = []
                         for issues_str in filtered_df["recurring_issues_str"].dropna():
                             filtered_issues.extend(extract_issues(issues_str))
                         filtered_issue_counts = Counter(filtered_issues)
-                        
+
                         # Remove NO_ISSUE and OTHER
                         for issue_type in [NO_ISSUE, OTHER]:
                             full_issue_counts.pop(issue_type, None)
                             filtered_issue_counts.pop(issue_type, None)
-                        
+
                         if not full_issue_counts:
                             ui.html('<div style="text-align:center; padding:20px; color:#94A3B8;">No issues to display</div>')
                         else:
@@ -3191,14 +2849,14 @@ def main_page():
                                 uniformtext=dict(minsize=10, mode="hide"),
                             )
                             ui.plotly(fig).classes("w-full")
-                        
+
                         ui.html(f'<div style="color:#64748B; font-size:14px; margin-top:10px;">Showing <strong>{len(filtered_df)}</strong> of {len(df)} records after filtering</div>')
-                
+
                 def update_data_explorer():
                     data_explorer_container.clear()
                     with data_explorer_container:
                         render_section_header("Data Explorer", "Browse individual evaluation records (filtered)")
-                        
+
                         filtered_df = filtered_data_ref["df"]
                         if not filtered_df.empty:
                             display_cols = [c for c in ["intent", "model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns and filtered_df[c].dropna().astype(str).str.strip().ne("").any()]
@@ -3274,12 +2932,12 @@ def main_page():
                             table.on("rowClick", on_row_click)
                         else:
                             ui.html('<div style="text-align:center; padding:20px; color:#F59E0B;">No records match the selected filters</div>')
-                
+
                 def on_apply_filters():
                     update_visualizations()
                     update_data_explorer()
                     ui.notify(f"Filters applied: {len(filtered_data_ref['df'])} records match", type="positive")
-                
+
                 def on_clear_filters():
                     include_filter.value = []
                     must_have_filter.value = []
@@ -3291,10 +2949,10 @@ def main_page():
                     update_visualizations()
                     update_data_explorer()
                     ui.notify("Filters cleared", type="info")
-                
+
                 apply_filter_btn.on_click(on_apply_filters)
                 clear_filter_btn.on_click(on_clear_filters)
-                
+
                 # Initial render
                 update_visualizations()
                 update_data_explorer()
@@ -4461,8 +4119,8 @@ def main_page():
         # Start with trace dataframe which has traj_score
         traj_scores_df = state.traj_df.copy()
         
-        print(f"  📊 Starting with traj_df: {traj_scores_df.shape} rows")
-        print(f"  📊 Has traj_score: {'traj_score' in traj_scores_df.columns}")
+   #     print(f"  📊 Starting with traj_df: {traj_scores_df.shape} rows")
+   #     print(f"  📊 Has traj_score: {'traj_score' in traj_scores_df.columns}")
         
         # Merge agent evaluation scores (which have the "score" column)
         trajectory_df = state.metadata.get("trajectory_df")
@@ -4494,13 +4152,13 @@ def main_page():
                 on=["task_id", "step_in_trace_general"],
                 how="left"
             )
-            print(f"  ✓ Merged agent scores: {traj_scores_df.shape} rows, has score: {'score' in traj_scores_df.columns}")
+      #      print(f"  ✓ Merged agent scores: {traj_scores_df.shape} rows, has score: {'score' in traj_scores_df.columns}")
         else:
             print(f"  ⚠️  No agent scores found to merge")
         
-        #print(f"  📊 Final traj_scores_df: {traj_scores_df.shape} rows")
-        #print(f"  📊 Columns: {list(traj_scores_df.columns)}")
-        #print(f"  📊 Unique task_ids: {len(traj_scores_df['task_id'].unique()) if 'task_id' in traj_scores_df.columns else 0}")
+     #   print(f"  📊 Final traj_scores_df: {traj_scores_df.shape} rows")
+     #   print(f"  📊 Columns: {list(traj_scores_df.columns)}")
+     #   print(f"  📊 Unique task_ids: {len(traj_scores_df['task_id'].unique()) if 'task_id' in traj_scores_df.columns else 0}")
         
         # Get trace evaluation results if available
         traj_eval_results = state.metadata.get("traj_eval_results", {})
