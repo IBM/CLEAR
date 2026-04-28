@@ -34,7 +34,6 @@ dependencies = [
     "langchain_community",
     "numpy",
     "pyarrow>=15.0.0",
-    "litellm>=1.0.0",
     "nest-asyncio",
     "nicegui>=2.0.0",
     "plotly",
