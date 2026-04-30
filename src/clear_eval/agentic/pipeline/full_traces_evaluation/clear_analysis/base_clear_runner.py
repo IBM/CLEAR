@@ -212,7 +212,7 @@ class BaseClearRunner(ABC):
                 "output_dir": str(output_dir),
                 "perform_generation": False,
                 "input_columns": self.get_input_columns(),
-                "agent_mode": True,
+                "task": "agent",
                 "eval_model_params": self.inference_config.model_params,
                 "resume_enabled": not self.overwrite,
                 "inference_backend": self.inference_config.inference_backend,

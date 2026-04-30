@@ -85,9 +85,9 @@ default_eval_criteria_dict = {
 }
 
 default_agentic_eval_criteria_dict = {
-    "Correctness": "The response produces accurate and logically sound results. For a final answer, this meets the user's stated requirements. For a partial response, such as a tool call, this means selecting the appropriate tool and providing accurate and logical parameters that correctly advance the task.",
-    "Completeness": "For a final answer, all parts of the user's request are addressed. For a partial response, the step taken is a logical and self-contained action that moves towards fulfilling the user's request, without missing essential elements for that specific step.",
-    "Clarity": "The explanation and code are easy to read, well-structured, and unambiguous.",
+    "Correctness": "The response produces accurate and logically sound results. For a final answer, this meets the user's stated requirements. For an intermediate step, this means the output is factually correct and logically advances the task given the specific instruction.",
+    "Completeness": "For a final answer, all parts of the user's request are fully addressed. For an intermediate step (e.g., a tool call or partial reasoning), completeness is not expected — the step only needs to correctly advance the task.",
+    "Clarity": "The output is easy to read, well-structured, and unambiguous. Internal or structured formatting (e.g., agent-internal markup, structured data for downstream consumption) is acceptable in agentic workflows.",
     "Relevance": "The response stays focused on the question without unnecessary or off-topic content.",
     "Efficiency": "The proposed solution is optimized for performance, avoiding unnecessary complexity.",
     "Robustness": "The solution handles edge cases and potential errors gracefully.",

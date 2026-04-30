@@ -5,7 +5,8 @@ import pandas as pd
 from clear_eval.pipeline.evaluation_criteria import EvaluationCriteria, get_default_evaluation_criteria
 from clear_eval.pipeline.propmts import get_math_evaluation_prompt_reference_based, get_math_evaluation_prompt_reference_less, \
     get_rag_evaluation_prompt_reference_based, get_rag_evaluation_prompt_reference_free, \
-    get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based
+    get_general_evaluation_prompt_reference_less, get_general_evaluation_prompt_reference_based, \
+    get_agent_evaluation_prompt_reference_less, get_agent_evaluation_prompt_reference_based
 from clear_eval.pipeline.constants import ANALYSIS_SKIPPED, SCORE_COL, EVALUATION_TEXT_COL
 from clear_eval.pipeline.eval_utils import evaluate_single_records
 
@@ -36,20 +37,29 @@ class EvalUseCase:
             return f"{ANALYSIS_SKIPPED} - Prediction Error"
 
         evaluation_criteria = config.get('evaluation_criteria')
+        agent_mode = config.get('agent_mode', False)
         if not evaluation_criteria:
-            agent_mode = config.get('agent_mode', False)
             evaluation_criteria = get_default_evaluation_criteria(agent_mode)
         if isinstance(evaluation_criteria, dict):
             evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
         evaluation_criteria_str = evaluation_criteria.to_str()
 
-        if config["is_reference_based"]:
-            reference = row[config['reference_column']]
-            if pd.isna(reference):
-                return f"{ANALYSIS_SKIPPED} - Missing reference"
-            return get_general_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
+        if agent_mode:
+            if config["is_reference_based"]:
+                reference = row[config['reference_column']]
+                if pd.isna(reference):
+                    return f"{ANALYSIS_SKIPPED} - Missing reference"
+                return get_agent_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
+            else:
+                return get_agent_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
         else:
-            return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
+            if config["is_reference_based"]:
+                reference = row[config['reference_column']]
+                if pd.isna(reference):
+                    return f"{ANALYSIS_SKIPPED} - Missing reference"
+                return get_general_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
+            else:
+                return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
 
     def get_evaluation_prompt_func(self, config):
         """Return the evaluation prompt function for this use case."""
@@ -70,6 +80,34 @@ class GeneralEvalUseCase(EvalUseCase):
     @staticmethod
     def generate_evaluation_model_prompt(row, config):
         return GeneralEvalUseCase.generate_general_evaluation_model_prompt(row, config)
+
+class AgentEvalUseCase(EvalUseCase):
+    required_input_fields = ['model_input_column']
+
+    @staticmethod
+    def get_default_generation_model_inputs(row, config):
+        raise ValueError("model inputs should have been specified in the input")
+
+    @staticmethod
+    def generate_evaluation_model_prompt(row, config):
+        model_answer = row[config['model_output_column']]
+        model_input = row[config['model_input_column']]
+
+        if pd.isna(model_input) or pd.isna(model_answer):
+            return f"{ANALYSIS_SKIPPED} - Missing Input"
+
+        if isinstance(model_answer, str) and model_answer.startswith("Error:"):
+            return f"{ANALYSIS_SKIPPED} - Prediction Error"
+
+        evaluation_criteria = config.get('evaluation_criteria')
+        if not evaluation_criteria:
+            evaluation_criteria = get_default_evaluation_criteria(agent_mode=True)
+        if isinstance(evaluation_criteria, dict):
+            evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
+        evaluation_criteria_str = evaluation_criteria.to_str()
+
+        return get_agent_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
+
 
 class MathUseCase(EvalUseCase):
     required_input_fields = ["question_column"]

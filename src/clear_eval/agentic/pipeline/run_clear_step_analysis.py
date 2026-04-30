@@ -256,7 +256,6 @@ def run_analysis_for_agent(
     Tool-call CSVs (filename ending with ``__tool_calls``) are routed to
     ``task="tool_call"`` (SPARC evaluation) and stored in a ``tool_calls/``
     subdirectory under the parent agent's results directory.  All other CSVs
-    use ``task="general"`` (standard CLEAR evaluation) at the agent root.
 
     Directory layout::
 
@@ -289,7 +288,7 @@ def run_analysis_for_agent(
     else:
         agent_name = stem
         output_dir = Path(results_dir) / agent_name
-        task = "general"
+        task = "agent"
         label = "reasoning"
 
     logger.info("=" * 80)
@@ -636,7 +635,6 @@ Config file structure (YAML format - see setup/default_agentic_config.yaml):
   # CLEAR arguments
   provider: openai
   eval_model_name: gpt-4o
-  agent_mode: true
   # ... other CLEAR parameters
 
 Argument Precedence (lowest to highest):

@@ -353,6 +353,58 @@ Present the output ONLY as a Python list of strings. Your response MUST start wi
 Synthesized List of New Recommendations (Python List format ONLY):
 """
 
+def get_agent_evaluation_prompt_reference_less(model_input, model_output, evaluation_criteria_str):
+
+    return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
+
+Input: The instruction or context the model was given for this specific step.
+Output: The model's output for this step.
+
+IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
+
+Do NOT penalize an output for being brief, lacking end-user polish, or using internal formatting if it correctly and fully addresses the specific instruction it was given. A short, focused output that serves its purpose within the workflow is complete.
+
+Evaluation Criteria:
+{evaluation_criteria_str}
+
+Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
+
+Input: '{model_input}'
+Output: '{model_output}'
+
+--- Begin Evaluation ---
+Textual Evaluation: [Your textual evaluation here]
+Evaluation score: [Your score here]
+"""
+
+
+def get_agent_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str):
+
+    return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
+
+Input: The instruction or context the model was given for this specific step.
+Output: The model's output for this step.
+Reference: The expected reference output.
+
+IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
+
+Do NOT penalize an output for being brief, lacking end-user polish, or using internal formatting if it correctly and fully addresses the specific instruction it was given. A short, focused output that serves its purpose within the workflow is complete.
+
+Evaluation Criteria:
+{evaluation_criteria_str}
+
+Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
+
+Input: '{model_input}'
+Reference: '{reference}'
+Output: '{model_output}'
+
+--- Begin Evaluation ---
+Textual Evaluation: [Your textual evaluation here]
+Evaluation score: [Your score here]
+"""
+
+
 def get_rag_evaluation_prompt_reference_based(question, model_answer, reference):
     return f"""You are an objective evaluator of question answering systems.
 You are given a question, a reference answer and a model's response to the question.

@@ -58,7 +58,7 @@ def add_clear_args_to_parser(parser: argparse.ArgumentParser | None = None, grou
     target.add_argument("--run-name", default=None,
                         help="Unique identifier for the run")
     target.add_argument("--task", default=None,
-                        help="task to evaluate: general, tool_call, math, rag, external")
+                        help="task to evaluate: general, agent, tool_call, math, rag, external")
     target.add_argument("--evaluation-criteria", type=parse_dict, default=None,
                         help="Json of a dictionary of evaluation criteria for the judge. Example: --evaluation-criteria '{\"correction\": \"Response is factually correct\"}'")
     target.add_argument("--max-examples-to-analyze", type=int, default=None,
@@ -68,7 +68,7 @@ def add_clear_args_to_parser(parser: argparse.ArgumentParser | None = None, grou
     target.add_argument("--high-score-threshold", type=float, default=None,
                         help="The minimum judge score required for a single record to be considered successful")
     target.add_argument("--agent-mode", type=str2bool, default=None,
-                        help="Whether to use a default evaluation criteria suited for an agentic step and not a single llm response")
+                        help="Deprecated: use --task agent instead. If set to true with task=general, uses agentic evaluation criteria.")
 
     target.add_argument("--max-workers", type=int, default=None,
                         help="Number of parallel inferences")

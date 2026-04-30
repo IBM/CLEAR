@@ -1,4 +1,4 @@
-from clear_eval.pipeline.use_cases.eval_use_case import MathUseCase, RAGUseCase, GeneralEvalUseCase
+from clear_eval.pipeline.use_cases.eval_use_case import MathUseCase, RAGUseCase, GeneralEvalUseCase, AgentEvalUseCase
 
 def get_task_data_obj(use_case_name):
     if use_case_name == "math":
@@ -7,6 +7,8 @@ def get_task_data_obj(use_case_name):
         return RAGUseCase()
     elif use_case_name == "general":
         return GeneralEvalUseCase()
+    elif use_case_name == "agent":
+        return AgentEvalUseCase()
     elif use_case_name == "tool_call":
         from clear_eval.pipeline.use_cases.tool_call_use_case import ToolCallEvalUseCase
         return ToolCallEvalUseCase()
