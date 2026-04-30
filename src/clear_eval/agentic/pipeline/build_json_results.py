@@ -39,10 +39,22 @@ def build_workflow_graph(traj_df):
         agent = row.get("Name") or row.get("agent_name")
         if not agent:
             continue
-        if row.get("tool_or_agent") == "tool":
-            node_stats[agent]["tool_calls"] += 1
-        else:
-            node_stats[agent]["agent_calls"] += 1
+
+        # Count tool calls from the combined response JSON
+        n_tool_calls = 0
+        response = row.get("response", "")
+        if pd.notna(response) and isinstance(response, str) and response.strip().startswith('{'):
+            try:
+                parsed = json.loads(response)
+                if isinstance(parsed, dict) and "tool_calls" in parsed:
+                    tc = parsed["tool_calls"]
+                    if isinstance(tc, list):
+                        n_tool_calls = len(tc)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        node_stats[agent]["tool_calls"] += n_tool_calls
+        node_stats[agent]["agent_calls"] += 1
 
     # Deduplicate by llm_call_index if available
     seq_df = traj_df

@@ -469,7 +469,6 @@ def preprocess_traces_if_needed(
     from_raw_traces: bool,
     agent_framework: str = "langgraph",
     observability_framework: str = "mlflow",
-    separate_tools="combined",
 ) -> Path:
     """
     Preprocess raw traces to CSV if needed, otherwise return input directory.
@@ -480,9 +479,7 @@ def preprocess_traces_if_needed(
         from_raw_traces: If True, process JSON traces; if False, use CSV files directly
         agent_framework: Agent framework (for JSON processing)
         observability_framework: Observability framework (for JSON processing)
-        separate_tools: Tool/text splitting mode (combined, separate,
-            tools_with_reasoning). Also accepts bool.
-        
+
     Returns:
         Path to directory containing CSV files
     """
@@ -494,16 +491,15 @@ def preprocess_traces_if_needed(
         logger.info(f"Input: {input_dir}")
         logger.info(f"Agent framework: {agent_framework}")
         logger.info(f"Observability framework: {observability_framework}")
-        
+
         traces_data_dir = output_dir / "traces_data"
         traces_data_dir.mkdir(parents=True, exist_ok=True)
-        
+
         process_traces_to_traj_data(
             input_dir=str(input_dir),
             output_dir=str(traces_data_dir),
             agent_framework=agent_framework,
             observability_framework=observability_framework,
-            separate_tools=separate_tools
         )
         logger.info(f"✓ Processed traces to: {traces_data_dir}")
         return traces_data_dir
@@ -755,7 +751,6 @@ def main():
         from_raw_traces=config.get('from_raw_traces'),
         agent_framework=config.get('agent_framework'),
         observability_framework=config.get('observability_framework'),
-        separate_tools=config.get('separate_tools')
     )
 
     # Run the evaluation pipeline

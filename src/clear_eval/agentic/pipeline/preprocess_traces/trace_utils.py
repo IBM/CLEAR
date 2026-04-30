@@ -551,81 +551,35 @@ def extract_intent_from_input(input_data: Any, attributes: Dict[str, Any] | None
 # ----- CSV row construction (shared by MLflow & Langfuse processors) -----
 
 
-def _append_reasoning_to_input(model_input: str, reasoning_text: str) -> str:
-    """Append reasoning text as an assistant message to model_input JSON."""
-    try:
-        messages = json.loads(model_input)
-        if isinstance(messages, list):
-            messages.append({"role": "assistant", "content": reasoning_text, "tool_calls": []})
-            return json.dumps(messages)
-    except (json.JSONDecodeError, TypeError):
-        pass
-    return model_input
-
-
-_VALID_SEPARATE_TOOLS = ("combined", "separate", "tools_with_reasoning")
-
-
-def _normalize_separate_tools(value) -> str:
-    """Normalize ``separate_tools`` to a canonical string mode.
-
-    Accepts bool (backward compat) or string.  Returns one of:
-    ``"combined"``, ``"separate"``, ``"tools_with_reasoning"``.
-    """
-    if isinstance(value, bool):
-        return "separate" if value else "combined"
-    if isinstance(value, str):
-        low = value.lower()
-        if low in ("true", "false"):
-            return "separate" if low == "true" else "combined"
-        if low in _VALID_SEPARATE_TOOLS:
-            return low
-    raise ValueError(
-        f"Invalid separate_tools value: {value!r}. "
-        f"Expected bool or one of: {', '.join(_VALID_SEPARATE_TOOLS)}"
-    )
-
-
 def build_csv_rows(
     llm_calls: List[Dict[str, Any]],
-    separate_tools:str,
 ) -> List[Dict[str, Any]]:
     """
     Build final CSV rows from a list of extracted LLM call records.
 
-    Each record represents a single LLM invocation and contains fields
-    extracted by a framework-specific processor (MLflow / Langfuse).  This
-    function handles row splitting (tool vs agent), counter assignment, and
-    ID generation — logic that is identical across observability backends.
+    Always emits **one row per LLM call**.  When tool calls are present,
+    ``response`` is a JSON object with ``"content"`` and ``"tool_calls"``
+    keys; otherwise it is plain text.
+
+    Row splitting for per-tool-call evaluation (SPARC) is handled
+    downstream in ``convert_to_clear_format()`` at analysis time,
+    controlled by the ``--separate-tools`` flag.
 
     Args:
         llm_calls: One dict per LLM call with keys:
             - agent_name (str)
             - model_input (str, already serialized)
             - response_text (str)
-            - tool_calls (list in full OpenAI format: {"id", "type", "function": {"name", "arguments"}})
+            - tool_calls (list in full OpenAI format)
             - api_spec (list of tool definitions)
             - meta_data (dict, not yet JSON-serialized)
             - intent (str)
             - task_id (str)
             - traj_score (Any)
-        separate_tools: Controls how tool calls and text are represented.
-            Accepts bool for backward compatibility (True -> "separate",
-            False -> "combined") or one of:
-            - ``"combined"`` (default): single row per LLM call.  When tool
-              calls are present the response is a JSON object with
-              ``"content"`` and ``"tool_calls"`` keys; otherwise plain text.
-            - ``"separate"``: one row per tool call plus an optional row for
-              the text response.
-            - ``"tools_with_reasoning"``: like ``"separate"`` but the
-              reasoning text is appended to each tool row's ``model_input``
-              as an assistant message (richer SPARC context).  No separate
-              agent row is emitted.
 
     Returns:
         List of row dicts matching the unified CSV schema.
     """
-    separate_tools = _normalize_separate_tools(separate_tools)
     rows: List[Dict[str, Any]] = []
     step_counter = 0
     llm_call_counter = 0
@@ -642,71 +596,32 @@ def build_csv_rows(
         traj_score = call.get("traj_score")
 
         llm_call_counter += 1
+        step_counter += 1
 
         api_spec_str = json.dumps(api_spec) if api_spec else ""
         meta_data_str = json.dumps(meta_data)
 
-        # Shared fields for every row produced from this LLM call
-        base = {
+        if tool_calls:
+            response = json.dumps({
+                "content": response_text or "",
+                "tool_calls": tool_calls,
+            })
+        else:
+            response = response_text
+
+        rows.append({
             "Name": agent_name,
             "intent": intent,
             "task_id": task_id,
             "llm_call_index": llm_call_counter,
             "model_input": model_input,
+            "response": response,
+            "tool_or_agent": "agent",
             "api_spec": api_spec_str,
             "meta_data": meta_data_str,
             "traj_score": traj_score,
-        }
-
-        if separate_tools != "combined":
-            has_text = response_text and response_text.strip() not in ("null", "None", "")
-            has_tools = isinstance(tool_calls, list) and len(tool_calls) > 0
-
-            # Determine model_input for tool rows
-            tool_input = model_input
-            if has_tools and has_text and separate_tools == "tools_with_reasoning":
-                tool_input = _append_reasoning_to_input(model_input, response_text)
-
-            # One row per tool call
-            if has_tools:
-                for tc in tool_calls:
-                    step_counter += 1
-                    rows.append({
-                        **base,
-                        "id": f"{task_id}_{step_counter}",
-                        "step_in_trace_general": step_counter,
-                        "model_input": tool_input,
-                        "response": json.dumps(tc, indent=2),
-                        "tool_or_agent": "tool",
-                    })
-
-            # Agent row: emit when there's text and either no tools or "separate" mode
-            if has_text and (not has_tools or separate_tools == "separate"):
-                step_counter += 1
-                rows.append({
-                    **base,
-                    "id": f"{task_id}_{step_counter}",
-                    "step_in_trace_general": step_counter,
-                    "response": response_text,
-                    "tool_or_agent": "agent",
-                })
-        else:
-            # Single combined row
-            step_counter += 1
-            if tool_calls:
-                combined_response = json.dumps({
-                    "content": response_text or "",
-                    "tool_calls": tool_calls,
-                })
-            else:
-                combined_response = response_text
-
-            rows.append({
-                **base,
-                "id": f"{task_id}_{step_counter}",
-                "step_in_trace_general": step_counter,
-                "response": combined_response,
-                "tool_or_agent": "agent",
-            })
+            "id": f"{task_id}_{step_counter}",
+            "step_in_trace_general": step_counter,
+        })
 
     return rows

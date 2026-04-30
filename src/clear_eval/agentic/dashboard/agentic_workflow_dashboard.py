@@ -638,13 +638,22 @@ def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
         lambda: {"count": 0, "tasks": set(), "tool_calls": 0, "agent_calls": 0}
     )
 
-    # tool_calls / agent_calls are counted from every row
+    # Count tool calls from the combined response JSON
     for _, row in traj_df.iterrows():
         agent = row["Name"]
-        if row.get("tool_or_agent") == "tool":
-            node_stats[agent]["tool_calls"] += 1
-        else:
-            node_stats[agent]["agent_calls"] += 1
+        n_tool_calls = 0
+        response = row.get("response", "")
+        if pd.notna(response) and isinstance(response, str) and response.strip().startswith('{'):
+            try:
+                parsed = json.loads(response)
+                if isinstance(parsed, dict) and "tool_calls" in parsed:
+                    tc = parsed["tool_calls"]
+                    if isinstance(tc, list):
+                        n_tool_calls = len(tc)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        node_stats[agent]["tool_calls"] += n_tool_calls
+        node_stats[agent]["agent_calls"] += 1
 
     # Graph structure and node count use one entry per LLM call
     seq_df = _get_llm_call_sequence(traj_df)

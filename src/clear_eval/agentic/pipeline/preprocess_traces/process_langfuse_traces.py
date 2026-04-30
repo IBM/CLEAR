@@ -253,7 +253,6 @@ def _extract_llm_call_records(
 def extract_llm_calls_from_langgraph_trace(
     json_data: Any,
     file_name: str,
-    separate_tools: str,
     system_trunc_limit: int = 50_000,
 ) -> List[Dict[str, Any]]:
     """
@@ -262,7 +261,6 @@ def extract_llm_calls_from_langgraph_trace(
     Args:
         json_data: Trace dict or list of observations
         file_name: Fallback name for trace_id
-        separate_tools: Tool/text splitting mode. See :func:`build_csv_rows`.
         system_trunc_limit: Max chars for system messages before truncation
 
     Returns:
@@ -272,13 +270,12 @@ def extract_llm_calls_from_langgraph_trace(
         json_data, file_name or "", _langgraph_filter, _langgraph_agent_name,
         system_trunc_limit=system_trunc_limit,
     )
-    return build_csv_rows(llm_calls, separate_tools=separate_tools)
+    return build_csv_rows(llm_calls)
 
 
 def extract_llm_calls_from_crewai_trace(
     json_data: Any,
     file_name: str,
-    separate_tools: str,
     system_trunc_limit: int = 50_000,
 ) -> List[Dict[str, Any]]:
     """
@@ -287,7 +284,6 @@ def extract_llm_calls_from_crewai_trace(
     Args:
         json_data: Trace dict or list of observations
         file_name: Fallback name for trace_id
-        separate_tools: Tool/text splitting mode. See :func:`build_csv_rows`.
         system_trunc_limit: Max chars for system messages before truncation
 
     Returns:
@@ -297,4 +293,4 @@ def extract_llm_calls_from_crewai_trace(
         json_data, file_name or "", _crewai_filter, _crewai_agent_name,
         system_trunc_limit=system_trunc_limit,
     )
-    return build_csv_rows(llm_calls, separate_tools=separate_tools)
+    return build_csv_rows(llm_calls)

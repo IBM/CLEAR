@@ -405,7 +405,6 @@ def _get_traj_score(trace: Dict[str, Any]) -> Any:
 def extract_llm_calls_from_mlflow_trace(
     trace: Dict[str, Any],
     file_name: str,
-    separate_tools: str,
     system_trunc_limit: int = 50_000
 ) -> List[Dict[str, Any]]:
     """
@@ -420,7 +419,6 @@ def extract_llm_calls_from_mlflow_trace(
     Args:
         trace: The trace dict containing spans (flat or native format)
         file_name: Fallback name for trace_id
-        separate_tools: Tool/text splitting mode. See :func:`build_csv_rows`.
         system_trunc_limit: Max chars for system messages before truncation
 
     Returns:
@@ -512,4 +510,4 @@ def extract_llm_calls_from_mlflow_trace(
             "traj_score": traj_score,
         })
 
-    return build_csv_rows(llm_calls, separate_tools=separate_tools)
+    return build_csv_rows(llm_calls)

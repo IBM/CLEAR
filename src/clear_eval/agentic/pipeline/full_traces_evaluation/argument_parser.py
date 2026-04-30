@@ -49,11 +49,11 @@ def add_preprocessing_args_to_parser(parser: argparse.ArgumentParser) -> None:
     )
     group.add_argument(
         "--separate-tools",
-        type=str,
+        type=str2bool,
         default=None,
-        help="How to represent tool calls and reasoning text: "
-             "combined (default), separate, tools_with_reasoning. "
-             "Also accepts true/false for backward compatibility.",
+        help="Enable per-tool-call evaluation (tools_with_reasoning mode). "
+             "false (default): single combined evaluation per LLM call. "
+             "true: one evaluation per tool call with reasoning in input.",
     )
 
 

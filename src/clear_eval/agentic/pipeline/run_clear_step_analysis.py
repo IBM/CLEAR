@@ -132,22 +132,68 @@ def _enrich_model_input_with_api_spec(row) -> str:
     return f"{model_input}\n\n{tool_msg}"
 
 
+def _append_reasoning_to_input(model_input: str, reasoning_text: str) -> str:
+    """Append reasoning text as an assistant message to model_input JSON."""
+    try:
+        messages = json.loads(model_input)
+        if isinstance(messages, list):
+            messages.append({"role": "assistant", "content": reasoning_text, "tool_calls": []})
+            return json.dumps(messages)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return model_input
+
+
+def _parse_tool_calls_from_response(response: str):
+    """Parse tool calls from a combined response JSON.
+
+    If response is a JSON object with "content" and/or "tool_calls" keys,
+    returns (content_text, tool_calls_list). Otherwise returns (None, None)
+    indicating the response is plain text.
+    """
+    if not response or not isinstance(response, str):
+        return None, None
+    response = response.strip()
+    if not response.startswith('{'):
+        return None, None
+    try:
+        parsed = json.loads(response)
+        if isinstance(parsed, dict) and "tool_calls" in parsed:
+            return parsed.get("content", ""), parsed["tool_calls"]
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None, None
+
+
 ##########################################
 ## Convert shared data to clear format ###
 ##########################################
-def convert_to_clear_format(input_dir: str, output_dir: str, overwrite: bool = True) -> None:
+def convert_to_clear_format(
+    input_dir: str,
+    output_dir: str,
+    overwrite: bool = True,
+    separate_tools: bool = False,
+) -> None:
     """
     Convert CSV files to CLEAR format grouped by agent.
 
-    When the data contains tool rows (``tool_or_agent == "tool"``), each agent
-    produces two CSVs:
-    - ``{agent_name}.csv`` — reasoning (agent) rows
-    - ``{agent_name}__tool_calls.csv`` — tool-call rows
+    When ``separate_tools=False`` (default): each row is passed through
+    as-is (response already contains combined JSON with tool calls when
+    present).
+
+    When ``separate_tools=True``: rows whose ``response`` contains tool
+    calls are split into per-tool-call rows for ``tool_data``:
+      - Content only (no tool calls): sent to agent_data as text.
+      - Tool calls only (no content): one row per tool call to tool_data.
+      - Both content and tool calls: content appended to model_input,
+        one row per tool call to tool_data.
 
     Args:
         input_dir: Directory containing CSV files
         output_dir: Directory to save CLEAR format files
         overwrite: If False, skip conversion if output files already exist
+        separate_tools: If True, split tool calls into separate rows for
+            per-tool-call evaluation (tools_with_reasoning mode).
     """
     output_dir = Path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -195,15 +241,38 @@ def convert_to_clear_format(input_dir: str, output_dir: str, overwrite: bool = T
                     task_counter[task_id] += 1
 
                     row_with_agent = {'agent_name': agent_name, **row}
-                    is_tool_row = (
-                        'tool_or_agent' in row.index
-                        and row.get('tool_or_agent') == 'tool'
-                    )
-                    if is_tool_row:
-                        tool_data[agent_name].append(row_with_agent)
-                    else:
-                        row_with_agent['model_input'] = _enrich_model_input_with_api_spec(row)
+                    row_with_agent['model_input'] = _enrich_model_input_with_api_spec(row)
+
+                    if not separate_tools:
+                        # Combined mode: response taken as-is
                         agent_data[agent_name].append(row_with_agent)
+                    else:
+                        # Tools-with-reasoning mode: parse response for tool calls
+                        response_raw = row.get('response', '')
+                        if pd.isna(response_raw):
+                            response_raw = ''
+                        content_text, parsed_tools = _parse_tool_calls_from_response(str(response_raw))
+
+                        if not parsed_tools:
+                            # No tool calls — plain text response to agent_data
+                            agent_data[agent_name].append(row_with_agent)
+                        else:
+                            # Has tool calls — split into per-tool rows
+                            model_input = row_with_agent['model_input']
+                            has_content = content_text and content_text.strip() not in ('', 'null', 'None')
+                            if has_content:
+                                tool_input = _append_reasoning_to_input(model_input, content_text)
+                            else:
+                                tool_input = model_input
+
+                            orig_step = row_with_agent.get('step_in_trace_general', 0)
+                            for tc_idx, tc in enumerate(parsed_tools):
+                                tool_row = dict(row_with_agent)
+                                tool_row['model_input'] = tool_input
+                                tool_row['response'] = json.dumps(tc, indent=2)
+                                tool_row['tool_or_agent'] = 'tool'
+                                tool_row['id'] = f"{task_id}_{orig_step}_tc{tc_idx}"
+                                tool_data[agent_name].append(tool_row)
 
         except Exception as e:
             logger.error(f"Error processing {csv_file}: {e}")
@@ -349,7 +418,6 @@ def run_clear_analysis(
 
     if not csv_files:
         logger.error(f"No CSV files found in {input_data_path}")
-        return ""
 
     eval_model_name = config_dict.get("eval_model_name", "unknown")
     logger.info(f"Running CLEAR analysis on {len(csv_files)} agent types (eval model: {eval_model_name})")
@@ -372,42 +440,6 @@ def run_clear_analysis(
 
     logger.info(f"✓ Analysis complete: {stats['processed']} processed, {stats['skipped']} skipped" +
                (f", {stats['errors']} errors" if stats['errors'] > 0 else ""))
-
-
-def create_comprehensive_ui_results(
-    clear_results_dir: str | Path,
-    traj_data_dir: str | Path,
-    result_zip_name: str = "ui_results.zip",
-) -> Path:
-    """
-    Create a comprehensive UI results zip with INPUT DEDUPLICATION.
-
-    This is a wrapper around create_ui_input_zip() for backward compatibility.
-    All logic is now in create_ui_input.py to avoid code duplication.
-
-    Parameters
-    ----------
-    clear_results_dir : str | Path
-        Directory containing agent subdirectories with CLEAR results
-    traj_data_dir : str | Path
-        Directory containing trajectory CSV files
-    result_zip_name : str
-        Name of the output zip file (default: 'ui_results.zip')
-
-    Returns
-    -------
-    Path
-        Path to the created ui_results.zip
-    """
-    clear_results_path = Path(clear_results_dir).resolve()
-
-    return create_ui_input_zip(
-        output_dir=clear_results_path,
-        traces_data_dir=traj_data_dir,
-        clear_results_dir=clear_results_path,
-        output_zip_name=result_zip_name
-    )
-
 
 def run_step_analysis_pipeline(
     traces_data_dir: str,
@@ -460,8 +492,14 @@ def run_step_analysis_pipeline(
         clear_data_dir = os.path.join(intermediate_output_dir, 'clear_data')
         clear_results_dir = os.path.join(intermediate_output_dir, 'clear_results')
 
+        separate_tools = config_dict.get('separate_tools', False)
+
         logger.info("Converting trajectory data to CLEAR format...")
-        convert_to_clear_format(traces_data_dir, clear_data_dir, overwrite=overwrite)
+        convert_to_clear_format(
+            traces_data_dir, clear_data_dir,
+            overwrite=overwrite,
+            separate_tools=separate_tools,
+        )
 
         run_clear_analysis(
             clear_data_dir,
@@ -525,7 +563,6 @@ def run_full_pipeline(config_dict: dict) -> dict:
     results_dir = config_dict.get('results_dir')
     agent_framework = config_dict.get('agent_framework', 'langgraph')
     observability_framework = config_dict.get('observability_framework', 'mlflow')
-    separate_tools = config_dict.get('separate_tools')
     overwrite = config_dict.get('overwrite')
     memory_only = config_dict.get('memory_only')
 
@@ -554,7 +591,6 @@ def run_full_pipeline(config_dict: dict) -> dict:
             traces_data_dir,
             agent_framework=agent_framework,
             observability_framework=observability_framework,
-            separate_tools=separate_tools
         )
 
         # Call the step analysis pipeline
@@ -626,7 +662,7 @@ Config file structure (YAML format - see setup/default_agentic_config.yaml):
   # Preprocessing options (only used when from_raw_traces=true)
   agent_framework: langgraph
   observability_framework: langfuse
-  separate_tools: combined
+  separate_tools: false
 
   # Execution options
   overwrite: true

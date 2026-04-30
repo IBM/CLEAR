@@ -79,8 +79,9 @@ built-in preprocessors use a structured JSON format when tool calls are present:
 ```
 
 This format is recommended as it helps the LLM judge clearly distinguish text
-from tool invocations, but it is not required.  If you produce CSVs yourself,
-you may represent tool calls inline, appended, or in any other format.
+from tool invocations, and enables per-tool-call evaluation via
+`--separate-tools true`.  If you produce CSVs yourself, you may represent
+tool calls inline, appended, or in any other format.
 
 ---
 
