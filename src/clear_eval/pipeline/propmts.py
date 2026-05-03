@@ -367,11 +367,11 @@ def _build_tools_context(api_spec_str, model_output):
     if not api_spec_str or not isinstance(api_spec_str, str) or api_spec_str.strip() == "":
         return ""
     try:
-        tools = json.loads(api_spec_str)
+        available_tools = json.loads(api_spec_str)
     except (json.JSONDecodeError, TypeError):
         return ""
 
-    if not isinstance(tools, list) or not tools:
+    if not isinstance(available_tools, list) or not available_tools:
         return ""
 
     # Extract called tool names from model_output
@@ -401,7 +401,7 @@ def _build_tools_context(api_spec_str, model_output):
     called_tools_full = []
     other_tools_summary = []
 
-    for tool in tools:
+    for tool in available_tools:
         if not isinstance(tool, dict):
             continue
         func = tool.get("function", tool)
@@ -432,9 +432,41 @@ def _build_tools_context(api_spec_str, model_output):
     return result
 
 
+def _format_model_output(model_output):
+    """Format model output for the judge prompt.
+
+    If the output is a JSON object with content and/or tool_calls,
+    split them into separate labeled sections for clarity.
+    Otherwise return as-is.
+    """
+    if not model_output or not isinstance(model_output, str):
+        return str(model_output or "")
+
+    stripped = model_output.strip()
+    try:
+        parsed = json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        return model_output
+
+    if not isinstance(parsed, dict):
+        return model_output
+
+    content = parsed.get("content", "").strip()
+    tool_calls = parsed.get("tool_calls", [])
+    parts = []
+    if content:
+        parts.append(f"Content:\n {content}")
+    if tool_calls:
+        parts.append(f"Tool Calls: {json.dumps(tool_calls, indent=2)}")
+
+    return "\n".join(parts)
+
+
 def get_agent_evaluation_prompt_reference_less(model_input, model_output, evaluation_criteria_str, api_spec=None):
 
     tools_context = _build_tools_context(api_spec, model_output) if api_spec else ""
+    formatted_output = _format_model_output(model_output)
+    tools_section = f"\n--- Available Tools ---\n{tools_context}" if tools_context else ""
 
     return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
 
@@ -451,9 +483,12 @@ Evaluation Criteria:
 
 Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
 
-Input: '{model_input}'
-Output: '{model_output}'
-{tools_context}
+--- Input ---
+{model_input}
+
+--- Output ---
+{formatted_output}
+{tools_section}
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
 Evaluation score: [Your score here]
@@ -463,6 +498,8 @@ Evaluation score: [Your score here]
 def get_agent_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str, api_spec=None):
 
     tools_context = _build_tools_context(api_spec, model_output) if api_spec else ""
+    formatted_output = _format_model_output(model_output)
+    tools_section = f"\n--- Available Tools ---\n{tools_context}" if tools_context else ""
 
     return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
 
@@ -480,10 +517,15 @@ Evaluation Criteria:
 
 Provide a score from 0 to 1 and explain your reasoning clearly and concisely. End the response with 'Evaluation Score: <score>' (e.g., 'Evaluation Score: 0.7').
 
-Input: '{model_input}'
-Reference: '{reference}'
-Output: '{model_output}'
-{tools_context}
+--- Input ---
+{model_input}
+
+--- Reference ---
+{reference}
+
+--- Output ---
+{formatted_output}
+{tools_section}
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
 Evaluation score: [Your score here]
