@@ -1,3 +1,8 @@
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
 def get_math_evaluation_prompt_reference_less(question, model_response):
     return f"""You are an objective evaluator of math word problem solvers. You are given a math problem and a detailed model answer. 
 Evaluate the model answer based on how well it solves the math problem.
@@ -353,12 +358,89 @@ Present the output ONLY as a Python list of strings. Your response MUST start wi
 Synthesized List of New Recommendations (Python List format ONLY):
 """
 
-def get_agent_evaluation_prompt_reference_less(model_input, model_output, evaluation_criteria_str):
+def _build_tools_context(api_spec_str, model_output):
+    """Build a compact tools context section for the judge prompt.
+
+    Returns a string to be inserted into the judge prompt, or empty string
+    if there is no api_spec.
+    """
+    if not api_spec_str or not isinstance(api_spec_str, str) or api_spec_str.strip() == "":
+        return ""
+    try:
+        tools = json.loads(api_spec_str)
+    except (json.JSONDecodeError, TypeError):
+        return ""
+
+    if not isinstance(tools, list) or not tools:
+        return ""
+
+    # Extract called tool names from model_output
+    called_tool_names = set()
+    if model_output and isinstance(model_output, str):
+        try:
+            parsed = json.loads(model_output)
+            tools_list = []
+            if isinstance(parsed, dict):
+                if "tool_calls" in parsed:
+                    tools_list = parsed["tool_calls"]
+                else:
+                    tools_list = [parsed]
+            elif isinstance(parsed, list):
+                tools_list = parsed
+
+            for tc in tools_list:
+                if isinstance(tc, dict):
+                    name = tc.get("function", {}).get("name") or tc.get("name", "")
+                    if name:
+                        called_tool_names.add(name)
+
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Split tools into called vs other
+    called_tools_full = []
+    other_tools_summary = []
+
+    for tool in tools:
+        if not isinstance(tool, dict):
+            continue
+        func = tool.get("function", tool)
+        if not isinstance(func, dict):
+            continue
+        name = func.get("name", "")
+
+        if name in called_tool_names:
+            called_tools_full.append(json.dumps(tool, indent=2))
+        else:
+            desc = func.get("description", "")
+            desc_str = f": {desc}" if desc else ""
+            other_tools_summary.append(f"- {name}{desc_str}")
+
+    # Build the context section
+    parts = []
+    if called_tools_full:
+        parts.append("Called tools (full schema):\n" + "\n".join(called_tools_full))
+    if other_tools_summary:
+        parts.append("Other available tools:\n" + "\n".join(other_tools_summary))
+
+    if not parts:
+        return ""
+
+    result = "\nAvailable Tools Context:\n" + "\n\n".join(parts) + "\n"
+    logger.debug("Tools context for judge prompt (%d called, %d other):\n%s",
+                 len(called_tools_full), len(other_tools_summary), result)
+    return result
+
+
+def get_agent_evaluation_prompt_reference_less(model_input, model_output, evaluation_criteria_str, api_spec=None):
+
+    tools_context = _build_tools_context(api_spec, model_output) if api_spec else ""
 
     return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
 
 Input: The instruction or context the model was given for this specific step.
-Output: The model's output for this step.
+Output: The model's output for this step.{'''
+Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
 IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
 
@@ -371,20 +453,23 @@ Provide a score from 0 to 1 and explain your reasoning clearly and concisely. En
 
 Input: '{model_input}'
 Output: '{model_output}'
-
+{tools_context}
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
 Evaluation score: [Your score here]
 """
 
 
-def get_agent_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str):
+def get_agent_evaluation_prompt_reference_based(model_input, model_output, reference, evaluation_criteria_str, api_spec=None):
+
+    tools_context = _build_tools_context(api_spec, model_output) if api_spec else ""
 
     return f"""You are an impartial judge evaluating the quality of an AI model's output within a multi-step agentic workflow. You will receive:
 
 Input: The instruction or context the model was given for this specific step.
 Output: The model's output for this step.
-Reference: The expected reference output.
+Reference: The expected reference output.{'''
+Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
 IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
 
@@ -398,7 +483,7 @@ Provide a score from 0 to 1 and explain your reasoning clearly and concisely. En
 Input: '{model_input}'
 Reference: '{reference}'
 Output: '{model_output}'
-
+{tools_context}
 --- Begin Evaluation ---
 Textual Evaluation: [Your textual evaluation here]
 Evaluation score: [Your score here]

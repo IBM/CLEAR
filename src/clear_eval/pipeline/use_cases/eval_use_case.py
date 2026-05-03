@@ -26,40 +26,33 @@ class EvalUseCase:
 
     @staticmethod
     def generate_general_evaluation_model_prompt(row, config):
+        # Deprecated agent_mode: use task="agent" instead.
+        if config.get('agent_mode', False):
+            return AgentEvalUseCase.generate_evaluation_model_prompt(row, config)
+
         model_answer = row[config['model_output_column']]
         model_input = row[config['model_input_column']]
 
-        if  pd.isna(model_input) or pd.isna(model_answer):
+        if pd.isna(model_input) or pd.isna(model_answer):
             return f"{ANALYSIS_SKIPPED} - Missing Input"
 
-        # Check if model output indicates a previous error
         if isinstance(model_answer, str) and model_answer.startswith("Error:"):
             return f"{ANALYSIS_SKIPPED} - Prediction Error"
 
         evaluation_criteria = config.get('evaluation_criteria')
-        agent_mode = config.get('agent_mode', False)
         if not evaluation_criteria:
-            evaluation_criteria = get_default_evaluation_criteria(agent_mode)
+            evaluation_criteria = get_default_evaluation_criteria(agent_mode=False)
         if isinstance(evaluation_criteria, dict):
             evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
         evaluation_criteria_str = evaluation_criteria.to_str()
 
-        if agent_mode:
-            if config["is_reference_based"]:
-                reference = row[config['reference_column']]
-                if pd.isna(reference):
-                    return f"{ANALYSIS_SKIPPED} - Missing reference"
-                return get_agent_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
-            else:
-                return get_agent_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
-        else:
-            if config["is_reference_based"]:
-                reference = row[config['reference_column']]
-                if pd.isna(reference):
-                    return f"{ANALYSIS_SKIPPED} - Missing reference"
-                return get_general_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
-            else:
-                return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
+        if config["is_reference_based"]:
+            reference = row[config['reference_column']]
+            if pd.isna(reference):
+                return f"{ANALYSIS_SKIPPED} - Missing reference"
+            return get_general_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str)
+
+        return get_general_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
 
     def get_evaluation_prompt_func(self, config):
         """Return the evaluation prompt function for this use case."""
@@ -106,7 +99,18 @@ class AgentEvalUseCase(EvalUseCase):
             evaluation_criteria = EvaluationCriteria.from_dict(evaluation_criteria)
         evaluation_criteria_str = evaluation_criteria.to_str()
 
-        return get_agent_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str)
+        # Pass api_spec to prompt if available (non-empty)
+        api_spec = row.get("api_spec", None) if hasattr(row, 'get') else None
+        if api_spec is not None and (pd.isna(api_spec) or not api_spec):
+            api_spec = None
+
+        if config.get("is_reference_based"):
+            reference = row[config['reference_column']]
+            if pd.isna(reference):
+                return f"{ANALYSIS_SKIPPED} - Missing reference"
+            return get_agent_evaluation_prompt_reference_based(model_input, model_answer, reference, evaluation_criteria_str, api_spec=api_spec)
+
+        return get_agent_evaluation_prompt_reference_less(model_input, model_answer, evaluation_criteria_str, api_spec=api_spec)
 
 
 class MathUseCase(EvalUseCase):
