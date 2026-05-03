@@ -102,36 +102,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
 TOOL_CALLS_SUFFIX = "__tool_calls"
 
 
-def _enrich_model_input_with_api_spec(row) -> str:
-    """Append api_spec to model_input when api_spec is non-empty.
-
-    This gives the CLEAR judge visibility into what tools were available
-    so it can assess tool selection quality.  Rows without api_spec are
-    returned unchanged.
-    """
-    model_input = row.get("model_input", "")
-    api_spec = row.get("api_spec", "")
-
-    if pd.isna(model_input):
-        model_input = ""
-    if pd.isna(api_spec) or not api_spec:
-        return model_input
-
-    tool_msg = f"Available tools:\n{api_spec}"
-
-    # Try to append as a message to a JSON message list
-    try:
-        messages = json.loads(str(model_input))
-        if isinstance(messages, list):
-            messages.append({"role": "system", "content": tool_msg, "tool_calls": []})
-            return json.dumps(messages)
-    except (json.JSONDecodeError, TypeError):
-        pass
-
-    # Fallback: append as plain text
-    return f"{model_input}\n\n{tool_msg}"
-
-
 def _append_reasoning_to_input(model_input: str, reasoning_text: str) -> str:
     """Append reasoning text as an assistant message to model_input JSON."""
     try:
@@ -241,7 +211,6 @@ def convert_to_clear_format(
                     task_counter[task_id] += 1
 
                     row_with_agent = {'agent_name': agent_name, **row}
-                    row_with_agent['model_input'] = _enrich_model_input_with_api_spec(row)
 
                     if not separate_tools:
                         # Combined mode: response taken as-is
