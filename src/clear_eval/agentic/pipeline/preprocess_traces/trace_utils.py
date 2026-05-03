@@ -105,7 +105,7 @@ def _extract_tool_calls_from_content(msg: dict) -> List[Dict[str, Any]]:
                 if not isinstance(func, dict):
                     func = {}
                 name = func.get("name", tc.get("name", ""))
-                args = func.get("arguments", tc.get("arguments", "{}"))
+                args = func.get("arguments", tc.get("arguments", tc.get("args", "{}")))
                 if not isinstance(args, str):
                     args = json.dumps(args, ensure_ascii=False)
                 tool_calls.append({
@@ -206,6 +206,10 @@ def normalize_input_messages(messages: Any, system_trunc_limit: int = 50_000) ->
 
     if not isinstance(messages, list):
         return str(messages)
+
+    # Flatten double-nested lists (LangChain autolog: [[msg1, msg2]])
+    if messages and isinstance(messages[0], list):
+        messages = [item for sublist in messages for item in sublist if item is not None]
 
     result = []
     system_chars_used = 0
@@ -321,6 +325,37 @@ def normalize_response(output_data: Any) -> str:
                     parts.append(normalize_content(content.get("parts", []), include_function_calls=False))
             return "\n---\n".join(p for p in parts if p)
 
+        # LangChain LLMResult format: {"generations": [[{"message": {"content": "...", ...}}]], ...}
+        elif "generations" in output_data and isinstance(output_data["generations"], list):
+            parts = []
+            for gen_group in output_data["generations"]:
+                if not isinstance(gen_group, list):
+                    continue
+                for gen in gen_group:
+                    if not isinstance(gen, dict):
+                        continue
+                    msg = gen.get("message", {})
+                    if isinstance(msg, dict):
+                        parts.append(normalize_content(msg.get("content", ""), include_function_calls=False))
+                    elif gen.get("text"):
+                        parts.append(gen["text"])
+            return "\n---\n".join(p for p in parts if p)
+
+        # LangGraph node output format: {"output": [{"update": {"messages": [...]}}]}
+        elif "output" in output_data and isinstance(output_data["output"], list):
+            parts = []
+            for entry in output_data["output"]:
+                if not isinstance(entry, dict):
+                    continue
+                update = entry.get("update", {})
+                if isinstance(update, dict):
+                    msgs = update.get("messages", [])
+                    if isinstance(msgs, list):
+                        for msg in msgs:
+                            if isinstance(msg, dict) and msg.get("type") == "ai":
+                                parts.append(normalize_content(msg.get("content", ""), include_function_calls=False))
+            return "\n---\n".join(p for p in parts if p)
+
         # Direct content/parts format (Anthropic or unwrapped)
         elif "content" in output_data:
             return normalize_content(output_data["content"], include_function_calls=False)
@@ -358,6 +393,31 @@ def extract_tool_calls(output_data: Any) -> List[Dict[str, Any]]:
             content = candidate.get("content", {})
             if isinstance(content, dict):
                 tool_calls.extend(_extract_tool_calls_from_content(content))
+
+    # LangChain LLMResult format: {"generations": [[{"message": {"tool_calls": [...]}}]], ...}
+    elif "generations" in output_data and isinstance(output_data["generations"], list):
+        for gen_group in output_data["generations"]:
+            if not isinstance(gen_group, list):
+                continue
+            for gen in gen_group:
+                if not isinstance(gen, dict):
+                    continue
+                msg = gen.get("message", {})
+                if isinstance(msg, dict):
+                    tool_calls.extend(_extract_tool_calls_from_content(msg))
+
+    # LangGraph node output format: {"output": [{"update": {"messages": [...]}}]}
+    elif "output" in output_data and isinstance(output_data["output"], list):
+        for entry in output_data["output"]:
+            if not isinstance(entry, dict):
+                continue
+            update = entry.get("update", {})
+            if isinstance(update, dict):
+                msgs = update.get("messages", [])
+                if isinstance(msgs, list):
+                    for msg in msgs:
+                        if isinstance(msg, dict):
+                            tool_calls.extend(_extract_tool_calls_from_content(msg))
 
     # Anthropic direct output: {"content": [{"type": "tool_use", ...}, ...], "role": "assistant"}
     elif "content" in output_data and isinstance(output_data.get("content"), list):

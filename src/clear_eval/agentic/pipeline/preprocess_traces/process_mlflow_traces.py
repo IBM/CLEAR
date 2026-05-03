@@ -129,7 +129,16 @@ def _extract_input_output_from_span(
     outputs_obj = s.get("outputs", {}) or safe_json(attrs.get("mlflow.spanOutputs")) or {}
 
     # Extract bound tools (API spec)
+    # Check inputs first, then LangChain-specific attribute locations
     api_spec = extract_api_spec(inputs)
+    if not api_spec:
+        invocation_params = attrs.get("invocation_params", {})
+        if isinstance(invocation_params, dict):
+            api_spec = extract_api_spec(invocation_params)
+    if not api_spec:
+        chat_tools = attrs.get("mlflow.chat.tools")
+        if isinstance(chat_tools, list):
+            api_spec = extract_api_spec({"tools": chat_tools})
 
     # Extract input messages (OpenAI/Anthropic: messages, Gemini: contents)
     # extract_messages_from_input handles separate system prompts (Anthropic/Gemini)
@@ -496,6 +505,19 @@ def extract_llm_calls_from_mlflow_trace(
         model_input_str, response_text, tool_calls, api_spec, model_meta = _extract_input_output_from_span(
             s, system_trunc_limit
         )
+
+        # Fallback: if no tool_calls found but finish_reason indicates tool_calls,
+        # check the parent span's output (LangChain autolog strips tool_calls from
+        # generations[].message but the parent LangGraph node span preserves them)
+        if not tool_calls:
+            parent = get_parent(s)
+            if parent and not _is_model_call_span(parent):
+                parent_outputs = parent.get("outputs", {})
+                if isinstance(parent_outputs, dict):
+                    parent_tool_calls = extract_tool_calls(parent_outputs)
+                    if parent_tool_calls:
+                        tool_calls = parent_tool_calls
+
         meta_data = _build_span_metadata(s, model_meta)
 
         llm_calls.append({
