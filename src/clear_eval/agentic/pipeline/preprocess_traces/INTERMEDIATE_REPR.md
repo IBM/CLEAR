@@ -80,8 +80,7 @@ built-in preprocessors use a structured JSON format when tool calls are present:
 
 This format is recommended as it helps the LLM judge clearly distinguish text
 from tool invocations, and enables per-tool-call evaluation via
-`--separate-tools true`.  If you produce CSVs yourself, you may represent
-tool calls inline, appended, or in any other format.
+`--separate-tools true`.  
 
 ---
 
@@ -116,22 +115,3 @@ and Gemini (`functionDeclarations`) formats to this shape.  When producing
 CSVs yourself, use the full OpenAI format directly.
 
 ---
-
-## Example
-
-A trace where agent A calls the LLM twice and agent B calls it once:
-
-| Name | task_id | step_in_trace_general | llm_call_index | tool_or_agent | response (abbreviated) |
-|------|---------|-----------------------|----------------|---------------|------------------------|
-| A | tr-abc | 1 | 1 | agent | I'll search for that. [called search("climate")] |
-| B | tr-abc | 2 | 2 | agent | The answer is 42. |
-| A | tr-abc | 3 | 3 | agent | Done. |
-
----
-
-## Experimental: separate tool-call modes
-
-The `--separate-tools` flag supports additional modes for per-tool-call
-evaluation.  These are **experimental** and not yet fully validated.
-See [EXPERIMENTAL_SEPARATE_TOOLS.md](EXPERIMENTAL_SEPARATE_TOOLS.md) for
-details.
