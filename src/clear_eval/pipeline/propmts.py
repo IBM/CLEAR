@@ -451,6 +451,10 @@ def _format_model_output(model_output):
     if not isinstance(parsed, dict):
         return model_output
 
+    # Only format if it's the expected content/tool_calls structure
+    if "content" not in parsed and "tool_calls" not in parsed:
+        return model_output
+
     content = parsed.get("content", "").strip()
     tool_calls = parsed.get("tool_calls", [])
     parts = []
@@ -459,7 +463,7 @@ def _format_model_output(model_output):
     if tool_calls:
         parts.append(f"Tool Calls: {json.dumps(tool_calls, indent=2)}")
 
-    return "\n".join(parts)
+    return "\n".join(parts) if parts else model_output
 
 
 def get_agent_evaluation_prompt_reference_less(model_input, model_output, evaluation_criteria_str, api_spec=None):
@@ -474,9 +478,14 @@ Input: The instruction or context the model was given for this specific step.
 Output: The model's output for this step.{'''
 Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
-IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
+IMPORTANT — Scope of Evaluation:
+You are evaluating a SINGLE STEP within a multi-step agentic workflow. Determine what this step's role is from its Input (system prompt, instructions), then judge ONLY whether the Output fulfills THAT role.
 
-Do NOT penalize an output for being brief, lacking end-user polish, or using internal formatting if it correctly and fully addresses the specific instruction it was given. A short, focused output that serves its purpose within the workflow is complete.
+- If the step's instruction is to perform a complete task (e.g., "analyze the data and respond with your findings"), judge it on task completion.
+- If the step's role is to invoke tools or gather information, a well-formed tool call with correct parameters IS a successful output.
+- If the Input contains results from prior tool calls, the step is only responsible for processing them if its instructions say so.
+
+If the output includes a tool call or routing action, treat it as a delegation — the step is handing off to another component and should NOT be expected to also contain the result of that action. If the output is purely textual with no such delegation, it should fully address the step's instruction. Do NOT assume that every step must produce a user-facing final answer. Many steps exist solely to advance the workflow (tool calls, routing decisions, partial computations). Judge each step on its own stated purpose.
 
 Evaluation Criteria:
 {evaluation_criteria_str}
@@ -508,9 +517,14 @@ Output: The model's output for this step.
 Reference: The expected reference output.{'''
 Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
-IMPORTANT: This output may be a final answer delivered to an end user, or it may be an intermediate step in a larger workflow — for example, a reasoning step, a planning step, or a concise result meant for consumption by another agent or tool.
+IMPORTANT — Scope of Evaluation:
+You are evaluating a SINGLE STEP within a multi-step agentic workflow. Determine what this step's role is from its Input (system prompt, instructions), then judge ONLY whether the Output fulfills THAT role.
 
-Do NOT penalize an output for being brief, lacking end-user polish, or using internal formatting if it correctly and fully addresses the specific instruction it was given. A short, focused output that serves its purpose within the workflow is complete.
+- If the step's instruction is to perform a complete task (e.g., "analyze the data and respond with your findings"), judge it on task completion.
+- If the step's role is to invoke tools or gather information, a well-formed tool call with correct parameters IS a successful output.
+- If the Input contains results from prior tool calls, the step is only responsible for processing them if its instructions say so.
+
+If the output includes a tool call or routing action, treat it as a delegation — the step is handing off to another component and should NOT be expected to also contain the result of that action. If the output is purely textual with no such delegation, it should fully address the step's instruction. Do NOT assume that every step must produce a user-facing final answer. Many steps exist solely to advance the workflow (tool calls, routing decisions, partial computations). Judge each step on its own stated purpose.
 
 Evaluation Criteria:
 {evaluation_criteria_str}

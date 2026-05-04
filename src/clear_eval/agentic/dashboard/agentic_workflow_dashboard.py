@@ -241,6 +241,47 @@ def extract_issues(text, delimiter=";"):
     return [NO_ISSUE] if not issues else issues
 
 
+def _format_field_as_json_if_possible(value):
+    """
+    Format a field value as pretty-printed JSON if it's JSON-parseable,
+    otherwise return as string.
+    
+    Args:
+        value: The value to format (can be string, dict, list, etc.)
+    
+    Returns:
+        Formatted string (JSON if possible, otherwise plain string)
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return "N/A"
+    
+    # If already a dict or list, format as JSON
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, indent=2, ensure_ascii=False)
+        except (TypeError, ValueError):
+            return str(value)
+    
+    # If string, try to parse as JSON
+    if isinstance(value, str):
+        value_stripped = value.strip()
+        # Check if it looks like JSON
+        if value_stripped and (
+            (value_stripped.startswith('{') and value_stripped.endswith('}')) or
+            (value_stripped.startswith('[') and value_stripped.endswith(']'))
+        ):
+            try:
+                parsed = json.loads(value_stripped)
+                return json.dumps(parsed, indent=2, ensure_ascii=False)
+            except (json.JSONDecodeError, ValueError):
+                # Not valid JSON, return as-is
+                pass
+        return value
+    
+    # For other types, convert to string
+    return str(value)
+
+
 def _extract_issues_from_str(text, delimiter=";"):
     if pd.isna(text) or not text or text == "[]":
         return []
@@ -2915,10 +2956,17 @@ def main_page():
                                                     ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(val)}</pre>')
 
                                         with ui.expansion("Model Input (Prompt)").classes("w-full"):
-                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("model_input", "N/A"))}</pre>')
+                                            formatted_input = _format_field_as_json_if_possible(orig_row.get("model_input", "N/A"))
+                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{formatted_input}</pre>')
+
+                                        if "api_spec" in orig_row and orig_row.get("api_spec") is not None and not (isinstance(orig_row.get("api_spec"), float) and pd.isna(orig_row.get("api_spec"))):
+                                            with ui.expansion("API Spec").classes("w-full"):
+                                                formatted_api_spec = _format_field_as_json_if_possible(orig_row.get("api_spec"))
+                                                ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{formatted_api_spec}</pre>')
 
                                         with ui.expansion("Response").classes("w-full"):
-                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("response", "N/A"))}</pre>')
+                                            formatted_response = _format_field_as_json_if_possible(orig_row.get("response", "N/A"))
+                                            ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{formatted_response}</pre>')
 
                                         with ui.expansion("Full Evaluation Text").classes("w-full"):
                                             ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:300px; overflow-y:auto;">{str(orig_row.get("evaluation_text", "N/A"))}</pre>')
@@ -3497,14 +3545,23 @@ def main_page():
                             with ui.column().classes("flex-1"):
                                 ui.label("Input").classes("text-sm font-semibold text-slate-600")
                                 _inp = row.get("model_input", None)
-                                input_text = str(_inp) if _inp is not None and not (isinstance(_inp, float) and pd.isna(_inp)) else "N/A"
+                                input_text = _format_field_as_json_if_possible(_inp)
                                 ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:250px; overflow-y:auto; background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid #E2E8F0;">{input_text[:1000]}{"..." if len(input_text) > 1000 else ""}</pre>')
 
                             with ui.column().classes("flex-1"):
                                 ui.label("Output").classes("text-sm font-semibold text-slate-600")
                                 _out = row.get("response", None)
-                                output_text = str(_out) if _out is not None and not (isinstance(_out, float) and pd.isna(_out)) else "N/A"
+                                output_text = _format_field_as_json_if_possible(_out)
                                 ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:250px; overflow-y:auto; background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid #E2E8F0;">{output_text[:1000]}{"..." if len(output_text) > 1000 else ""}</pre>')
+
+                        # Show API Spec if available
+                        if "api_spec" in row and row.get("api_spec") is not None and not (isinstance(row.get("api_spec"), float) and pd.isna(row.get("api_spec"))):
+                            with ui.row().classes("w-full"):
+                                with ui.column().classes("flex-1"):
+                                    ui.label("API Spec").classes("text-sm font-semibold text-slate-600")
+                                    _api_spec = row.get("api_spec", None)
+                                    api_spec_text = _format_field_as_json_if_possible(_api_spec)
+                                    ui.html(f'<pre style="white-space:pre-wrap; font-size:12px; color:#334155; max-height:250px; overflow-y:auto; background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid #E2E8F0;">{api_spec_text[:1000]}{"..." if len(api_spec_text) > 1000 else ""}</pre>')
 
                         # Evaluation summary shown directly below input/output (not collapsible)
                         step_info = scores_by_step.get(step_num, {})
