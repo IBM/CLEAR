@@ -26,7 +26,6 @@ provider_defaults:
     max_workers: 20
 
 eval_model_params:
-  temperature: 0.0  # Default for deterministic evaluation
   max_tokens: 8096
 
 # unique run_ identifier (to appear in file name)
