@@ -85,13 +85,8 @@ default_eval_criteria_dict = {
 }
 
 default_agentic_eval_criteria_dict = {
-    "Correctness": "The response produces accurate and logically sound results. For a final answer, this meets the user's stated requirements. For an intermediate step, this means the output is factually correct and logically advances the task given the specific instruction.",
-    "Completeness": "For a final answer, all parts of the user's request are fully addressed. For an intermediate step (e.g., a tool call or partial reasoning), completeness is not expected — the step only needs to correctly advance the task.",
-    "Clarity": "The output is easy to read, well-structured, and unambiguous. Internal or structured formatting (e.g., agent-internal markup, structured data for downstream consumption) is acceptable in agentic workflows.",
-    "Relevance": "The response stays focused on the question without unnecessary or off-topic content.",
-    "Efficiency": "The proposed solution is optimized for performance, avoiding unnecessary complexity.",
-    "Robustness": "The solution handles edge cases and potential errors gracefully.",
-    "Best_Practices": "The solution follows accepted conventions, style guidelines, and maintainable coding standards.",
-    "Actionability": "The response provides directly usable steps without requiring significant rework.",
-    "Transparency": "Reasoning, assumptions, and decisions are clearly explained.",
+    "Correctness": "The output is factually correct and logically sound for what THIS STEP is supposed to do. For a tool call: correct tool selected with valid parameters. For a reasoning step: sound logic that advances the task. For a final answer: meets the user's requirements.",
+    "Completeness": "The step fulfills its specific role in the workflow. A tool call is complete if it invokes the right tool with all required parameters. A reasoning step is complete if it reaches a conclusion. Only final answers need to fully address the user's request.",
+    "Relevance": "The output is appropriate for this step's role — it advances the task without unnecessary or off-topic content. A tool call to gather needed information is relevant even if it doesn't answer the user directly.",
+    "Tool Selection": "If tools were called: were the appropriate tools chosen given the available options? Were the arguments well-formed and suitable for the task? If no tools were called but should have been, note this. Skip this criterion if no tools are involved.",
 }

@@ -42,68 +42,6 @@ def convert_csv_to_parquet_buffer(csv_file: Path) -> tuple[str, bytes, int]:
 
     return f"{csv_file.stem}.parquet", parquet_bytes, csv_size
 
-
-def deduplicate_agent_result_zip(agent_zip_path: Path, output_buffer: BytesIO) -> dict:
-    """
-    Remove model_input and response columns from agent result zip CSVs.
-
-    Returns:
-        Dictionary with size statistics
-    """
-    original_size = 0
-    deduplicated_size = 0
-    files_processed = 0
-
-    with zipfile.ZipFile(agent_zip_path, 'r') as source_zip:
-        with zipfile.ZipFile(output_buffer, 'w', compression=zipfile.ZIP_DEFLATED) as target_zip:
-            for item in source_zip.namelist():
-                file_data = source_zip.read(item)
-                original_size += len(file_data)
-
-                if item.endswith('.csv') or item.endswith('.parquet'):
-                    try:
-                        # Read the file
-                        if item.endswith('.csv'):
-                            csv_content = file_data.decode('utf-8')
-                            df = pd.read_csv(StringIO(csv_content))
-                        else:
-                            df = pd.read_parquet(BytesIO(file_data))
-
-                        # Remove model_input and response columns
-                        columns_to_drop = []
-                        if 'model_input' in df.columns:
-                            columns_to_drop.append('model_input')
-                        if 'response' in df.columns:
-                            columns_to_drop.append('response')
-
-                        if columns_to_drop:
-                            df = df.drop(columns=columns_to_drop)
-                            files_processed += 1
-
-                            # Write back in same format
-                            if item.endswith('.csv'):
-                                csv_buffer = StringIO()
-                                df.to_csv(csv_buffer, index=False)
-                                file_data = csv_buffer.getvalue().encode('utf-8')
-                            else:
-                                parquet_buffer = BytesIO()
-                                df.to_parquet(parquet_buffer, engine='pyarrow', compression='snappy', index=False)
-                                file_data = parquet_buffer.getvalue()
-
-                    except Exception as e:
-                        logger.warning(f"Could not process {item}: {e}")
-
-                target_zip.writestr(item, file_data)
-                deduplicated_size += len(file_data)
-
-    return {
-        'original_size': original_size,
-        'deduplicated_size': deduplicated_size,
-        'files_processed': files_processed,
-        'reduction_pct': ((original_size - deduplicated_size) / original_size * 100) if original_size > 0 else 0
-    }
-
-
 def _add_trajectory_data_to_zip(zf: zipfile.ZipFile, traces_data_dir: Path) -> int:
     """
     Add trajectory data to zip file (converted to Parquet).

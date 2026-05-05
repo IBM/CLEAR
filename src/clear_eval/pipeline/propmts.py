@@ -479,13 +479,15 @@ Output: The model's output for this step.{'''
 Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
 IMPORTANT — Scope of Evaluation:
-You are evaluating a SINGLE STEP within a multi-step agentic workflow. Determine what this step's role is from its Input (system prompt, instructions), then judge ONLY whether the Output fulfills THAT role.
+You are evaluating a SINGLE STEP within a multi-step agentic workflow. This step may have access to tools.
 
-- If the step's instruction is to perform a complete task (e.g., "analyze the data and respond with your findings"), judge it on task completion.
-- If the step's role is to invoke tools or gather information, a well-formed tool call with correct parameters IS a successful output.
-- If the Input contains results from prior tool calls, the step is only responsible for processing them if its instructions say so.
+The output may be:
+- A tool invocation (in any format: structured JSON, Action/Action Input, function calls, etc.) — this is a delegation. The tool will be executed AFTER this step and results will appear in a subsequent step. Do NOT penalize for missing tool results or a final answer.
+- A textual response that addresses the instruction directly (possibly after having received tool results in the input).
 
-If the output includes a tool call or routing action, treat it as a delegation — the step is handing off to another component and should NOT be expected to also contain the result of that action. If the output is purely textual with no such delegation, it should fully address the step's instruction. Do NOT assume that every step must produce a user-facing final answer. Many steps exist solely to advance the workflow (tool calls, routing decisions, partial computations). Judge each step on its own stated purpose.
+Judge the output based on what it is:
+- For tool calls: Were the correct tools selected? Are parameters appropriate?
+- For text responses: Does it correctly address the step's instruction given the available context?
 
 Evaluation Criteria:
 {evaluation_criteria_str}
@@ -518,13 +520,15 @@ Reference: The expected reference output.{'''
 Available Tools Context: The tools available to the model, with full schemas for tools that were called and names/descriptions for others.''' if tools_context else ''}
 
 IMPORTANT — Scope of Evaluation:
-You are evaluating a SINGLE STEP within a multi-step agentic workflow. Determine what this step's role is from its Input (system prompt, instructions), then judge ONLY whether the Output fulfills THAT role.
+You are evaluating a SINGLE STEP within a multi-step agentic workflow. This step may have access to tools.
 
-- If the step's instruction is to perform a complete task (e.g., "analyze the data and respond with your findings"), judge it on task completion.
-- If the step's role is to invoke tools or gather information, a well-formed tool call with correct parameters IS a successful output.
-- If the Input contains results from prior tool calls, the step is only responsible for processing them if its instructions say so.
+The output may be:
+- A tool invocation (in any format: structured JSON, Action/Action Input, function calls, etc.) — this is a delegation. The tool will be executed AFTER this step and results will appear in a subsequent step. Do NOT penalize for missing tool results or a final answer.
+- A textual response that addresses the instruction directly (possibly after having received tool results in the input).
 
-If the output includes a tool call or routing action, treat it as a delegation — the step is handing off to another component and should NOT be expected to also contain the result of that action. If the output is purely textual with no such delegation, it should fully address the step's instruction. Do NOT assume that every step must produce a user-facing final answer. Many steps exist solely to advance the workflow (tool calls, routing decisions, partial computations). Judge each step on its own stated purpose.
+Judge the output based on what it is:
+- For tool calls: Were the correct tools selected? Are parameters appropriate?
+- For text responses: Does it correctly address the step's instruction given the available context?
 
 Evaluation Criteria:
 {evaluation_criteria_str}
