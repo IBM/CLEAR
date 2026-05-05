@@ -68,7 +68,8 @@ def build_workflow_graph(traj_df):
 
     edges = defaultdict(int)
 
-    for task_id, task_group in seq_df.groupby("task_id"):
+    task_col = "task_id" if "task_id" in seq_df.columns else "trace_id"
+    for task_id, task_group in seq_df.groupby(task_col):
         task_group = task_group.sort_values("step_in_trace_general") if "step_in_trace_general" in task_group.columns else task_group
         agents = task_group["Name"].tolist()
 
