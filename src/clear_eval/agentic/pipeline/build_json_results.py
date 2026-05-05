@@ -56,14 +56,20 @@ def build_workflow_graph(traj_df):
         node_stats[agent]["tool_calls"] += n_tool_calls
         node_stats[agent]["agent_calls"] += 1
 
-    # Sort by llm_call_index (IR no longer has step_in_trace_general)
-    sort_col = "llm_call_index" if "llm_call_index" in traj_df.columns else "step_in_trace_general"
-    seq_df = traj_df.sort_values(sort_col) if sort_col in traj_df.columns else traj_df
+    # Deduplicate by llm_call_index so split tool rows don't create extra edges
+    if "llm_call_index" in traj_df.columns and not traj_df["llm_call_index"].isnull().all():
+        seq_df = (
+            traj_df
+            .sort_values("step_in_trace_general")
+            .drop_duplicates(subset=["task_id", "llm_call_index"], keep="first")
+        )
+    else:
+        seq_df = traj_df.sort_values("step_in_trace_general") if "step_in_trace_general" in traj_df.columns else traj_df
 
     edges = defaultdict(int)
 
     for task_id, task_group in seq_df.groupby("task_id"):
-        task_group = task_group.sort_values(sort_col) if sort_col in task_group.columns else task_group
+        task_group = task_group.sort_values("step_in_trace_general") if "step_in_trace_general" in task_group.columns else task_group
         agents = task_group["Name"].tolist()
 
         for i, agent in enumerate(agents):
@@ -160,6 +166,7 @@ def _process_results_dir(
     config_dict: Dict[str, Any],
     trace_metrics: Dict[str, Any],
     all_traces: set,
+    all_results_dfs: Optional[List] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Process one CLEAR results directory into a result dict.
@@ -201,6 +208,9 @@ def _process_results_dir(
 
     if results_df is None:
         return None
+
+    if all_results_dfs is not None:
+        all_results_dfs.append(results_df)
 
     # Build issue ID mapping
     issue_text_to_id = {}
@@ -338,7 +348,6 @@ def build_comprehensive_json_results(
         Comprehensive results dictionary
     """
     clear_results_path = Path(clear_results_dir)
-    traces_data_path = Path(traces_data_dir)
 
     filtered_config = {k: v for k, v in config_dict.items() if k != "provider_defaults"}
 
@@ -359,19 +368,10 @@ def build_comprehensive_json_results(
         "agents": {},
     }
 
-    # Load trajectory data for workflow graph building
-    traj_dfs = []
-    for csv_file in traces_data_path.glob("*.csv"):
-        try:
-            df = pd.read_csv(csv_file)
-            traj_dfs.append(df)
-        except Exception as e:
-            logger.warning(f"Could not load trajectory data {csv_file}: {e}")
-
-    traj_df = pd.concat(traj_dfs) if traj_dfs else pd.DataFrame()
     all_traces: set = set()
     trace_metrics: Dict[str, Any] = defaultdict(lambda: {"scores": [], "has_issues": []})
     agent_component_scores: Dict[str, Dict[str, List[float]]] = {}
+    all_results_dfs: List[pd.DataFrame] = []  # Collect for workflow graph
 
     # Top-level dirs are agent dirs.  Component subdirs (e.g. tool_calls/)
     # live *inside* each agent dir, not as siblings.
@@ -386,6 +386,7 @@ def build_comprehensive_json_results(
         # Process main (reasoning) results — files at agent root
         reasoning_result = _process_results_dir(
             agent_dir, config_dict, trace_metrics, all_traces,
+            all_results_dfs,
         )
 
         # Process tool evaluation results from tool_calls/ subdir
@@ -394,6 +395,7 @@ def build_comprehensive_json_results(
         if tool_calls_dir.is_dir():
             tool_result = _process_results_dir(
                 tool_calls_dir, config_dict, trace_metrics, all_traces,
+                all_results_dfs,
             )
 
         if reasoning_result is None and tool_result is None:
@@ -429,6 +431,11 @@ def build_comprehensive_json_results(
     # Global statistics
     results["metadata"]["statistics"]["total_traces"] = len(all_traces)
     results["metadata"]["statistics"]["total_agents"] = len(results["agents"])
+
+    # Build workflow graph from collected results
+    traj_df = pd.concat(all_results_dfs, ignore_index=True) if all_results_dfs else pd.DataFrame()
+    if not traj_df.empty and 'step_in_trace_general' in traj_df.columns:
+        traj_df = traj_df.sort_values(['task_id', 'step_in_trace_general']).reset_index(drop=True)
     results["metadata"]["workflow_graph"] = build_workflow_graph(traj_df)
 
     # Build pass/fail summary

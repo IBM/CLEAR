@@ -673,6 +673,7 @@ def build_csv_rows(
             "Name": agent_name,
             "intent": intent,
             "task_id": task_id,
+            "step_in_trace_general": step_counter,
             "llm_call_index": llm_call_counter,
             "model_input": model_input,
             "response": response,

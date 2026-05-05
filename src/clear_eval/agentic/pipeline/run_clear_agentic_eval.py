@@ -100,6 +100,14 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         "--results-dir",
         help="Base output directory (required)"
     )
+    group.add_argument(
+        "--separate-tools",
+        type=str2bool,
+        default=None,
+        help="Enable per-tool-call evaluation (tools_with_reasoning mode). "
+             "false (default): single combined evaluation per LLM call. "
+             "true: one evaluation per tool call with reasoning in input.",
+    )
     
     # Pipeline mode control
     group.add_argument(

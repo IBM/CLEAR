@@ -29,13 +29,14 @@ Each row represents **one LLM invocation**.
 
 ### Required
 
-| Column         | Type     | Description                                                                                                          |
-|----------------|----------|----------------------------------------------------------------------------------------------------------------------|
-| `Name`         | str      | Agent or node name.  CLEAR groups and evaluates rows by this value, so set it to the component that invoked the LLM. |
-| `task_id`      | str      | Trajectory identifier.  All rows from the same trace must share this value.                                          |
-| `llm_call_index` | int   | Row ordering within the trace (1-indexed, unique per row within the file).                                           |
-| `model_input`  | json/str | The messages sent to the LLM (see [format](#model_input-format)).                                                    |
-| `response`     | str      | The LLM output (see [format](#response-format)).                                                                     |
+| Column                  | Type     | Description                                                                                                          |
+|-------------------------|----------|----------------------------------------------------------------------------------------------------------------------|
+| `Name`                  | str      | Agent or node name.  CLEAR groups and evaluates rows by this value, so set it to the component that invoked the LLM. |
+| `task_id`               | str      | Trajectory identifier.  All rows from the same trace must share this value.                                          |
+| `step_in_trace_general` | int      | Row ordering (1-indexed, unique per row within the file). Same value as `llm_call_index` in the IR.                  |
+| `llm_call_index`        | int      | LLM call ordering (1-indexed). Equal to `step_in_trace_general` in the IR. Downstream, when `--separate-tools true` splits tool calls into separate rows, multiple rows share the same `llm_call_index` but get unique `step_in_trace_general`. |
+| `model_input`           | json/str | The messages sent to the LLM (see [format](#model_input-format)).                                                    |
+| `response`              | str      | The LLM output (see [format](#response-format)).                                                                     |
 
 ### Optional
 
@@ -47,7 +48,8 @@ Each row represents **one LLM invocation**.
 | `meta_data` | json/str | Free-form JSON string for any metadata you want to log (model name, token counts, latency, span IDs, etc.). |
 | `traj_score` | float | Ground-truth trajectory score (0-1).  All rows in a trajectory should share the same value. |
 
-> **Note:** `step_in_trace_general` and `id` are now **not** part of the IR.
+> **Note:** `id` is assigned downstream by `convert_to_clear_format()` as `{task_id}_{step_in_trace_general}`.
+
 ---
 
 ## `model_input` format

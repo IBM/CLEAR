@@ -192,7 +192,7 @@ def convert_to_clear_format(
 
     logger.info(f"Converting {len(csv_files)} CSV files to CLEAR format...")
 
-    # Per-task step counter for assigning unique step_in_trace_general
+    # Per-task step counter (only used in separate_tools mode to reassign steps)
     task_step_counters: Dict[str, int] = defaultdict(int)
 
     for csv_file in csv_files:
@@ -203,14 +203,14 @@ def convert_to_clear_format(
                 if 'Name' not in df.columns:
                     df["Name"] = df["agent_name"]
 
-                # Sort by llm_call_index (or step_in_trace_general for old IR) to ensure correct ordering
-                sort_col = 'llm_call_index' if 'llm_call_index' in df.columns else 'step_in_trace_general'
-                if sort_col in df.columns:
-                    df = df.sort_values(sort_col).reset_index(drop=True)
+                # Sort by step_in_trace_general (present in both old and new IR)
+                if 'step_in_trace_general' in df.columns:
+                    df = df.sort_values('step_in_trace_general').reset_index(drop=True)
 
                 for i, row in df.iterrows():
                     agent_name = row['Name']
                     task_id = row['task_id']
+                    step = int(row.get('step_in_trace_general', i + 1))
 
                     total_rows += 1
                     agent_counter[agent_name] += 1
@@ -218,29 +218,30 @@ def convert_to_clear_format(
 
                     row_with_agent = {'agent_name': agent_name, **row}
 
+                    # Ensure llm_call_index exists (old IR may not have it)
+                    if 'llm_call_index' not in row or pd.isna(row.get('llm_call_index')):
+                        row_with_agent['llm_call_index'] = step
+
                     if not separate_tools:
-                        # Combined mode: one row per LLM call
-                        task_step_counters[task_id] += 1
-                        step = task_step_counters[task_id]
-                        row_with_agent['step_in_trace_general'] = step
+                        # Combined mode: keep step_in_trace_general from IR, assign id
                         row_with_agent['id'] = f"{task_id}_{step}"
                         agent_data[agent_name].append(row_with_agent)
                     else:
-                        # Tools-with-reasoning mode: parse response for tool calls
+                        # Separate tools mode: parse response for tool calls
                         response_raw = row.get('response', '')
                         if pd.isna(response_raw):
                             response_raw = ''
                         content_text, parsed_tools = _parse_tool_calls_from_response(str(response_raw))
 
                         if not parsed_tools:
-                            # No tool calls — plain text response gets its own step
+                            # No tool calls — gets its own sequential step
                             task_step_counters[task_id] += 1
-                            step = task_step_counters[task_id]
-                            row_with_agent['step_in_trace_general'] = step
-                            row_with_agent['id'] = f"{task_id}_{step}"
+                            new_step = task_step_counters[task_id]
+                            row_with_agent['step_in_trace_general'] = new_step
+                            row_with_agent['id'] = f"{task_id}_{new_step}"
                             agent_data[agent_name].append(row_with_agent)
                         else:
-                            # Has tool calls — each tool call gets its own step
+                            # Each tool call gets its own sequential step
                             model_input = row_with_agent['model_input']
                             has_content = content_text and content_text.strip() not in ('', 'null', 'None')
                             if has_content:
@@ -250,13 +251,13 @@ def convert_to_clear_format(
 
                             for tc_idx, tc in enumerate(parsed_tools):
                                 task_step_counters[task_id] += 1
-                                step = task_step_counters[task_id]
+                                new_step = task_step_counters[task_id]
                                 tool_row = dict(row_with_agent)
                                 tool_row['model_input'] = tool_input
                                 tool_row['response'] = json.dumps(tc, indent=2)
                                 tool_row['tool_or_agent'] = 'tool'
-                                tool_row['step_in_trace_general'] = step
-                                tool_row['id'] = f"{task_id}_{step}"
+                                tool_row['step_in_trace_general'] = new_step
+                                tool_row['id'] = f"{task_id}_{new_step}"
                                 tool_data[agent_name].append(tool_row)
 
         except Exception as e:
