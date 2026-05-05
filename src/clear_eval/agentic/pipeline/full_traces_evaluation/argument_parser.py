@@ -47,14 +47,6 @@ def add_preprocessing_args_to_parser(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Observability framework used to capture traces (default: mlflow)",
     )
-    group.add_argument(
-        "--separate-tools",
-        type=str2bool,
-        default=None,
-        help="Enable per-tool-call evaluation (tools_with_reasoning mode). "
-             "false (default): single combined evaluation per LLM call. "
-             "true: one evaluation per tool call with reasoning in input.",
-    )
 
 
 def create_base_parser(description: str) -> argparse.ArgumentParser:
