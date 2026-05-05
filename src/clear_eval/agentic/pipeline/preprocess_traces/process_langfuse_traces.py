@@ -5,7 +5,7 @@ Supports LangGraph and CrewAI frameworks.
 Handles multiple providers: OpenAI, Anthropic, Gemini, etc.
 
 Output fields match the unified CSV schema:
-id, Name, intent, task_id, step_in_trace_general, llm_call_index,
+  Name, intent, task_id, llm_call_index,
   model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 """
 

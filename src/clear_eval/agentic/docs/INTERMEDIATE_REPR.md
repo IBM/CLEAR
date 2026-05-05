@@ -29,23 +29,25 @@ Each row represents **one LLM invocation**.
 
 ### Required
 
-| Column                  | Type     | Description                                                                                                          |
-|-------------------------|----------|----------------------------------------------------------------------------------------------------------------------|
-| `Name`                  | str      | Agent or node name.  CLEAR groups and evaluates rows by this value, so set it to the component that invoked the LLM. |
-| `task_id`               | str      | Trajectory identifier.  All rows from the same trace must share this value.                                          |
-| `step_in_trace_general` | int      | Row ordering (1-indexed, unique per row within the file).                                                            |
-| `model_input`           | json/str | The messages sent to the LLM (see [format](#model_input-format)).                                                    |
-| `response`              | str      | The LLM output (see [format](#response-format)).                                                                     |
+| Column         | Type     | Description                                                                                                          |
+|----------------|----------|----------------------------------------------------------------------------------------------------------------------|
+| `Name`         | str      | Agent or node name.  CLEAR groups and evaluates rows by this value, so set it to the component that invoked the LLM. |
+| `task_id`      | str      | Trajectory identifier.  All rows from the same trace must share this value.                                          |
+| `llm_call_index` | int   | Row ordering within the trace (1-indexed, unique per row within the file).                                           |
+| `model_input`  | json/str | The messages sent to the LLM (see [format](#model_input-format)).                                                    |
+| `response`     | str      | The LLM output (see [format](#response-format)).                                                                     |
 
 ### Optional
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `intent` | str | The user's original query / goal for this trajectory. |
-| `api_spec` | str | JSON string of tool definitions available to the LLM call, in OpenAI format (see [format](#api_spec-format)). When present, automatically appended to `model_input` at evaluation time so the judge can assess tool selection quality. |
+| `tool_or_agent` | str | `"agent"` (default). Reserved for downstream use when tool calls are split into separate rows. |
+| `api_spec` | str | JSON string of tool definitions available to the LLM call, in OpenAI format (see [format](#api_spec-format)). |
 | `meta_data` | json/str | Free-form JSON string for any metadata you want to log (model name, token counts, latency, span IDs, etc.). |
 | `traj_score` | float | Ground-truth trajectory score (0-1).  All rows in a trajectory should share the same value. |
 
+> **Note:** `step_in_trace_general` and `id` are now **not** part of the IR.
 ---
 
 ## `model_input` format

@@ -680,8 +680,6 @@ def build_csv_rows(
             "api_spec": api_spec_str,
             "meta_data": meta_data_str,
             "traj_score": traj_score,
-            "id": f"{task_id}_{step_counter}",
-            "step_in_trace_general": step_counter,
         })
 
     return rows

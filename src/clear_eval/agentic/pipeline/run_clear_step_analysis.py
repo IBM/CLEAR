@@ -192,6 +192,9 @@ def convert_to_clear_format(
 
     logger.info(f"Converting {len(csv_files)} CSV files to CLEAR format...")
 
+    # Per-task step counter for assigning unique step_in_trace_general
+    task_step_counters: Dict[str, int] = defaultdict(int)
+
     for csv_file in csv_files:
         try:
             with open(csv_file, 'r', encoding='utf-8') as f:
@@ -199,9 +202,12 @@ def convert_to_clear_format(
                 df = df.rename(columns={"trace_id": "task_id"}, inplace=False)
                 if 'Name' not in df.columns:
                     df["Name"] = df["agent_name"]
-                df.loc[:, "id"] = df.apply(
-                    lambda row: f"{row['task_id']}_{row['step_in_trace_general']}", axis=1
-                )
+
+                # Sort by llm_call_index (or step_in_trace_general for old IR) to ensure correct ordering
+                sort_col = 'llm_call_index' if 'llm_call_index' in df.columns else 'step_in_trace_general'
+                if sort_col in df.columns:
+                    df = df.sort_values(sort_col).reset_index(drop=True)
+
                 for i, row in df.iterrows():
                     agent_name = row['Name']
                     task_id = row['task_id']
@@ -213,7 +219,11 @@ def convert_to_clear_format(
                     row_with_agent = {'agent_name': agent_name, **row}
 
                     if not separate_tools:
-                        # Combined mode: response taken as-is
+                        # Combined mode: one row per LLM call
+                        task_step_counters[task_id] += 1
+                        step = task_step_counters[task_id]
+                        row_with_agent['step_in_trace_general'] = step
+                        row_with_agent['id'] = f"{task_id}_{step}"
                         agent_data[agent_name].append(row_with_agent)
                     else:
                         # Tools-with-reasoning mode: parse response for tool calls
@@ -223,10 +233,14 @@ def convert_to_clear_format(
                         content_text, parsed_tools = _parse_tool_calls_from_response(str(response_raw))
 
                         if not parsed_tools:
-                            # No tool calls — plain text response to agent_data
+                            # No tool calls — plain text response gets its own step
+                            task_step_counters[task_id] += 1
+                            step = task_step_counters[task_id]
+                            row_with_agent['step_in_trace_general'] = step
+                            row_with_agent['id'] = f"{task_id}_{step}"
                             agent_data[agent_name].append(row_with_agent)
                         else:
-                            # Has tool calls — split into per-tool rows
+                            # Has tool calls — each tool call gets its own step
                             model_input = row_with_agent['model_input']
                             has_content = content_text and content_text.strip() not in ('', 'null', 'None')
                             if has_content:
@@ -234,13 +248,15 @@ def convert_to_clear_format(
                             else:
                                 tool_input = model_input
 
-                            orig_step = row_with_agent.get('step_in_trace_general', 0)
                             for tc_idx, tc in enumerate(parsed_tools):
+                                task_step_counters[task_id] += 1
+                                step = task_step_counters[task_id]
                                 tool_row = dict(row_with_agent)
                                 tool_row['model_input'] = tool_input
                                 tool_row['response'] = json.dumps(tc, indent=2)
                                 tool_row['tool_or_agent'] = 'tool'
-                                tool_row['id'] = f"{task_id}_{orig_step}_tc{tc_idx}"
+                                tool_row['step_in_trace_general'] = step
+                                tool_row['id'] = f"{task_id}_{step}"
                                 tool_data[agent_name].append(tool_row)
 
         except Exception as e:

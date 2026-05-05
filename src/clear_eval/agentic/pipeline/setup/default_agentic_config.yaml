@@ -76,6 +76,7 @@ input_columns:
   - tool_or_agent
   - llm_call_index
   - api_spec
+  - meta_data
 
 
 # ============================================================================

@@ -6,7 +6,7 @@ format suitable for LLM-as-judge evaluation, significantly reducing token usage
 while preserving the information needed for quality assessment.
 
 INPUT: Unified CSV format (output of preprocessing step)
-  Columns: Name, intent, task_id, step_in_trace_general, llm_call_index,
+  Columns: Name, intent, task_id, llm_call_index,
            model_input, response, tool_or_agent, api_spec, meta_data, traj_score
 
 The CSV format is provider-agnostic (works with Langfuse, MLflow traces)
@@ -403,7 +403,7 @@ def _collect_and_deduplicate_steps(
     agent_previous_input: Dict[str, str] = {}
 
     for idx, row in df.iterrows():
-        step_num = row.get("step_in_trace_general", idx + 1)
+        step_num = row.get("step_in_trace_general", row.get("llm_call_index", idx + 1))
         agent_name = row.get("Name", "unknown")
         action_type = row.get("tool_or_agent", "agent")
 

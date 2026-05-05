@@ -56,19 +56,14 @@ def build_workflow_graph(traj_df):
         node_stats[agent]["tool_calls"] += n_tool_calls
         node_stats[agent]["agent_calls"] += 1
 
-    # Deduplicate by llm_call_index if available
-    seq_df = traj_df
-    if "llm_call_index" in traj_df.columns and not traj_df["llm_call_index"].isnull().all():
-        seq_df = (
-            traj_df
-            .sort_values("step_in_trace_general")
-            .drop_duplicates(subset=["task_id", "llm_call_index"], keep="first")
-        )
+    # Sort by llm_call_index (IR no longer has step_in_trace_general)
+    sort_col = "llm_call_index" if "llm_call_index" in traj_df.columns else "step_in_trace_general"
+    seq_df = traj_df.sort_values(sort_col) if sort_col in traj_df.columns else traj_df
 
     edges = defaultdict(int)
 
     for task_id, task_group in seq_df.groupby("task_id"):
-        task_group = task_group.sort_values("step_in_trace_general")
+        task_group = task_group.sort_values(sort_col) if sort_col in task_group.columns else task_group
         agents = task_group["Name"].tolist()
 
         for i, agent in enumerate(agents):
@@ -162,7 +157,6 @@ def _parse_issues_list(recurring_issues_str):
 
 def _process_results_dir(
     results_dir: Path,
-    traj_data: Dict[str, Any],
     config_dict: Dict[str, Any],
     trace_metrics: Dict[str, Any],
     all_traces: set,
@@ -234,33 +228,26 @@ def _process_results_dir(
     for _, row in results_df.iterrows():
         task_id = row.get('task_id', row.get('question_id', ''))
         step = row.get('step_in_trace_general', 0)
-        row_id = row.get('id', row.get('question_id', f"{task_id}_{step}"))
+        row_id = row.get('id', f"{task_id}_{step}")
 
         if task_id:
             all_traces.add(str(task_id))
 
         row_issues = _parse_issues_list(row.get('recurring_issues_str', ''))
 
-        # Fallback lookup into trajectory data (for legacy compatibility)
-        traj_key = f"{task_id}_{step}"
-        traj_row = traj_data.get(traj_key, {})
-
         meta_data = _parse_meta_data(row.get('meta_data', ''))
-        if not meta_data:
-            meta_data = _parse_meta_data(traj_row.get('meta_data', ''))
-
-        model_input = row.get('model_input') or traj_row.get('model_input', '')
-        response = row.get('response', traj_row.get('response', ''))
+        model_input = row.get('model_input', '')
+        response = row.get('response', '')
         eval_text = row.get('evaluation_text', '')
         eval_summary = row.get('evaluation_summary', '')
         score_val = row.get('score', 0)
-        tool_or_agent = row.get('tool_or_agent', traj_row.get('tool_or_agent', 'agent'))
+        tool_or_agent = row.get('tool_or_agent', 'agent')
 
         span_data = {
             "trace_id": str(task_id),
             "span_reference": {
                 "span_id": meta_data.get('span_id', f"{task_id}_span_{step}"),
-                "span_name": meta_data.get('span_name', traj_row.get('Name', dir_name)),
+                "span_name": meta_data.get('span_name', dir_name),
                 "span_type": meta_data.get('span_type', ''),
                 "tool_or_agent": _safe_str(tool_or_agent),
                 "parent_span_id": meta_data.get('parent_span_id'),
@@ -276,15 +263,7 @@ def _process_results_dir(
                 "evaluation_text": _safe_str(eval_text, max_len=5000),
                 "evaluation_summary": _safe_str(eval_summary, max_len=2000)
             },
-            "span_metadata": {
-                "duration_ms": meta_data.get('duration_ms'),
-                "status": meta_data.get('status'),
-                "model": meta_data.get('model'),
-                "provider": meta_data.get('provider'),
-                "tokens": meta_data.get('tokens', {}),
-                "latency": meta_data.get('latency'),
-                "cost": meta_data.get('cost'),
-            }
+            "span_metadata": meta_data
         }
 
         trace_id_str = str(task_id)
@@ -380,23 +359,16 @@ def build_comprehensive_json_results(
         "agents": {},
     }
 
-    # Load trajectory data for additional context (keyed by task_id_step)
-    traj_data = {}
+    # Load trajectory data for workflow graph building
     traj_dfs = []
     for csv_file in traces_data_path.glob("*.csv"):
         try:
             df = pd.read_csv(csv_file)
             traj_dfs.append(df)
-            if 'trace_id' in df.columns and 'task_id' not in df.columns:
-                df = df.rename(columns={"trace_id": "task_id"})
-            for _, row in df.iterrows():
-                task_id = row.get('task_id', row.get('trace_id', ''))
-                step = row.get('step_in_trace_general', 0)
-                traj_data[f"{task_id}_{step}"] = row.to_dict()
         except Exception as e:
             logger.warning(f"Could not load trajectory data {csv_file}: {e}")
 
-    traj_df = pd.concat(traj_dfs)
+    traj_df = pd.concat(traj_dfs) if traj_dfs else pd.DataFrame()
     all_traces: set = set()
     trace_metrics: Dict[str, Any] = defaultdict(lambda: {"scores": [], "has_issues": []})
     agent_component_scores: Dict[str, Dict[str, List[float]]] = {}
@@ -413,7 +385,7 @@ def build_comprehensive_json_results(
 
         # Process main (reasoning) results — files at agent root
         reasoning_result = _process_results_dir(
-            agent_dir, traj_data, config_dict, trace_metrics, all_traces,
+            agent_dir, config_dict, trace_metrics, all_traces,
         )
 
         # Process tool evaluation results from tool_calls/ subdir
@@ -421,7 +393,7 @@ def build_comprehensive_json_results(
         tool_calls_dir = agent_dir / TOOL_CALLS_SUBDIR
         if tool_calls_dir.is_dir():
             tool_result = _process_results_dir(
-                tool_calls_dir, traj_data, config_dict, trace_metrics, all_traces,
+                tool_calls_dir, config_dict, trace_metrics, all_traces,
             )
 
         if reasoning_result is None and tool_result is None:
