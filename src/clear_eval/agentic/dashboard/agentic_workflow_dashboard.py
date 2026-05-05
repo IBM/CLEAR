@@ -497,7 +497,9 @@ def load_data_from_zip(file_bytes, progress_callback=None) -> Tuple[pd.DataFrame
                             #    print(f"  ✓ Joined {len(trajectory_df)} trace rows with inputs")
                     all_traj_data = []  # Clear since we already concatenated
         else:
-            raise ValueError("trajectory_data.zip not found in uploaded file.")
+            # New format (v6.0+): no trajectory_data.zip — results are self-contained.
+            # traj_df will be built from agent results in DashboardState.load().
+            print("ℹ️  No trajectory_data.zip found (new format) — will build trace view from results.")
 
         # Concatenate trace data if not already done
         if all_traj_data:
@@ -676,7 +678,7 @@ def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
     """Build a directed graph representing the agent workflow."""
     G = nx.DiGraph()
     node_stats = defaultdict(
-        lambda: {"count": 0, "tasks": set(), "tool_calls": 0, "agent_calls": 0}
+        lambda: {"count": 0, "tasks": set()}#, "tool_calls": 0, "agent_calls": 0}
     )
 
     # Count tool calls from the combined response JSON
@@ -693,8 +695,8 @@ def build_workflow_graph(traj_df: pd.DataFrame) -> Tuple[nx.DiGraph, Dict]:
                         n_tool_calls = len(tc)
             except (json.JSONDecodeError, TypeError):
                 pass
-        node_stats[agent]["tool_calls"] += n_tool_calls
-        node_stats[agent]["agent_calls"] += 1
+     #   node_stats[agent]["tool_calls"] += n_tool_calls
+     #   node_stats[agent]["agent_calls"] += 1
 
     # Graph structure and node count use one entry per LLM call
     seq_df = _get_llm_call_sequence(traj_df)
@@ -1007,8 +1009,8 @@ def visualize_workflow_graph(
             f"<b style='font-size:14px'>{node}</b><br><br>"
             f"<b>Total Calls:</b> {count}<br>"
             f"<b>Unique Tasks:</b> {unique_tasks}<br>"
-            f"<b>Tool Calls:</b> {tool_calls}<br>"
-            f"<b>Agent Calls:</b> {agent_calls}"
+   #         f"<b>Tool Calls:</b> {tool_calls}<br>"
+   #         f"<b>Agent Calls:</b> {agent_calls}"
         )
         
         # Enhanced color scheme based on selection and activity
@@ -1609,7 +1611,7 @@ class DashboardState:
     def load(self, file_bytes: bytes, progress_callback=None):
         """Load all data from the uploaded ZIP."""
         self.traj_df, self.agent_results, self.metadata = load_data_from_zip(file_bytes, progress_callback)
-        
+
         # Extract inputs_lookup if it was loaded (stored in metadata temporarily)
         if "inputs_lookup_df" in self.metadata:
             self.inputs_lookup_df = self.metadata.pop("inputs_lookup_df")
@@ -1617,15 +1619,6 @@ class DashboardState:
         # Extract full trace CLEAR results if available
         if "full_traj_clear_results" in self.metadata:
             self.full_traj_clear_results = self.metadata.get("full_traj_clear_results", {})
-
-        if self.traj_df.empty:
-            return False
-
-        self.statistics = {
-            "unique_tasks": self.traj_df["task_id"].nunique() if "task_id" in self.traj_df.columns else 0,
-            "total_rows": len(self.traj_df),
-            "unique_agents": self.traj_df["Name"].nunique() if "Name" in self.traj_df.columns else 0,
-        }
 
         # Pre-load agent scores
         self.all_agent_scores = {}
@@ -1665,6 +1658,34 @@ class DashboardState:
             except Exception as e:
                 print(f"  ⚠️  Error loading {agent_name}: {e}")
                 pass
+
+        # For new format (v6.0+): if traj_df is empty, build it from agent results.
+        # This gives the dashboard the same shape it expects (one row per evaluated step).
+        if self.traj_df.empty and self.all_agent_scores_df:
+            dfs = []
+            for agent_name, df in self.all_agent_scores_df.items():
+                agent_df = df.copy()
+                if "Name" not in agent_df.columns:
+                    agent_df["Name"] = agent_name.replace("__tool_calls", "")
+                dfs.append(agent_df)
+            if dfs:
+                self.traj_df = pd.concat(dfs, ignore_index=True)
+                if "step_in_trace_general" in self.traj_df.columns:
+                    self.traj_df = self.traj_df.sort_values(
+                        ["task_id", "step_in_trace_general"]
+                    ).reset_index(drop=True)
+                if "agent_name" in self.traj_df.columns and "Name" not in self.traj_df.columns:
+                    self.traj_df["Name"] = self.traj_df["agent_name"]
+                print(f"✓ Built trace view from {len(self.traj_df)} evaluated steps")
+
+        if self.traj_df.empty:
+            return False
+
+        self.statistics = {
+            "unique_tasks": self.traj_df["task_id"].nunique() if "task_id" in self.traj_df.columns else 0,
+            "total_rows": len(self.traj_df),
+            "unique_agents": self.traj_df["Name"].nunique() if "Name" in self.traj_df.columns else 0,
+        }
 
         # Populate traj_score from clear_data CSVs if available (primary source)
         if "task_id_to_traj_score" in self.metadata and "task_id" in self.traj_df.columns:
@@ -1883,7 +1904,7 @@ def main_page():
             return
 
         if not success:
-            ui.notify("No trace data found in ZIP file", type="warning")
+            ui.notify("Failed to load zip content", type="warning")
             return
 
         ui.notify(
@@ -2093,8 +2114,8 @@ def main_page():
                 with ui.row().classes("w-full gap-4 justify-center"):
                     render_metric_card("Total Calls", stats.get("count", 0))
                     render_metric_card("Unique Tasks", stats.get("unique_tasks", 0))
-                    render_metric_card("Tool Calls", stats.get("tool_calls", 0))
-                    render_metric_card("Agent Calls", stats.get("agent_calls", 0))
+               #     render_metric_card("Tool Calls", stats.get("tool_calls", 0))
+               #     render_metric_card("Agent Calls", stats.get("agent_calls", 0))
 
                 with ui.row().classes("w-full gap-6"):
                     with ui.column().classes("flex-1"):
@@ -2906,7 +2927,6 @@ def main_page():
                     data_explorer_container.clear()
                     with data_explorer_container:
                         render_section_header("Data Explorer", "Browse individual evaluation records (filtered)")
-
                         filtered_df = filtered_data_ref["df"]
                         if not filtered_df.empty:
                             display_cols = [c for c in ["intent", "model_input_preview", "response", "score", "evaluation_summary", "recurring_issues_str"] if c in filtered_df.columns and filtered_df[c].dropna().astype(str).str.strip().ne("").any()]
@@ -3334,20 +3354,23 @@ def main_page():
                 trajectory_scores = []
                 scores_by_step = {}
 
-                def _find_score(result_key, composite_id, task_id_val, step_num):
+                def _find_score(result_key, row_id, task_id_val, step_num):
                     """Try to find a score in a specific agent_scores_df entry."""
                     if result_key not in state.all_agent_scores_df:
                         return None, None
                     df_agent = state.all_agent_scores_df[result_key]
                     match = pd.DataFrame()
-                    if "id" in df_agent.columns and composite_id:
-                        match = df_agent[df_agent["id"] == composite_id]
+                    # Primary: match by id column
+                    if "id" in df_agent.columns and row_id:
+                        match = df_agent[df_agent["id"] == row_id]
+                    # Fallback: match by question_id index (old format)
+                    if match.empty and row_id and row_id in df_agent.index:
+                        match = df_agent.loc[[row_id]]
+                    # Fallback: match by (task_id, step_in_trace_general)
                     if match.empty and "task_id" in df_agent.columns:
                         step_col = "step_in_trace_general" if "step_in_trace_general" in df_agent.columns else "step_in_trace"
                         if step_col in df_agent.columns and task_id_val:
                             match = df_agent[(df_agent["task_id"].astype(str) == task_id_val) & (df_agent[step_col] == step_num)]
-                    if match.empty and composite_id and composite_id in df_agent.index:
-                        match = df_agent.loc[[composite_id]]
                     if match.empty:
                         return None, None
                     s_val = None
@@ -3369,13 +3392,13 @@ def main_page():
                     agent_name = row["Name"]
                     step_num = row.get("step_in_trace_general", idx)
                     task_id_val = str(row.get("task_id", ""))
-                    composite_id = f"{task_id_val}_{step_num}" if task_id_val else ""
+                    row_id = str(row.get("id", "")) if pd.notna(row.get("id")) else f"{task_id_val}_{step_num}"
 
                     # Try the base agent key first, then the __tool_calls key for tool rows
-                    score_val, eval_summary_val = _find_score(agent_name, composite_id, task_id_val, step_num)
+                    score_val, eval_summary_val = _find_score(agent_name, row_id, task_id_val, step_num)
                     if score_val is None:
                         tool_key = f"{agent_name}__tool_calls"
-                        score_val, eval_summary_val = _find_score(tool_key, composite_id, task_id_val, step_num)
+                        score_val, eval_summary_val = _find_score(tool_key, row_id, task_id_val, step_num)
 
                     if score_val is not None:
                         trajectory_scores.append(score_val)

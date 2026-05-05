@@ -148,10 +148,7 @@ def _process_and_add_results_from_dir(
     total_agent_stats: dict
 ) -> bool:
     """
-    Find, process, and add CLEAR results zip from a directory.
-
-    This helper function eliminates code duplication between processing
-    regular agent results and tool-call results.
+    Find and add CLEAR results zip from a directory (no deduplication).
 
     Args:
         zf: ZipFile object to write to
@@ -166,30 +163,24 @@ def _process_and_add_results_from_dir(
     zip_files = list(results_dir.glob("analysis_results_*.zip"))
     if not zip_files:
         return False
-    
+
     # Each directory produces exactly one analysis_results_*.zip file
     zip_file = zip_files[0]
     arcname = f"agent_results/{agent_label}.zip"
-    dedup_buffer = BytesIO()
-    
+
     try:
-        stats = deduplicate_agent_result_zip(zip_file, dedup_buffer)
-        dedup_buffer.seek(0)
-        zf.writestr(arcname, dedup_buffer.read())
+        file_data = zip_file.read_bytes()
+        zf.writestr(arcname, file_data)
 
-        # Accumulate stats
-        total_agent_stats['original_size'] += stats['original_size']
-        total_agent_stats['deduplicated_size'] += stats['deduplicated_size']
-        total_agent_stats['files_processed'] += stats['files_processed']
+        total_agent_stats['original_size'] += len(file_data)
+        total_agent_stats['files_processed'] += 1
 
-        logger.debug(f"  {agent_label}: {stats['files_processed']} files, "
-                    f"{stats['original_size']/1024:.1f}KB -> {stats['deduplicated_size']/1024:.1f}KB")
+        logger.debug(f"  {agent_label}: {len(file_data)/1024:.1f}KB")
         return True
 
     except Exception as e:
-        logger.warning(f"Deduplication failed for {agent_label}, using original: {e}")
-        zf.write(zip_file, arcname=arcname)
-        return True
+        logger.warning(f"Failed to add {agent_label}: {e}")
+        return False
 
 
 def _add_agent_results_to_zip(zf: zipfile.ZipFile, clear_results_dir: Path) -> tuple[int, dict]:
@@ -306,28 +297,23 @@ def create_unified_ui_zip(
         result_zip.unlink()
 
     with zipfile.ZipFile(result_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        # 1. Add trajectory data if provided
-        if traces_data_dir and Path(traces_data_dir).exists():
-            traj_data_dir = Path(traces_data_dir)
-            _add_trajectory_data_to_zip(zf, traj_data_dir)
-
-        # 2. Add step-by-step CLEAR results if provided
+        # 1. Add step-by-step CLEAR results if provided (full, no deduplication)
         if step_by_step_clear_results_dir and Path(step_by_step_clear_results_dir).exists():
             clear_dir = Path(step_by_step_clear_results_dir)
             _add_agent_results_to_zip(zf, clear_dir)
-        
-        # 3. Add full trajectory results if provided
+
+        # 2. Add full trajectory results if provided
         if full_trajectory_results_dir and Path(full_trajectory_results_dir).exists():
             full_traj_dir = Path(full_trajectory_results_dir)
-            
+
             # Map actual directory names to dashboard-expected names
             dir_mapping = {
                 'task_success': 'task_success',
-                'full_trajectory': 'per_traj_results',  # Map to expected name
-                'rubric_evaluation': 'rubric_eval_results',  # Map to expected name
+                'full_trajectory': 'per_traj_results',
+                'rubric_evaluation': 'rubric_eval_results',
                 'clear_analysis': 'clear_results'
             }
-            
+
             for actual_dir_name, expected_dir_name in dir_mapping.items():
                 subdir = full_traj_dir / actual_dir_name
                 if subdir.exists():
@@ -339,19 +325,17 @@ def create_unified_ui_zip(
                             file_count += 1
                     if file_count > 0:
                         logger.info(f"Added {file_count} files from {actual_dir_name}/ as {expected_dir_name}/")
-        
-        # 4. Create metadata
+
+        # 3. Create metadata
         metadata = {
             "created_at": datetime.now().isoformat(),
             "type": "unified_results",
             "structure": {
-                "trajectory_data.zip": "Trajectory data as Parquet (compressed)",
-#                "traces_data/": "Original trajectory CSV files",
-                "agent_results/": "Step-by-step CLEAR analysis results",
+                "agent_results/": "Step-by-step CLEAR analysis results (full, with model_input/response)",
                 "full_traj_results/": "Full trajectory evaluation results",
                 "metadata.json": "This file - information about the zip contents"
             },
-            "format_version": "5.0"
+            "format_version": "6.0"
         }
         zf.writestr("metadata.json", json.dumps(metadata, indent=2))
     

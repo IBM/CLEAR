@@ -234,12 +234,14 @@ def _process_results_dir(
     for _, row in results_df.iterrows():
         task_id = row.get('task_id', row.get('question_id', ''))
         step = row.get('step_in_trace_general', 0)
+        row_id = row.get('id', row.get('question_id', f"{task_id}_{step}"))
 
         if task_id:
             all_traces.add(str(task_id))
 
         row_issues = _parse_issues_list(row.get('recurring_issues_str', ''))
 
+        # Fallback lookup into trajectory data (for legacy compatibility)
         traj_key = f"{task_id}_{step}"
         traj_row = traj_data.get(traj_key, {})
 
@@ -265,7 +267,7 @@ def _process_results_dir(
                 "step_in_trace": int(step) if not pd.isna(step) else 0
             },
             "input_output_pair": {
-                "id": _safe_str(row.get('id', traj_key)),
+                "id": _safe_str(row_id),
                 "model_input": _safe_str(model_input, max_len=10000),
                 "response": _safe_str(response, max_len=10000),
                 "score": _safe_float(score_val)
