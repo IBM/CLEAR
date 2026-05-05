@@ -215,7 +215,7 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | Parameter | CLI Flag | Default | Description                                                                |
 |-----------|----------|---------|----------------------------------------------------------------------------|
 | `provider` | `--provider` | `openai` | LLM provider                                                               |
-| `inference_backend` | `--inference-backend` | `litellm` | Backend: `litellm`, `langchain`, `endpoint`                                |
+| `inference_backend` | `--inference-backend` | `litellm` | Backend: `litellm`, `langchain`                               |
 | `eval_model_params` | `--eval-model-params` | `{}` | Model parameters (JSON)                                                    |
 
 ### Preprocessing (when `from_raw_traces=true`)
