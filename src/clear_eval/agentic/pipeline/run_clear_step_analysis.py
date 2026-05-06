@@ -83,16 +83,6 @@ def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
         help="Whether to overwrite existing results (default: true)"
     )
     group.add_argument(
-        "--success-threshold",
-        type=float,
-        help="Threshold for pass/fail determination (default: 0.7)"
-    )
-    group.add_argument(
-        "--pass-criteria",
-        choices=['avg', 'min'],
-        help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
-    )
-    group.add_argument(
         "--memory-only",
         type=str2bool,
         help="If true, use temp directories and return only JSON results (no files saved) (default: false)"

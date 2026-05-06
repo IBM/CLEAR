@@ -546,7 +546,7 @@ def save_comprehensive_json_results(
     Args:
         clear_results_dir: Directory containing agent CLEAR result subdirectories
         traces_data_dir: Directory containing trajectory CSV files
-        config_dict: Pipeline configuration containing success_threshold and pass_criteria
+        config_dict: Pipeline configuration containing
         output_dir: Directory to save the JSON output (defaults to clear_results_dir)
         output_filename: Name of the output JSON file
 
@@ -598,8 +598,6 @@ Examples:
   python -m clear_eval.agentic.pipeline.build_json_results \\
       --judge-results-dir /path/to/clear_results/<judge-model> \\
       --traces-data-dir /path/to/traces_data \\
-      --success-threshold 0.8 \\
-      --pass-criteria min
         """
     )
     parser.add_argument(
@@ -631,18 +629,6 @@ Examples:
         type=str,
         default="clear_results.json",
         help="Name of the output JSON file (default: clear_results.json)"
-    )
-    parser.add_argument(
-        "--success-threshold",
-        type=float,
-        default=None,
-        help="Threshold for pass/fail determination (default: 0.7)"
-    )
-    parser.add_argument(
-        "--pass-criteria",
-        choices=['avg', 'min'],
-        default=None,
-        help="Score type for pass/fail: 'avg' or 'min' (default: avg)"
     )
 
     args = parser.parse_args()
