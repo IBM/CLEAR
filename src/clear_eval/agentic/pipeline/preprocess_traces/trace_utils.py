@@ -621,10 +621,6 @@ def build_csv_rows(
     ``response`` is a JSON object with ``"content"`` and ``"tool_calls"``
     keys; otherwise it is plain text.
 
-    Row splitting for per-tool-call evaluation (SPARC) is handled
-    downstream in ``convert_to_clear_format()`` at analysis time,
-    controlled by the ``--separate-tools`` flag.
-
     Args:
         llm_calls: One dict per LLM call with keys:
             - agent_name (str)
