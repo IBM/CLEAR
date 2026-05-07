@@ -35,8 +35,9 @@ Example workflow:
            --eval-model-name gpt-4o --provider openai
 """
 import logging
+import argparse
 from pathlib import Path
-from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
+from clear_eval.args import str2bool, parse_dict
 from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.issues_clear_runner import IssuesClearRunner
 from clear_eval.agentic.pipeline.full_traces_evaluation.clear_analysis.root_cause_clear_runner import RootCauseClearRunner
 from clear_eval.agentic.pipeline.utils import InferenceConfig
@@ -47,11 +48,11 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main entry point for CLEAR analysis on evaluation results."""
-    parser = create_base_parser(
+    parser = argparse.ArgumentParser(
         description="Run CLEAR analysis on evaluation results"
     )
-    
-    # Add source argument
+
+    # Script-specific arguments
     parser.add_argument(
         "--source",
         type=str,
@@ -63,14 +64,33 @@ def main():
             "'root_cause' = failure_root_cause from task success evaluations."
         ),
     )
-    
-    # Add eval-results-dir argument
     parser.add_argument(
         "--eval-results-dir",
         type=str,
         required=True,
         help="Directory containing evaluation results (output_dir from evaluators)",
     )
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        required=True,
+        help="Output directory for CLEAR analysis results",
+    )
+    parser.add_argument(
+        "--overwrite",
+        type=str2bool,
+        default=True,
+        help="Whether to overwrite existing results (default: true)",
+    )
+
+    # Inference configuration
+    parser.add_argument("--eval-model-name", default="gpt-4o", help="Model identifier (default: gpt-4o)")
+    parser.add_argument("--provider", default="openai", help="LLM provider (default: openai)")
+    parser.add_argument("--inference-backend", default="litellm", choices=["langchain", "litellm", "endpoint"],
+                        help="Inference backend (default: litellm)")
+    parser.add_argument("--endpoint-url", default=None, help="Direct HTTP endpoint URL (for inference_backend=endpoint)")
+    parser.add_argument("--eval-model-params", type=parse_dict, default=None,
+                        help="JSON dict of model parameters (e.g., '{\"max_tokens\": 8096}')")
     
     args = parser.parse_args()
 
@@ -78,8 +98,8 @@ def main():
     inference_config = InferenceConfig(
         model_id=args.eval_model_name,
         provider=args.provider,
-        inference_backend=getattr(args, 'inference_backend', None) or 'litellm',
-        endpoint_url=getattr(args, 'endpoint_url', None),
+        inference_backend=args.inference_backend,
+        endpoint_url=args.endpoint_url,
         model_params=args.eval_model_params or {},
     )
 

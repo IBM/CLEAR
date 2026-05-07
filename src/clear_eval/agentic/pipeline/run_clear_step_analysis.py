@@ -38,55 +38,17 @@ from clear_eval.agentic.pipeline.utils import (
 from clear_eval.agentic.pipeline.build_json_results import save_comprehensive_json_results
 from clear_eval.agentic.pipeline.create_ui_input import create_ui_input_zip
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
-from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
-from clear_eval.args import add_clear_args_to_parser, str2bool
+from clear_eval.agentic.pipeline.argument_definitions import (
+    add_agentic_pipeline_args,
+    add_preprocessing_args,
+)
+from clear_eval.args import add_clear_args_to_parser
 from clear_eval.logging_config import setup_logging
 
 # Initialize logging
 setup_logging()
 
 logger = logging.getLogger(__name__)
-
-
-def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
-    """
-    Add agentic pipeline arguments to the parser.
-
-    These correspond to the agentic pipeline section in default_agentic_config.yaml.
-    """
-    group = parser.add_argument_group("Agentic Pipeline Arguments")
-
-    group.add_argument(
-        "--agentic-config-path",
-        help="Path to config file (JSON or YAML) that overrides defaults"
-    )
-    group.add_argument(
-        "--data-dir",
-        help="Input directory: raw traces (if from-raw-traces=true) or trajectory CSVs (if from-raw-traces=false)"
-    )
-    group.add_argument(
-        "--results-dir",
-        help="Output directory for pipeline results (required)"
-    )
-    group.add_argument(
-        "--from-raw-traces",
-        type=str2bool,
-        help="If true, preprocess raw traces first; if false, use trajectory CSVs directly (default: false)"
-    )
-
-    # Add preprocessing arguments (agent-framework, observability-framework, separate-tools)
-    add_preprocessing_args_to_parser(parser)
-
-    group.add_argument(
-        "--overwrite",
-        type=str2bool,
-        help="Whether to overwrite existing results (default: true)"
-    )
-    group.add_argument(
-        "--memory-only",
-        type=str2bool,
-        help="If true, use temp directories and return only JSON results (no files saved) (default: false)"
-    )
 
 
 TOOL_CALLS_SUFFIX = "__tool_calls"
@@ -657,7 +619,8 @@ Argument Precedence (lowest to highest):
     )
 
     # Add agentic pipeline arguments (includes --agentic-config-path)
-    add_agentic_args_to_parser(parser)
+    add_agentic_pipeline_args(parser)
+    add_preprocessing_args(parser)
 
     # Add CLEAR configuration arguments
     add_clear_args_to_parser(parser, group_name="CLEAR Configuration")

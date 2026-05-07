@@ -6,7 +6,7 @@ Converts trace JSON files into trajectory CSV files for evaluation.
 Supports multiple agent frameworks (langgraph, crewai) and observability platforms (langfuse, mlflow).
 
 Usage:
-    python preprocess_traces.py --input_dir /path/to/traces --output_dir /path/to/output \
+    python preprocess_traces.py --input-dir /path/to/traces --output-dir /path/to/output \
         --agent_framework langgraph --observability_framework langfuse
 """
 
@@ -24,6 +24,7 @@ from clear_eval.agentic.pipeline.preprocess_traces.process_langfuse_traces impor
 from clear_eval.agentic.pipeline.preprocess_traces.process_mlflow_traces import (
     extract_llm_calls_from_mlflow_trace,
 )
+from clear_eval.agentic.pipeline.argument_definitions import add_preprocessing_args
 
 logger = logging.getLogger(__name__)
 
@@ -241,15 +242,15 @@ def main():
         epilog="""
 Examples:
     # Process LangGraph traces from Langfuse
-    python preprocess_traces.py --input_dir ./traces --output_dir ./output \\
+    python preprocess_traces.py --input-dir ./traces --output-dir ./output \\
         --agent_framework langgraph --observability_framework langfuse
 
     # Process CrewAI traces from Langfuse
-    python preprocess_traces.py --input_dir ./traces --output_dir ./output \\
+    python preprocess_traces.py --input-dir ./traces --output-dir ./output \\
         --agent_framework crewai --observability_framework langfuse
 
     # Process LangGraph traces from MLflow
-    python preprocess_traces.py --input_dir ./traces --output_dir ./output \\
+    python preprocess_traces.py --input-dir ./traces --output-dir ./output \\
         --agent_framework langgraph --observability_framework mlflow
 
 Supported combinations:
@@ -260,34 +261,21 @@ Supported combinations:
     )
 
     parser.add_argument(
-        "--input_dir",
+        "--input-dir",
         type=str,
         required=True,
         help="Directory containing trace JSON files"
     )
 
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         type=str,
         required=True,
         help="Directory to save trajectory CSV files"
     )
 
-    parser.add_argument(
-        "--agent_framework",
-        type=str,
-        default="langgraph",
-        choices=["langgraph", "crewai"],
-        help="Agent framework used to generate the traces"
-    )
-
-    parser.add_argument(
-        "--observability_framework",
-        type=str,
-        default="mlflow",
-        choices=["langfuse", "mlflow"],
-        help="Observability platform that captured the traces (mlflow only supports langgraph)"
-    )
+    # Add centralized preprocessing arguments
+    add_preprocessing_args(parser)
 
     args = parser.parse_args()
 

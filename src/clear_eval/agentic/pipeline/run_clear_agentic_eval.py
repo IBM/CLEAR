@@ -7,7 +7,7 @@ This script provides a unified interface to run both:
 1. Step-by-step CLEAR analysis (on trajectory data)
 2. Full trajectory evaluation (task success, full trajectory, rubric, CLEAR analysis)
 
-All results are organized under: clear_results/<judge-model>/<run-name>/
+All results are organized under: clear_results/<run-name>/
 
 Configuration Precedence (lowest to highest):
     1. Default config: setup/default_agentic_config.yaml
@@ -68,106 +68,20 @@ from clear_eval.agentic.pipeline.utils import (
     validate_required_config,
     InferenceConfig,
 )
-from clear_eval.args import add_clear_args_to_parser, str2bool
+from clear_eval.agentic.pipeline.argument_definitions import (
+    add_agentic_pipeline_args,
+    add_preprocessing_args,
+    add_unified_pipeline_args,
+    add_full_trajectory_args,
+)
+from clear_eval.args import add_clear_args_to_parser
 from clear_eval.logging_config import setup_logging
 from clear_eval.agentic.pipeline.full_traces_evaluation.run_trajectory_evaluation_pipeline import run_trajectory_evaluation_pipeline
-from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import add_preprocessing_args_to_parser
 FULL_TRAJ_AVAILABLE = True
 
 # Initialize logging
 setup_logging()
 logger = logging.getLogger(__name__)
-
-
-def add_agentic_args_to_parser(parser: argparse.ArgumentParser) -> None:
-    """Add agentic pipeline arguments to the parser."""
-    group = parser.add_argument_group("Agentic Pipeline Arguments")
-    
-    group.add_argument(
-        "--agentic-config-path",
-        help="Path to unified config file (JSON or YAML)"
-    )
-    group.add_argument(
-        "--data-dir",
-        help="Input directory (JSON traces if from-raw-traces=True, else CSV files)"
-    )
-    group.add_argument(
-        "--from-raw-traces",
-        type=str2bool,
-        help="If True, process JSON traces; if False, use CSV files directly (default: false)"
-    )
-    group.add_argument(
-        "--results-dir",
-        help="Base output directory (required)"
-    )
-    group.add_argument(
-        "--separate-tools",
-        type=str2bool,
-        default=None,
-        help="Enable per-tool-call evaluation (tools_with_reasoning mode). "
-             "false (default): single combined evaluation per LLM call. "
-             "true: one evaluation per tool call with reasoning in input.",
-    )
-    
-    # Pipeline mode control
-    group.add_argument(
-        "--run-step-by-step",
-        type=str2bool,
-        help="Enable step-by-step CLEAR analysis (default: true)"
-    )
-    group.add_argument(
-        "--run-full-trajectory",
-        type=str2bool,
-        help="Enable full trajectory evaluation (default: true)"
-    )
-    
-    # Add preprocessing arguments (agent-framework, observability-framework, separate-tools)
-    add_preprocessing_args_to_parser(parser)
-    
-    # Full trajectory options
-    group.add_argument(
-        "--eval-types",
-        nargs='+',
-        choices=['task_success', 'full_trajectory', 'rubric', 'all'],
-        help="Evaluations to run (default: all)"
-    )
-    group.add_argument(
-        "--generate-rubrics",
-        type=str2bool,
-        help="Generate rubrics before evaluation"
-    )
-    group.add_argument(
-        "--rubric-dir",
-        help="Path to existing rubrics"
-    )
-    group.add_argument(
-        "--clear-analysis-types",
-        nargs='+',
-        choices=['root_cause', 'issues', 'all', 'none'],
-        help="CLEAR analyses to run on full trajectory results (default: all)"
-    )
-    
-    # Execution control
-    group.add_argument(
-        "--overwrite",
-        type=str2bool,
-        help="Overwrite existing results (default: true)"
-    )
-    group.add_argument(
-        "--max-files",
-        type=int,
-        help="Limit files to process (for testing)"
-    )
-    group.add_argument(
-        "--context-tokens",
-        type=int,
-        help="Model context window (for full trajectory)"
-    )
-    group.add_argument(
-        "--memory-only",
-        type=str2bool,
-        help="If true, use temporary directories and save only ui_input and json_result to results_dir (default: false)"
-    )
 
 
 def create_output_structure(
@@ -384,7 +298,10 @@ def main():
     )
     
     # Add agentic pipeline arguments
-    add_agentic_args_to_parser(parser)
+    add_agentic_pipeline_args(parser)
+    add_preprocessing_args(parser)
+    add_unified_pipeline_args(parser)
+    add_full_trajectory_args(parser)
     
     # Add CLEAR configuration arguments
     add_clear_args_to_parser(parser, group_name="CLEAR Configuration")

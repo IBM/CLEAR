@@ -78,7 +78,7 @@ Arguments:
         --provider: LLM provider (openai, watsonx, anthropic, etc.)
 
     Evaluation Control:
-        --eval-types: Evaluations to run (default: all)
+        --eval-types: Evaluations to run
                      Choices: task_success, full_trajectory, rubric, all
 
     Rubric Options:
@@ -86,7 +86,7 @@ Arguments:
         --rubric-dir: Use existing rubrics from directory
 
     CLEAR Analysis Control:
-        --clear-analysis-types: CLEAR analyses to run (default: all)
+        --clear-analysis-types: CLEAR analyses to run
                                Choices: root_cause, issues, all, none
                                - root_cause: Analyze task_success failures
                                - issues: Analyze full_trajectory issues
@@ -128,7 +128,12 @@ from clear_eval.agentic.pipeline.utils import (
     InferenceConfig,
 )
 from clear_eval.agentic.pipeline.preprocess_traces.preprocess_traces import process_traces_to_traj_data
-from clear_eval.agentic.pipeline.full_traces_evaluation.argument_parser import create_base_parser
+from clear_eval.agentic.pipeline.argument_definitions import (
+    add_agentic_pipeline_args,
+    add_preprocessing_args,
+    add_full_trajectory_args,
+)
+from clear_eval.args import add_clear_args_to_parser
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.task_success_evaluator import TaskSuccessEvaluator
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.full_trajectory_evaluator import FullTrajectoryEvaluator
 from clear_eval.agentic.pipeline.full_traces_evaluation.trace_evaluation.rubric_evaluator import RubricEvaluator
@@ -155,58 +160,16 @@ ALL_CLEAR_TYPES = [CLEAR_TYPE_ROOT_CAUSE, CLEAR_TYPE_ISSUES]
 
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser for the pipeline."""
-    parser = create_base_parser(
+    parser = argparse.ArgumentParser(
         description="Run trajectory evaluation pipeline with optional CLEAR analysis"
     )
     
-    # Add optional config file argument
-    parser.add_argument(
-        "--agentic-config-path",
-        type=str,
-        default=None,
-        help="Path to config file (JSON or YAML). CLI args override config values."
-    )
-
-    # Evaluation type selection
-    parser.add_argument(
-        "--eval-types",
-        type=str,
-        nargs="+",
-        choices=ALL_EVAL_TYPES + ["all"],
-        default=None,
-        help=(
-            "Evaluation types to run. Options: task_success, full_trajectory, rubric, all. "
-            "Default: all (runs all three; rubric skipped if no rubrics available)"
-        ),
-    )
-
-    # Rubric-specific arguments
-    parser.add_argument(
-        "--rubric-dir",
-        type=str,
-        default=None,
-        help="Directory containing rubric JSON files (for rubric evaluation, or where to save generated rubrics)",
-    )
-
-    parser.add_argument(
-        "--generate-rubrics",
-        action="store_true",
-        help="Generate rubrics before running rubric evaluation (saves to --rubric-dir or output_dir/rubrics/<model>)",
-    )
-
-    # CLEAR analysis control
-    parser.add_argument(
-        "--clear-analysis-types",
-        type=str,
-        nargs="+",
-        choices=ALL_CLEAR_TYPES + ["all", "none"],
-        default=None,
-        help=(
-            "CLEAR analysis types to run. Options: root_cause (from task_success), "
-            "issues (from full_trajectory), all, none. Default: all"
-        ),
-    )
-
+    # Add centralized argument groups
+    add_agentic_pipeline_args(parser)
+    add_preprocessing_args(parser)
+    add_full_trajectory_args(parser)
+    add_clear_args_to_parser(parser, group_name="CLEAR Configuration")
+    
     return parser
 
 
