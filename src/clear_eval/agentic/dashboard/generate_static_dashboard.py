@@ -48,6 +48,7 @@ def load_json_data(json_path, include_examples=True):
 
     raw_data = json.loads(json_path.read_text(encoding="utf-8"))
     metadata = raw_data.get("metadata", {})
+    judge_model_name = metadata.get("config", {}).get("eval_model_name", "")
     stats = metadata.get("statistics", {})
     workflow = metadata.get("workflow_graph", metadata.get("workflow", {}))
     raw_node_stats = workflow.get("node_stats", {})
@@ -61,7 +62,6 @@ def load_json_data(json_path, include_examples=True):
             "count": int(agent_stats.get("count", 0)),
             "unique_tasks": unique_tasks,
         }
-
     agents_data = {}
     for agent_name, agent_payload in raw_data.get("agents", {}).items():
         for agent_type in ["reasoning", "tools"]:
@@ -69,7 +69,7 @@ def load_json_data(json_path, include_examples=True):
             if not agent_type_payload:
                 continue
 
-            agent_label = f"{agent_name}:{agent_type}"
+            agent_label = f"{agent_name}:{agent_type}" if agent_type=="tools" else agent_name
             summary = agent_type_payload.get("agent_summary", {})
             issues = agent_type_payload.get("issues", [])
             no_issues = agent_type_payload.get("no_issues", [])
@@ -86,6 +86,7 @@ def load_json_data(json_path, include_examples=True):
                         input_output_pair = occurrence.get("input_output_pair", {})
                         evaluation = occurrence.get("evaluation", {})
                         examples.append({
+                            "intent": input_output_pair.get("intent", ""),
                             "trace_id": occurrence.get("trace_id", ""),
                             "step_in_trace": span_reference.get("step_in_trace", ""),
                             "model_input": _maybe_parse_json_text(input_output_pair.get("model_input", "")),
@@ -132,6 +133,7 @@ def load_json_data(json_path, include_examples=True):
         "unique_tasks": int(stats.get("total_traces", 0)),
         "unique_agents":  len(agents_data),
         "total_rows": int(stats.get("total_interactions_analyzed", 0)),
+        "judge_model_name": judge_model_name,
         "node_stats": node_stats,
         "edges": edges,
         "agents": agents_data,
@@ -244,6 +246,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <div class="dashboard-header">
     <h1>Agentic Workflow Dashboard</h1>
     <p>Explore agent traces, analyze performance, and discover patterns in multi-agent systems</p>
+    <p id="evaluatorInfo" style="margin-top:8px;font-size:14px;opacity:0.9"></p>
   </div>
   <div class="metrics-row" id="metricsRow"></div>
   <div class="divider"></div>
@@ -347,6 +350,15 @@ function renderExampleField(label, value) {
     .replace('issue-example-value code', `issue-example-value code${scrollClass}`)
     .replace('issue-example-value"', `issue-example-value${scrollClass}"`);
   return `<div class="issue-example-field"><div class="issue-example-label">${esc(label)}</div>${renderedValue}</div>`;
+}
+
+// ─── Evaluator Info ─────────────────────────────────────────────────────
+const evaluatorInfo = document.getElementById('evaluatorInfo');
+if (DATA.judge_model_name && DATA.judge_model_name !== null && DATA.judge_model_name !== '') {
+  evaluatorInfo.textContent = `Evaluator: ${DATA.judge_model_name}`;
+} else {
+  evaluatorInfo.textContent = 'Evaluator: Not specified';
+  evaluatorInfo.style.opacity = '0.7';
 }
 
 // ─── Metrics ────────────────────────────────────────────────────────────
@@ -509,15 +521,13 @@ function heatFg(val, min, max) {
         const examples=(d.examples||[]).map((ex, exampleIdx)=>`<details class="issue-example-card">
           <summary class="issue-example-summary">
             <div class="issue-example-summary-main">
-              <div class="issue-example-card-title">Example ${exampleIdx + 1}</div>
+              <div class="issue-example-card-title">Example ${exampleIdx + 1}${ex.intent ? ` - ${fmtExampleValue(ex.intent)}` : ''}</div>
               <div class="issue-example-meta">trace_id: ${fmtExampleValue(ex.trace_id)} · step: ${fmtExampleValue(ex.step_in_trace)}</div>
             </div>
             <div class="issue-example-chevron">›</div>
           </summary>
           <div class="issue-example-card-body">
             <div class="issue-example-fields">
-              ${renderExampleField('trace_id', ex.trace_id)}
-              ${renderExampleField('step_in_trace', ex.step_in_trace)}
               ${renderExampleField('model_input', ex.model_input)}
               ${renderExampleField('response', ex.response)}
               ${renderExampleField('score', ex.score)}

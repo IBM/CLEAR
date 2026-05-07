@@ -249,6 +249,7 @@ def _process_results_dir(
         meta_data = _parse_meta_data(row.get('meta_data', ''))
         model_input = row.get('model_input', '')
         response = row.get('response', '')
+        intent = row.get('intent', '')
         eval_text = row.get('evaluation_text', '')
         eval_summary = row.get('evaluation_summary', '')
         score_val = row.get('score', 0)
@@ -266,6 +267,7 @@ def _process_results_dir(
             },
             "input_output_pair": {
                 "id": _safe_str(row_id),
+                "intent": intent,
                 "model_input": _safe_str(model_input, max_len=10000),
                 "response": _safe_str(response, max_len=10000),
                 "score": _safe_float(score_val)
