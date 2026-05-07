@@ -1,0 +1,11 @@
+# Core agent dependencies
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0
+python-dotenv
+
+# MLflow tracing (for run_mlflow_tracing.py)
+mlflow>=2.17.0
+
+# Langfuse tracing (for run_langfuse_tracing.py)
+langfuse>=3.0.0
