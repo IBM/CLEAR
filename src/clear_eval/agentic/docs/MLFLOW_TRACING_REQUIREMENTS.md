@@ -10,6 +10,8 @@
 
 **Tool schemas:** Use `bind_tools()` so tool definitions are captured in the trace. Describing tools in the system prompt is not visible to autologging.
 
+To satisfy the tracing requirements, use **one** of the following options.
+
 ---
 
 ## With `mlflow.langchain.autolog()`
