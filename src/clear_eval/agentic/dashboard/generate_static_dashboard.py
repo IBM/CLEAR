@@ -125,7 +125,7 @@ def load_json_data(json_path, include_examples=True):
                 "total_evals": int(summary.get("total_interactions", 0)),
                 "avg_score": round(float(summary["avg_score"]), 2) if summary.get("avg_score") is not None else None,
                 "unique_issues": len(issues),
-                "unique_tasks": len(tasks_list),
+                "unique_tasks": node_stats.get(agent_name, {}).get("unique_tasks", 0),
                 "issues_table": issues_table,
             }
 
@@ -584,7 +584,7 @@ function toggleIssueExamples(id, rowEl){
 </html>"""
 
 
-def generate_html(json_path, output_path=None, include_examples=True):
+def generate_html(json_path, output_path=None, include_examples=False):
     """Generate static HTML dashboard from a clear_results.json file."""
     data = load_json_data(json_path, include_examples=include_examples)
     logging.info(f"Generating Static HTML report  from {json_path}")
