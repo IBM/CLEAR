@@ -67,7 +67,10 @@ def run(inputs: list[str], tag: str, model: str, session_id: str):
         # Flush after each trace to ensure delivery
         langfuse.flush()
 
-    print(f"\nAll traces sent to Langfuse (session: {session_id})")
+    # Final flush to ensure all traces are sent
+    print(f"\nFlushing all traces to Langfuse...")
+    langfuse.flush()
+    print(f"All traces sent to Langfuse (session: {session_id})")
 
 
 def export_traces(output_dir: str, tag: str):
@@ -91,28 +94,31 @@ def export_traces(output_dir: str, tag: str):
     print(f"Exporting {len(traces)} traces (tag='{tag}') to {output_dir}/")
 
     for t in traces:
-        # Fetch full trace with all observations
-        full_trace = langfuse.api.trace.get(t.id)
+        try:
+            # Fetch full trace with all observations
+            full_trace = langfuse.api.trace.get(t.id)
 
-        # Convert to dict — handles both pydantic v1 (.dict()) and v2 (.model_dump())
-        if hasattr(full_trace, "model_dump"):
-            trace_dict = full_trace.model_dump()
-        elif hasattr(full_trace, "dict"):
-            trace_dict = full_trace.dict()
-        else:
-            trace_dict = full_trace.__dict__
+            # Convert to dict — handles both pydantic v1 (.dict()) and v2 (.model_dump())
+            if hasattr(full_trace, "model_dump"):
+                trace_dict = full_trace.model_dump()
+            elif hasattr(full_trace, "dict"):
+                trace_dict = full_trace.dict()
+            else:
+                trace_dict = full_trace.__dict__
 
-        filepath = os.path.join(output_dir, f"{t.id}.json")
-        with open(filepath, "w") as f:
-            json.dump(trace_dict, f, indent=2, default=str)
-        print(f"  {t.id}.json")
+            filepath = os.path.join(output_dir, f"{t.id}.json")
+            with open(filepath, "w") as f:
+                json.dump(trace_dict, f, indent=2, default=str)
+            print(f"  ✓ {t.id}.json")
+        except Exception as e:
+            print(f"  ✗ {t.id}.json - Error: {e}")
 
-    print(f"Done! {len(traces)} traces saved.")
+    print(f"Done! {len(traces)} traces saved to {output_dir}")
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run research agent — Langfuse tracing")
-    parser.add_argument("--limit", type=int, default=3)
+    parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--model", default="gpt-4o-mini")
     parser.add_argument("--tag", default=f"run_{uuid.uuid4().hex[:8]}")
     parser.add_argument("--session-id", default=None,

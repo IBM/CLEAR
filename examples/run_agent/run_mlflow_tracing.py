@@ -87,16 +87,18 @@ def export_traces(output_dir: str, experiment_name: str, tag: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Run research agent — MLflow tracing")
-    parser.add_argument("--limit", type=int, default=3)
+    parser.add_argument("--limit", type=int, default=5)
     parser.add_argument("--model", default="gpt-4o-mini")
     parser.add_argument("--experiment-name", default="research-agent-mlflow")
-    parser.add_argument("--tracking-uri", default="http://127.0.0.1:5001")
+    parser.add_argument("--tracking-uri", default="http://127.0.0.1:5001",
+                        help="MLflow tracking URI (default: 'http://127.0.0.1:5001')")
     parser.add_argument("--output-dir", default=None,
                         help="Directory to export trace JSON files (optional)")
     parser.add_argument("--tag", default=f"run_{uuid.uuid4().hex[:8]}")
     args = parser.parse_args()
 
     mlflow.set_tracking_uri(args.tracking_uri)
+    print(f"MLflow tracking URI: {args.tracking_uri}")
     print(f"Run tag: {args.tag}")
 
     inputs = SAMPLE_INPUTS[: args.limit] if args.limit else SAMPLE_INPUTS
