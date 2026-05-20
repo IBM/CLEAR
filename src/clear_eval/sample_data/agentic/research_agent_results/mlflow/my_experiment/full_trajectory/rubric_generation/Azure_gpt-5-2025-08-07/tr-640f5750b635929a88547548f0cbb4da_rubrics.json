@@ -1,0 +1,50 @@
+{
+  "trajectory_name": "tr-640f5750b635929a88547548f0cbb4da",
+  "source_file": "/Users/lilache/PycharmProjects/CLEAR/examples/run_agent/new/my_traces_mlflow_results/my_experiment/traces_data/tr-640f5750b635929a88547548f0cbb4da.csv",
+  "judge_model": "Azure/gpt-5-2025-08-07",
+  "evaluation_timestamp": "2026-05-07T19:20:22.648803",
+  "evaluation_time_seconds": 29.44,
+  "raw_response": "{\n  \"task_summary\": \"Compute the light travel time from Earth to Mars using their average distances from the Sun and show step-by-step calculations.\",\n  \"complexity\": \"simple\",\n  \"rubrics\": [\n    {\n      \"id\": \"R1\",\n      \"description\": \"Compute Earth–Mars separation from average orbital distances.\",\n      \"criterion\": \"The execution trace shows Earth at ~1 AU and Mars at ~1.52–1.53 AU (or their km equivalents) and computes the separation as the difference (~0.51–0.54 AU or ~7.6e7–8.1e7 km).\"\n    },\n    {\n      \"id\": \"R2\",\n      \"description\": \"Apply the speed of light with consistent units to get time in seconds.\",\n      \"criterion\": \"The agent uses either c ≈ 299,792 km/s with a km distance, or 1 AU ≈ 499 s with an AU distance, and computes a travel time of approximately 258–265 seconds.\"\n    },\n    {\n      \"id\": \"R3\",\n      \"description\": \"Convert to minutes and present step-by-step intermediate values.\",\n      \"criterion\": \"The final output states the time in minutes (~4.3–4.4 minutes) and includes intermediate numeric values for the Earth–Mars separation and the time in seconds before the minutes conversion.\"\n    }\n  ]\n}",
+  "parsed_evaluation": {
+    "task_summary": "Compute the light travel time from Earth to Mars using their average distances from the Sun and show step-by-step calculations.",
+    "complexity": "simple",
+    "rubrics": [
+      {
+        "id": "R1",
+        "description": "Compute Earth–Mars separation from average orbital distances.",
+        "criterion": "The execution trace shows Earth at ~1 AU and Mars at ~1.52–1.53 AU (or their km equivalents) and computes the separation as the difference (~0.51–0.54 AU or ~7.6e7–8.1e7 km)."
+      },
+      {
+        "id": "R2",
+        "description": "Apply the speed of light with consistent units to get time in seconds.",
+        "criterion": "The agent uses either c ≈ 299,792 km/s with a km distance, or 1 AU ≈ 499 s with an AU distance, and computes a travel time of approximately 258–265 seconds."
+      },
+      {
+        "id": "R3",
+        "description": "Convert to minutes and present step-by-step intermediate values.",
+        "criterion": "The final output states the time in minutes (~4.3–4.4 minutes) and includes intermediate numeric values for the Earth–Mars separation and the time in seconds before the minutes conversion."
+      }
+    ]
+  },
+  "task_objective": "How many minutes does it take light to travel from Earth to Mars (at their average distances from the Sun)? Show each step.",
+  "task_summary": "Compute the light travel time from Earth to Mars using their average distances from the Sun and show step-by-step calculations.",
+  "complexity": "simple",
+  "rubrics": [
+    {
+      "id": "R1",
+      "description": "Compute Earth–Mars separation from average orbital distances.",
+      "criterion": "The execution trace shows Earth at ~1 AU and Mars at ~1.52–1.53 AU (or their km equivalents) and computes the separation as the difference (~0.51–0.54 AU or ~7.6e7–8.1e7 km)."
+    },
+    {
+      "id": "R2",
+      "description": "Apply the speed of light with consistent units to get time in seconds.",
+      "criterion": "The agent uses either c ≈ 299,792 km/s with a km distance, or 1 AU ≈ 499 s with an AU distance, and computes a travel time of approximately 258–265 seconds."
+    },
+    {
+      "id": "R3",
+      "description": "Convert to minutes and present step-by-step intermediate values.",
+      "criterion": "The final output states the time in minutes (~4.3–4.4 minutes) and includes intermediate numeric values for the Earth–Mars separation and the time in seconds before the minutes conversion."
+    }
+  ],
+  "num_rubrics": 3
+}

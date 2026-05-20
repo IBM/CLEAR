@@ -1,0 +1,60 @@
+{
+  "trajectory_name": "tr-f34a9851b31fafffe527c5b2d6262de8",
+  "source_file": "/Users/lilache/PycharmProjects/CLEAR/examples/run_agent/new/my_traces_mlflow_results/my_experiment/traces_data/tr-f34a9851b31fafffe527c5b2d6262de8.csv",
+  "judge_model": "Azure/gpt-5-2025-08-07",
+  "evaluation_timestamp": "2026-05-07T19:20:27.979991",
+  "evaluation_time_seconds": 36.4,
+  "raw_response": "{\n  \"task_summary\": \"Determine the GDP per capita of the country Mumbai is in and present it in USD with an explicit calculation.\",\n  \"complexity\": \"medium\",\n  \"rubrics\": [\n    {\n      \"id\": \"R1\",\n      \"description\": \"Identify the country of Mumbai and use it for the GDP per capita query.\",\n      \"criterion\": \"The execution trace includes an explicit step mapping 'Mumbai' to 'India', and subsequent retrieval/calculation steps reference India.\"\n    },\n    {\n      \"id\": \"R2\",\n      \"description\": \"Obtain the correct GDP per capita metric for India and ensure it is nominal USD (not PPP) or convert to USD.\",\n      \"criterion\": \"The trace shows the agent obtained a numeric country-level GDP per capita for India and either confirms it is 'current US$' (nominal USD) or performs a currency conversion to USD; PPP/international-dollar figures are not used.\"\n    },\n    {\n      \"id\": \"R3\",\n      \"description\": \"Show the calculation leading to the USD amount.\",\n      \"criterion\": \"The final output includes an explicit numerical calculation (e.g., value × exchange rate = USD result) or a statement that the metric is already in 'current US$' with an equality that yields the final USD figure.\"\n    },\n    {\n      \"id\": \"R4\",\n      \"description\": \"Present the final answer clearly in USD and associate it with India.\",\n      \"criterion\": \"The final output contains a single numeric GDP per capita figure labeled with '$' or 'USD' and mentions 'India' as the country.\"\n    }\n  ]\n}",
+  "parsed_evaluation": {
+    "task_summary": "Determine the GDP per capita of the country Mumbai is in and present it in USD with an explicit calculation.",
+    "complexity": "medium",
+    "rubrics": [
+      {
+        "id": "R1",
+        "description": "Identify the country of Mumbai and use it for the GDP per capita query.",
+        "criterion": "The execution trace includes an explicit step mapping 'Mumbai' to 'India', and subsequent retrieval/calculation steps reference India."
+      },
+      {
+        "id": "R2",
+        "description": "Obtain the correct GDP per capita metric for India and ensure it is nominal USD (not PPP) or convert to USD.",
+        "criterion": "The trace shows the agent obtained a numeric country-level GDP per capita for India and either confirms it is 'current US$' (nominal USD) or performs a currency conversion to USD; PPP/international-dollar figures are not used."
+      },
+      {
+        "id": "R3",
+        "description": "Show the calculation leading to the USD amount.",
+        "criterion": "The final output includes an explicit numerical calculation (e.g., value × exchange rate = USD result) or a statement that the metric is already in 'current US$' with an equality that yields the final USD figure."
+      },
+      {
+        "id": "R4",
+        "description": "Present the final answer clearly in USD and associate it with India.",
+        "criterion": "The final output contains a single numeric GDP per capita figure labeled with '$' or 'USD' and mentions 'India' as the country."
+      }
+    ]
+  },
+  "task_objective": "What is the GDP per capita of the country Mumbai is in? Express the answer in USD and show the calculation.",
+  "task_summary": "Determine the GDP per capita of the country Mumbai is in and present it in USD with an explicit calculation.",
+  "complexity": "medium",
+  "rubrics": [
+    {
+      "id": "R1",
+      "description": "Identify the country of Mumbai and use it for the GDP per capita query.",
+      "criterion": "The execution trace includes an explicit step mapping 'Mumbai' to 'India', and subsequent retrieval/calculation steps reference India."
+    },
+    {
+      "id": "R2",
+      "description": "Obtain the correct GDP per capita metric for India and ensure it is nominal USD (not PPP) or convert to USD.",
+      "criterion": "The trace shows the agent obtained a numeric country-level GDP per capita for India and either confirms it is 'current US$' (nominal USD) or performs a currency conversion to USD; PPP/international-dollar figures are not used."
+    },
+    {
+      "id": "R3",
+      "description": "Show the calculation leading to the USD amount.",
+      "criterion": "The final output includes an explicit numerical calculation (e.g., value × exchange rate = USD result) or a statement that the metric is already in 'current US$' with an equality that yields the final USD figure."
+    },
+    {
+      "id": "R4",
+      "description": "Present the final answer clearly in USD and associate it with India.",
+      "criterion": "The final output contains a single numeric GDP per capita figure labeled with '$' or 'USD' and mentions 'India' as the country."
+    }
+  ],
+  "num_rubrics": 4
+}

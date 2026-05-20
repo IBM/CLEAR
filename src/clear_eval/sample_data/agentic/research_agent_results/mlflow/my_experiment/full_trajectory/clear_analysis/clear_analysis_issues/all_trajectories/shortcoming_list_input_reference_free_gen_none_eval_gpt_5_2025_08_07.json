@@ -1,0 +1,16 @@
+[
+    "Role boundary violations (planner computes/answers; premature responses)",
+    "Redundant lookups and repeated computations causing inefficiency",
+    "Final deliverables incomplete or not directly answering the question (e.g., missing entity names or full lists)",
+    "Scope creep by adding unrequested or unanalysed content",
+    "Inconsistent naming, formatting, or rounding; no stated rounding policy",
+    "Incorrect or unsupported unit conversions and misuse of tools; unverified conversion factors",
+    "Calculations not fully chained with explicit tool outputs; missing final intermediate/result values",
+    "Introducing values/constants not supported by tool outputs; failure to reference tool results directly",
+    "Omission of relevant caveats or context (definitions, variability, assumptions)",
+    "Minor numerical inaccuracies in comparative statements or ratios",
+    "Initial research not consolidated; failure to gather all relevant entities in a single pass",
+    "Poor handling of tool limitations (unclear fallback, repeated unsupported attempts)",
+    "Review-stage inaccuracies and missed issues",
+    "Lack of an explicit calculation plan before computing"
+]

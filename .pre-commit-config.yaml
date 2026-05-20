@@ -5,4 +5,4 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: .secrets.baseline
+        exclude: \.secrets\.baseline|src/clear_eval/sample_data/agentic/

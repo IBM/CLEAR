@@ -1,0 +1,10 @@
+{
+  "total_evaluations": 20,
+  "total_rubrics": 70,
+  "avg_rubrics_per_task": 3.5,
+  "complexity_distribution": {
+    "medium": 10,
+    "simple": 10
+  },
+  "attempted_evals": 20
+}

@@ -1,0 +1,23 @@
+{
+  "total_evaluations": 20,
+  "overall_score_average": 0.863,
+  "step_quality_averages": {
+    "Correctness": 0.914,
+    "Completeness": 0.891,
+    "Clarity": 0.894,
+    "Relevance": 0.969,
+    "Efficiency": 0.701,
+    "Robustness": 0.806,
+    "Best_Practices": 0.72,
+    "Actionability": 0.891,
+    "Transparency": 0.875
+  },
+  "trajectory_averages": {
+    "Objective_Understanding": 0.941,
+    "Information_Completeness": 0.943,
+    "Execution_Quality": 0.772,
+    "User_Experience": 0.87,
+    "Final_Deliverable": 0.889
+  },
+  "attempted_evals": 20
+}
