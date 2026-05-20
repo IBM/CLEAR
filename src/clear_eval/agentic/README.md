@@ -293,10 +293,15 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 
 | Parameter | CLI Flag | Default | Description |
 |-----------|----------|---------|-------------|
-| `run_name` | `--run-name` | timestamp | Unique identifier for this run |
-| `overwrite` | `--overwrite` | `true` | Overwrite existing results |
+| `run_name` | `--run-name` | `null` | Run identifier. If null, a timestamp is generated (always fresh). |
+| `overwrite` | `--overwrite` | `true` | Controls behavior when `run_name` dir exists (see note below) |
 | `max_workers` | `--max-workers` | `10` | Parallel workers |
 | `max_files` | `--max-files` | `null` | Maximum number of files to evaluate (null = all) |
+
+**Note on `run_name` and `overwrite`:**
+- **`run_name` not set** (default): A timestamp-based name is generated, guaranteeing a fresh directory. `overwrite` has no effect.
+- **`run_name` set + `overwrite=true`** (default): Fails if the directory already exists. Use a different name or delete the existing directory.
+- **`run_name` set + `overwrite=false`**: Resume mode — reuses the existing directory, skipping steps whose outputs are already present. **Only use with the exact same input data and configuration as the original run.** Changing `data_dir`, `max_files`, or other parameters while resuming may produce inconsistent results.
 
 **Note on `max_files`:** Limits the number of trajectory CSV files to process (first N sorted by name). Preprocessing always runs fully; the limit applies when converting/evaluating. Works in both step-by-step analysis and full trajectory evaluation. Useful for quick testing on a subset of data.
 

@@ -325,10 +325,22 @@ def main():
     # Extract parameters
     data_dir = Path(config['data_dir'])
     from_raw_traces = config.get('from_raw_traces')
-    
+    overwrite = config.get('overwrite', True)
+    user_provided_run_name = config.get('run_name') is not None
+
     # Validate input directory exists
     if not data_dir.exists():
         parser.error(f"Input directory does not exist: {data_dir}")
+
+    # Validate run directory state
+    if output_dir.exists() and user_provided_run_name:
+        if overwrite:
+            parser.error(
+                f"Output directory already exists: {output_dir}\n"
+                f"Use --overwrite false to resume, or delete the existing directory."
+            )
+        else:
+            logger.info(f"Resuming existing run: {run_name}")
     
     # Log configuration
     logger.info("=" * 80)
