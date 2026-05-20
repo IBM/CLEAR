@@ -9,20 +9,23 @@ logger = logging.getLogger(__name__)
 import pandas as pd
 
 from clear_eval.pipeline.use_cases.use_case_utils import get_task_data_obj
-from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, EVALUATION_FILE_PREFIX_WITH_SUMMARIES,
-                                           EVALUATION_FILE_PREFIX_NO_SUMMARIES, SHORTCOMING_LIST_FILE_PREFIX, \
-                                           MAPPING_FILE_PREFIX, DEFAULT_ISSUES_FORMAT_MODE)
+from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, SHORTCOMING_LIST_FILE_PREFIX,
+                                           IDENTIFIED_SHORTCOMING_COL, SCORE_COL, EVALUATION_SUMMARY_COL,
+                                           DEFAULT_ISSUES_FORMAT_MODE)
 
 from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
     ensure_dir, \
     load_json_from_cache, resolve_data_path
 from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, \
     load_inputs, synthesize_shortcomings_from_df, \
-    remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record
+    remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record, \
+    generate_model_predictions
 from clear_eval.pipeline.inference_utils.llm_client import get_llm_client
 from clear_eval.pipeline.config_loader import load_yaml
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CHECKPOINT_FILE_PREFIX = "checkpoint"
+
 
 def get_issues_format(config):
         return config.get('issues_format', DEFAULT_ISSUES_FORMAT_MODE)
@@ -36,6 +39,12 @@ def get_run_name(config):
     return run_name
 
 
+def get_run_info(config):
+    eval_model_str = get_model_name_for_file(config["eval_model_name"])
+    run_name = get_run_name(config)
+    return f"{run_name}_eval_{eval_model_str}"
+
+
 def run_generation_pipeline(config):
     task = config.get("task")
     if not task:
@@ -43,7 +52,7 @@ def run_generation_pipeline(config):
     task_data = get_task_data_obj(task)
 
     data_path = resolve_data_path(config["data_path"])
-    data_df = load_inputs(config, data_path, load_predictions = False, task_data=task_data)
+    data_df = load_inputs(config, data_path, load_predictions=False, task_data=task_data)
 
     gen_model = config.get('gen_model_name')
     output_dir = config['output_dir']
@@ -73,37 +82,6 @@ def get_parquet_bytes(output_df):
     output_df.to_parquet(parquet_buffer, compression="brotli", engine="pyarrow", use_dictionary=True, index=False)
     return parquet_buffer.getvalue()
 
-def get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled):
-    # step3: generate shortcomings
-    format_mode = get_issues_format(config)
-    shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
-    shortcoming_list = None
-    if resume_enabled:
-        shortcoming_list = load_json_from_cache(shortcoming_list_output_path)
-    if shortcoming_list is None:
-        synthesis_template = config.get("synthesis_template")
-        shortcoming_list = synthesize_shortcomings_from_df(eval_df, eval_llm, config,
-                                                           synthesis_template=synthesis_template,
-                                                           format_mode = format_mode)
-        save_json_to_cache(shortcoming_list, shortcoming_list_output_path)
-        resume_enabled = False
-
-    if config["perform_clustering"]:
-        # step3.5: cluster shortcomings
-        deduplicated_shortcomings_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}_dedup.json"
-        deduplicated_shortcomings_list = None
-        if resume_enabled:
-            deduplicated_shortcomings_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
-        if deduplicated_shortcomings_list is None:
-            deduplicated_shortcomings_list = remove_duplicates_shortcomings(shortcoming_list, eval_llm,
-                                                                            max_shortcomings = config["max_shortcomings"],
-                                                                            format_mode=format_mode)
-            save_json_to_cache(deduplicated_shortcomings_list, deduplicated_shortcomings_list_output_path)
-            resume_enabled = False
-    else:
-        deduplicated_shortcomings_list = shortcoming_list
-    return deduplicated_shortcomings_list, resume_enabled
-
 def get_predefined_issues_list(config):
     issues = config.get("predefined_issues")
     if not issues:
@@ -114,33 +92,7 @@ def get_predefined_issues_list(config):
         return json.loads(issues)
     return None
 
-def aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info ):
-    format_mode = get_issues_format(config)
-    shortcoming_list = get_predefined_issues_list(config)
-    if shortcoming_list:
-        logger.info("Using predefined issues")
-        resume_enabled = False
-    else:
-        shortcoming_list, resume_enabled = get_issues_list(eval_df, config, eval_llm, output_dir, file_name_info, resume_enabled)
-
-    # step4: map to records
-    mapped_data_df = None
-    mapping_data_output_path = f"{output_dir}/{MAPPING_FILE_PREFIX}_{file_name_info}.csv"
-    if resume_enabled:
-        mapped_data_df = load_dataframe_from_cache(mapping_data_output_path, expected_rows=len(eval_df))
-    if mapped_data_df is None:
-        use_full_text = config['use_full_text_for_analysis']
-        qid_col = config['qid_column']
-        max_workers = config['max_workers']
-        high_score_threshold = config.get("high_score_threshold", 1)
-        mapped_data_df = map_shortcomings_to_records(eval_df, eval_llm, shortcoming_list, use_full_text,
-                                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode)
-        save_dataframe_to_cache(mapped_data_df, mapping_data_output_path)
-        resume_enabled = False
-    convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info)
-
 def convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info):
-    # step5 : convert to ui format and save
     task_data = get_task_data_obj(config.get("task"))
     output_df = convert_results_to_ui_input(mapped_data_df, config, task_data)
     output_path = f"{output_dir}/analysis_results_{file_name_info}.csv"
@@ -150,32 +102,32 @@ def convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info):
     save_ui_input_results(output_df, output_path, config)
 
 def save_ui_input_results(output_df, output_path, config):
-    # save outputs to zip
     parquet_bytes = get_parquet_bytes(output_df)
-    #csv_bytes = output_df.to_csv(index=False).encode()
     json_bytes = json.dumps(config, indent=2).encode()
 
-    # 3. Write to .zip
     zip_output_path = output_path.replace(".csv", ".zip")
     with zipfile.ZipFile(zip_output_path, mode="w") as zf:
         zf.writestr("results.parquet", parquet_bytes)
-        #zf.writestr("results.csv", csv_bytes)
         zf.writestr("metadata.json", json_bytes)
     logger.info(f"Results for uploading to ui are saved to {zip_output_path}")
+
 
 def run_aggregation_pipeline(config):
     logger.info(f"run_aggregation_pipeline received run config: {config}")
     run_info = get_run_info(config)
     eval_dir = config["output_dir"]
-    eval_file = os.path.join(eval_dir, f"{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv")
+    eval_file = os.path.join(eval_dir, f"{CHECKPOINT_FILE_PREFIX}_{run_info}.csv")
     # if evaluation file doesn't exist, fallback to treat data_path as input for aggregation
-    if not os.path.exists(eval_file):
+    if os.path.exists(eval_file):
+        eval_df = pd.read_csv(eval_file)
+    else:
         eval_file = config.get("data_path")
         if not os.path.exists(eval_file):
             logger.info(f"No evaluation file found at {eval_file}")
             return
-    eval_df = pd.read_csv(eval_file)
+        eval_df = pd.read_csv(eval_file)
     run_aggregation_from_df(config, eval_df, run_info)
+
 
 def get_eval_llm_from_config(config):
     return get_llm_from_config(config, eval_mode=True)
@@ -191,16 +143,14 @@ def get_llm_from_config(config, eval_mode=True):
 
     Backward compatible with use_litellm boolean field.
     """
-    # Get inference_backend, with backward compatibility for use_litellm
     if config.get("use_litellm", False):
         inference_backend = "litellm"
     else:
         inference_backend = config.get("inference_backend")
 
-    model_name_field ="eval_model_name" if eval_mode else "gen_model_name"
+    model_name_field = "eval_model_name" if eval_mode else "gen_model_name"
     model_params_field = "eval_model_params" if eval_mode else "gen_model_params"
 
-    # Build arguments for get_llm_client
     client_args = {
         "provider": config["provider"],
         "model": config[model_name_field],
@@ -213,7 +163,7 @@ def get_llm_from_config(config, eval_mode=True):
     return get_llm_client(**client_args)
 
 
-def run_evaluation_from_df(config, response_df, ):
+def run_evaluation_from_df(config, response_df):
     eval_llm = get_eval_llm_from_config(config)
     task_data = get_task_data_obj(config["task"])
     eval_df = task_data.eval_records(response_df, eval_llm, config)
@@ -221,37 +171,93 @@ def run_evaluation_from_df(config, response_df, ):
         eval_df = produce_summaries_per_record(eval_df, eval_llm, config)
     return eval_df
 
-def run_aggregation_from_df(config, eval_df, file_name_info):
 
+def resolve_issues_list(df, config, eval_llm, resume_enabled,
+                        shortcoming_list_output_path, deduplicated_shortcomings_list_output_path, format_mode):
+    """Resolve the shortcoming/issues list: from predefined, cache, or synthesis. Returns shortcoming_list."""
+    shortcoming_list = get_predefined_issues_list(config)
+    if shortcoming_list:
+        return shortcoming_list
+
+    shortcoming_list = None
+    if resume_enabled:
+        if config.get("perform_clustering", False):
+            shortcoming_list = load_json_from_cache(deduplicated_shortcomings_list_output_path)
+        if shortcoming_list is None:
+            raw_issues = load_json_from_cache(shortcoming_list_output_path)
+            if raw_issues is not None:
+                if config.get("perform_clustering", False):
+                    shortcoming_list = remove_duplicates_shortcomings(
+                        raw_issues, eval_llm, max_shortcomings=config["max_shortcomings"], format_mode=format_mode)
+                    save_json_to_cache(shortcoming_list, deduplicated_shortcomings_list_output_path)
+                else:
+                    shortcoming_list = raw_issues
+
+    if shortcoming_list is None:
+        synthesis_template = config.get("synthesis_template")
+        shortcoming_list = synthesize_shortcomings_from_df(df, eval_llm, config,
+                                                           synthesis_template=synthesis_template,
+                                                           format_mode=format_mode)
+        save_json_to_cache(shortcoming_list, shortcoming_list_output_path)
+        if config.get("perform_clustering", False):
+            shortcoming_list = remove_duplicates_shortcomings(
+                shortcoming_list, eval_llm, max_shortcomings=config["max_shortcomings"], format_mode=format_mode)
+            save_json_to_cache(shortcoming_list, deduplicated_shortcomings_list_output_path)
+
+    return shortcoming_list
+
+
+def resolve_issues_and_map(df, config, eval_llm, resume_enabled, checkpoint_path,
+                           shortcoming_list_output_path, deduplicated_shortcomings_list_output_path, format_mode):
+    """Resolve issues list and map shortcomings to records. Returns updated df."""
+    if IDENTIFIED_SHORTCOMING_COL in df.columns:
+        return df
+
+    if eval_llm is None:
+        eval_llm = get_eval_llm_from_config(config)
+
+    shortcoming_list = resolve_issues_list(
+        df, config, eval_llm, resume_enabled,
+        shortcoming_list_output_path, deduplicated_shortcomings_list_output_path, format_mode)
+
+    use_full_text = config['use_full_text_for_analysis']
+    qid_col = config['qid_column']
+    max_workers = config['max_workers']
+    high_score_threshold = config.get("high_score_threshold", 1)
+    df = map_shortcomings_to_records(df, eval_llm, shortcoming_list, use_full_text,
+                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode)
+    save_dataframe_to_cache(df, checkpoint_path)
+    return df
+
+
+def run_aggregation_from_df(config, df, file_name_info, eval_llm=None):
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
 
-    eval_llm = get_eval_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
-    aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm, file_name_info)
+    format_mode = get_issues_format(config)
+    checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{file_name_info}.csv"
+    shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
+    deduplicated_shortcomings_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}_dedup.json"
+    zip_path = f"{output_dir}/analysis_results_{file_name_info}.zip"
 
+    if resume_enabled and os.path.exists(zip_path):
+        return
 
-def get_run_info(config):
-    reference_str = "based" if config['is_reference_based'] else 'free'
-    eval_model_str = get_model_name_for_file(config["eval_model_name"])
-    gen_model = config.get('gen_model_name')
-    gen_model_str = get_model_name_for_file(gen_model)
-    run_info = f"reference_{reference_str}_gen_{gen_model_str}_eval_{eval_model_str}"
-    run_name = get_run_name(config)
-    return f"{run_name}_{run_info}"
+    df = resolve_issues_and_map(df, config, eval_llm, resume_enabled, checkpoint_path,
+                                   shortcoming_list_output_path, deduplicated_shortcomings_list_output_path, format_mode)
+    convert_to_ui_format(df, output_dir, config, file_name_info)
 
 
 def run_eval_pipeline(config):
-    # initialize
     logger.info(f"run_eval_pipeline received run config: {config}")
     task = config.get("task")
     if not task:
         raise ValueError(f"task config not specified")
 
-    eval_llm = get_eval_llm_from_config(config)
     output_dir = config['output_dir']
     ensure_dir(output_dir)
     resume_enabled = config['resume_enabled']
@@ -261,58 +267,57 @@ def run_eval_pipeline(config):
     with open(os.path.join(output_dir, f"config_{run_info}.json"), 'w') as f:
         json.dump(config, f)
 
-    # step0: load input data
-    data_path = resolve_data_path(config["data_path"])
-    data_df = load_inputs(config, data_path, load_predictions = not perform_generation, task_data=task_data)
-
-    # step 1: perform generation (if needed)
-    if perform_generation:
-        logger.info(f"Performing generation analysis on {len(data_df)} examples")
-        gen_df = None
-        gen_model = config.get('gen_model_name')
-        run_name = get_run_name(config)
-        gen_file_name = get_gen_file_name(run_name, gen_model)
-        gen_output_path = f"{output_dir}/{gen_file_name}"
-        if resume_enabled:
-            gen_df = load_dataframe_from_cache(gen_output_path, expected_rows=len(data_df))
-        if gen_df is None:
-            gen_llm = get_llm_from_config(config, eval_mode = False)
-            gen_df = run_predictions_generation_save_results(data_df, gen_llm, config, gen_output_path)
-            # Do not use newer cached results, using these generations
-            resume_enabled = False
-    else:
-        gen_df = data_df
-        logger.info(f"Using input generation results for {len(data_df)} examples")
-
-    # step2: generate evaluations + scores per single records
-    evaluation_output_path_0 = f"{output_dir}/{EVALUATION_FILE_PREFIX_NO_SUMMARIES}_{run_info}.csv"
-    eval_df_0 = None
-    if resume_enabled:
-        eval_df_0 = load_dataframe_from_cache(evaluation_output_path_0, expected_rows=len(gen_df))
-        if eval_df_0 is None: # FOR BACKWARD COMPATIBILITY WHEN NEXT STEP INCLUDES RESULTS FOR THIS STEP
-            evaluation_output_path_1 = f"{output_dir}/{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv"
-            eval_df_0 = load_dataframe_from_cache(evaluation_output_path_1, expected_rows=len(gen_df))
-    if eval_df_0 is None:
-        eval_df_0 = task_data.eval_records(gen_df, eval_llm, config)
-        save_dataframe_to_cache(eval_df_0, evaluation_output_path_0)
-        resume_enabled = False
-
-    # step2.5: SUMMARIES
-    evaluation_output_path = f"{output_dir}/{EVALUATION_FILE_PREFIX_WITH_SUMMARIES}_{run_info}.csv"
-    eval_df = None
-    if resume_enabled:
-        eval_df = load_dataframe_from_cache(evaluation_output_path, expected_rows=len(eval_df_0))
-    if eval_df is None:
-        eval_df = produce_summaries_per_record(eval_df_0, eval_llm, config,)
-        save_dataframe_to_cache(eval_df, evaluation_output_path)
-        resume_enabled = False
-
     generate_issues = config.get("generate_issues", True)
+    checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{run_info}.csv"
+    zip_path = f"{output_dir}/analysis_results_{run_info}.zip"
+
+    # If final output exists, nothing to do
+    if resume_enabled and os.path.exists(zip_path):
+        return
+
+    # Load checkpoint if resuming
+    df = None
+    eval_llm = None
+    if resume_enabled:
+        df = load_dataframe_from_cache(checkpoint_path)
+
+    # Determine completed stages by column presence
+    has_generation = df is not None and config['model_output_column'] in df.columns
+    has_eval = df is not None and SCORE_COL in df.columns
+    has_summaries = df is not None and EVALUATION_SUMMARY_COL in df.columns
+    has_mapping = df is not None and IDENTIFIED_SHORTCOMING_COL in df.columns
+
+    if not has_mapping:
+        eval_llm = get_eval_llm_from_config(config)
+
+    # --- Generation ---
+    if not has_generation:
+        data_path = resolve_data_path(config["data_path"])
+        data_df = load_inputs(config, data_path, load_predictions=not perform_generation, task_data=task_data)
+        if perform_generation:
+            logger.info(f"Performing generation analysis on {len(data_df)} examples")
+            gen_llm = get_llm_from_config(config, eval_mode=False)
+            df = generate_model_predictions(data_df, gen_llm, config)
+        else:
+            df = data_df
+            logger.info(f"Using input generation results for {len(data_df)} examples")
+        save_dataframe_to_cache(df, checkpoint_path)
+
+    # --- Evaluation ---
+    if not has_eval:
+        df = task_data.eval_records(df, eval_llm, config)
+        save_dataframe_to_cache(df, checkpoint_path)
+
+    # --- Summaries ---
+    if not has_summaries:
+        df = produce_summaries_per_record(df, eval_llm, config)
+        save_dataframe_to_cache(df, checkpoint_path)
+
     if not generate_issues:
         return
 
-    aggregate_evaluations(config, output_dir, resume_enabled, eval_df, eval_llm ,
-                    file_name_info = run_info)
+    # --- Aggregation (issues + mapping + UI output) ---
+    run_aggregation_from_df(config, df, run_info, eval_llm=eval_llm)
 
 
 if __name__ == "__main__":
