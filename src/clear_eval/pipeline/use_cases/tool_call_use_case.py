@@ -1,7 +1,7 @@
 import json
 from tqdm import tqdm
 from importlib.resources import files
-from typing import Any, Dict, Tuple, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Tuple, List, Optional
 import pandas as pd
 from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
 from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
@@ -19,241 +19,23 @@ from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 logger = logging.getLogger(__name__)
 
 
-def _patch_json_schema_to_pydantic_model():
-    """
-    Monkey-patch altk's json_schema_to_pydantic_model to fix OpenAI structured
-    output compatibility.
-
-    OpenAI's structured output API requires 'additionalProperties: false' on all
-    object-type schemas. When the original function maps JSON Schema "object" type
-    to Python ``dict``, Pydantic generates a schema with 'additionalProperties: true',
-    which OpenAI rejects. This patch maps free-form "object" fields (like the
-    "correction" field in SPARC metrics) to ``str`` instead, so the LLM returns
-    them as JSON-formatted strings.
-    """
-    from pydantic import BaseModel, create_model, Field as PydField
-
-    _T = TypeVar("_T")
-
-    def patched_json_schema_to_pydantic_model(
-        schema: Dict[str, Any], model_name: str = "AutoModel"
-    ) -> Type[BaseModel]:
-        fields: Dict[str, Any] = {}
-        required_fields = set(schema.get("required", []))
-
-        type_mapping = {
-            "string": str,
-            "integer": int,
-            "number": float,
-            "boolean": bool,
-            "array": list,
-            # Map "object" to str to avoid OpenAI additionalProperties issue.
-            # Free-form object fields (no sub-properties defined) cannot satisfy
-            # OpenAI's requirement for additionalProperties: false, so we
-            # represent them as JSON strings instead.
-            "object": str,
-            "null": type(None),
-        }
-
-        def parse_type(type_def: Union[str, List[str]]) -> Type[_T]:
-            if isinstance(type_def, list):
-                python_types = [type_mapping.get(t, Any) for t in type_def]
-                if type(None) in python_types:
-                    python_types.remove(type(None))
-                    if len(python_types) == 1:
-                        return Optional[python_types[0]]  # type: ignore
-                    else:
-                        return Optional[Union[tuple(python_types)]]  # type: ignore
-                else:
-                    return Union[tuple(python_types)]  # type: ignore
-            else:
-                return type_mapping.get(type_def, Any)
-
-        for prop_name, prop_schema in schema.get("properties", {}).items():
-            field_type: Any = parse_type(prop_schema.get("type"))
-            default = ... if prop_name in required_fields else None
-            description = prop_schema.get("description", None)
-            field_args = {"description": description} if description else {}
-            fields[prop_name] = (field_type, PydField(default, **field_args))
-
-        return create_model(model_name, **fields)  # type: ignore
-
-    import altk.core.llm.output_parser as _output_parser_module
-    _output_parser_module.json_schema_to_pydantic_model = patched_json_schema_to_pydantic_model
-
-
-# Apply the patch at import time so all downstream ALTK code uses the fixed version
-_patch_json_schema_to_pydantic_model()
-
-
-def _relax_freeform_object_types(schema: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Return a *copy* of *schema* where every free-form ``"type": "object"``
-    property (i.e. one that declares no ``properties`` of its own) is loosened
-    to ``"type": ["object", "string"]``.
-
-    This keeps the validation schema in sync with the Pydantic model produced
-    by the patched ``json_schema_to_pydantic_model`` (which maps ``"object"``
-    → ``str``).  Without this, OpenAI returns a JSON string for such fields
-    but ``jsonschema.validate`` rejects it because the original schema only
-    allows ``"object"``.
-    """
-    import copy
-    schema = copy.deepcopy(schema)
-    for _prop_name, prop_schema in schema.get("properties", {}).items():
-        if (
-            prop_schema.get("type") == "object"
-            and "properties" not in prop_schema
-        ) or _prop_name == "correction":
-            prop_schema["type"] = ["object", "string"]
-    return schema
-
-
-def _patch_validate(client):
-    """
-    Monkey-patch ``_validate`` on *client* so that dict schemas are relaxed
-    (via `_relax_freeform_object_types`) before ``jsonschema.validate`` runs.
-    """
-    _orig_validate = client._validate
-
-    def _relaxed_validate(raw, schema):
-        if isinstance(schema, dict):
-            schema = _relax_freeform_object_types(schema)
-        return _orig_validate(raw, schema)
-
-    client._validate = _relaxed_validate
-    return client
-
-
-def _make_prompt_validated_wrapper(client):
-    """
-    Wrap an ALTK ValidatingLLMClient so that ``generate`` / ``generate_async``
-    use **prompt-based** schema validation instead of the provider-native
-    ``response_format`` parameter.
-
-    This is needed for providers (e.g. watsonx) that do not support OpenAI-style
-    structured output via ``response_format``.  The wrapper overrides every call
-    so that:
-      • ``schema_field`` is forced to ``None`` (no ``response_format`` kwarg).
-      • ``include_schema_in_system_prompt`` is forced to ``True`` so the schema
-        description is injected into the system message and the response is
-        validated client-side by ALTK's retry loop.
-
-    Additionally, ``_parse_llm_response`` is patched so that an empty LLM
-    response returns ``""`` instead of raising ``ValueError``.  This lets the
-    ALTK validation/retry loop treat it as a malformed output and retry,
-    rather than bubbling up an unrecoverable error.
-    """
-    _orig_generate = client.generate
-    _orig_generate_async = client.generate_async
-    _orig_parse = client._parse_llm_response
-
-    # --- Resilient response parser -----------------------------------
-    def _safe_parse_llm_response(raw):
-        try:
-            return _orig_parse(raw)
-        except (ValueError, KeyError):
-            # Check if the response contains reasoning_content but no actual
-            # content — this happens when reasoning models (e.g. on watsonx)
-            # exhaust the max_tokens budget on "thinking" tokens.
-            _choices = getattr(raw, "choices", None) or (raw.get("choices", []) if isinstance(raw, dict) else [])
-            if _choices:
-                _msg = getattr(_choices[0], "message", None) or (_choices[0].get("message", {}) if isinstance(_choices[0], dict) else {})
-                _reasoning = getattr(_msg, "reasoning_content", None) or (_msg.get("reasoning_content") if isinstance(_msg, dict) else None)
-                _finish = getattr(_choices[0], "finish_reason", None) or (_choices[0].get("finish_reason") if isinstance(_choices[0], dict) else None)
-                if _reasoning and _finish == "length":
-                    logger.warning(
-                        "LLM reasoning consumed entire token budget (finish_reason='length'). "
-                        "Consider increasing 'max_tokens' in eval_model_params. Will retry."
-                    )
-            else:
-                logger.debug("LLM returned empty/unparseable response; will retry.")
-            # Return empty string so the ValidatingLLMClient retry loop
-            # sees it as invalid output and retries instead of crashing.
-            return ""
-
-    client._parse_llm_response = _safe_parse_llm_response
-
-    # --- Wrappers that force prompt-based validation -----------------
-    def _wrapped_generate(prompt, *, schema, schema_field=None, retries=3, **kw):
-        return _orig_generate(
-            prompt,
-            schema=schema,
-            schema_field=None,
-            retries=retries,
-            include_schema_in_system_prompt=True,
-            **kw,
-        )
-
-    async def _wrapped_generate_async(prompt, *, schema, schema_field=None, retries=3, **kw):
-        return await _orig_generate_async(
-            prompt,
-            schema=schema,
-            schema_field=None,
-            retries=retries,
-            include_schema_in_system_prompt=True,
-            **kw,
-        )
-
-    client.generate = _wrapped_generate
-    client.generate_async = _wrapped_generate_async
-    return client
-
-
-def _inject_default_generation_args(client, eval_model_params: Dict[str, Any]):
-    """
-    Monkey-patch ``generate`` and ``generate_async`` on *client* so that
-    inference parameters from *eval_model_params* (e.g. ``max_tokens``,
-    ``temperature``) are injected into every call.
-
-    For providers like watsonx whose SDK methods (``ModelInference.achat``)
-    expect these parameters inside a ``params`` dict rather than as top-level
-    keyword arguments, we inject them directly into the ``params`` kwarg.
-
-    **Important:** This must be applied *after* ``_make_prompt_validated_wrapper``
-    because ``ValidatingLLMClient.generate_async`` calls ``super()._generate_async()``
-    which bypasses instance-level patches on ``_generate_async``.  By wrapping
-    ``generate`` / ``generate_async`` (the outermost entry points) we ensure the
-    ``params`` dict is present before *any* downstream code runs.
-    """
-    params_dict: Dict[str, Any] = {}
-    if "max_tokens" in eval_model_params:
-        params_dict["max_tokens"] = eval_model_params["max_tokens"]
-    if "temperature" in eval_model_params:
-        params_dict["temperature"] = eval_model_params["temperature"]
-    if not params_dict:
-        return client
-
-    _orig_generate = client.generate
-    _orig_generate_async = client.generate_async
-
-    def _patched_generate(prompt, **kwargs):
-        # Merge into the `params` dict that watsonx SDK methods expect
-        existing_params = kwargs.get("params") or {}
-        if isinstance(existing_params, dict):
-            merged = {**params_dict, **existing_params}  # caller overrides defaults
-        else:
-            merged = existing_params  # TextChatParameters object — don't touch
-        kwargs["params"] = merged
-        return _orig_generate(prompt, **kwargs)
-
-    async def _patched_generate_async(prompt, **kwargs):
-        existing_params = kwargs.get("params") or {}
-        if isinstance(existing_params, dict):
-            merged = {**params_dict, **existing_params}
-        else:
-            merged = existing_params
-        kwargs["params"] = merged
-        return await _orig_generate_async(prompt, **kwargs)
-
-    client.generate = _patched_generate
-    client.generate_async = _patched_generate_async
-    return client
-
-
-# Providers whose LLM endpoints do NOT support response_format with a
-# Pydantic model (i.e. OpenAI-style structured output).
+# Providers whose LLM endpoints do NOT support response_format with a Pydantic
+# model (OpenAI-style structured output). For these we flip ALTK's
+# ``prompt_based_validation`` knob — see altk.core.llm.ValidatingLLMClient.
 _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx"}
+
+
+def _forwardable_generation_kwargs(eval_model_params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Pick only the inference-time knobs SPARC cares about from
+    ``eval_model_params`` (CLEAR config) and return a dict suitable for
+    ``ValidatingLLMClient.default_generation_kwargs``."""
+    if not eval_model_params:
+        return {}
+    out: Dict[str, Any] = {}
+    for k in ("max_tokens", "temperature"):
+        if k in eval_model_params:
+            out[k] = eval_model_params[k]
+    return out
 
 
 class ToolCallEvalUseCase(EvalUseCase):
@@ -266,10 +48,26 @@ class ToolCallEvalUseCase(EvalUseCase):
         return run_async(self.eval_records_async(df, llm, config, score_col))
 
     async def eval_records_async(self, df, llm, config, score_col=SCORE_COL):
-        """Evaluates predictions and adds scores."""
+        """Evaluates predictions and adds scores.
+
+        Output columns (added or overwritten):
+          - ``evaluation_text``: human-readable verdict ("Tool call is valid." or
+            a concatenation of per-issue explanations).
+          - ``score`` (``score_col``): normalized SPARC rubric score in [0, 1],
+            derived from the 1-5 mean of every semantic metric's output. Falls
+            back to the boolean decision (1.0 APPROVE / 0.0 REJECT) when the
+            pipeline didn't produce a numeric rating (e.g. static-only track).
+          - ``sparc_decision``: boolean — True iff SPARC decided APPROVE.
+          - ``sparc_score_1_to_5``: raw 1-5 rubric mean (None for static-only).
+          - ``sparc_recommendations``: JSON array of SPARCRecommendation dicts
+            (unified-diff + importance). Empty array ``"[]"`` in runtime mode.
+        """
         logger.info(f"\n--- Evaluating Tool calls predictionsPredictions ---")
         df[EVALUATION_TEXT_COL] = ""
         df[score_col] = pd.NA  # Use Pandas NA for missing scores
+        df["sparc_decision"] = pd.NA
+        df["sparc_score_1_to_5"] = pd.NA
+        df["sparc_recommendations"] = "[]"
 
         # convert CLEAR llm to ALTK llm
         altk_llm_client = self.clear_llm_client_to_altk_llm_client(llm, config.get("provider"),
@@ -277,51 +75,63 @@ class ToolCallEvalUseCase(EvalUseCase):
                                                                    config.get("eval_model_params"))
 
         # call sparc with pipeline over examples, results store sorted results over the examples
-        results = await self.generate_sparc_evaluation_results(df=df, llm_client=altk_llm_client)
+        results = await self.generate_sparc_evaluation_results(
+            df=df,
+            llm_client=altk_llm_client,
+            track_name=config.get("track", "slow_track"),
+            runtime_pipeline=bool(config.get("runtime_pipeline", True)),
+        )
 
-        # extract output score and evaluation text from each results (concatenate failing explanations? minimum/average score over metrics?)
         for i, result in enumerate(results):
-            (eval_text, score) = self.get_eval_from_results(result)  # TODO extract eval text and score from results
-            score = score if pd.isna(score) else float(score)
+            (eval_text, score, decision_bool, raw_score) = self.get_eval_from_results(result)
 
             df.at[df.index[i], EVALUATION_TEXT_COL] = eval_text
-            df.at[df.index[i], score_col] = score if pd.isna(score) else float(score)
+            df.at[df.index[i], score_col] = float(score) if score is not None else pd.NA
+            df.at[df.index[i], "sparc_decision"] = decision_bool
+            df.at[df.index[i], "sparc_score_1_to_5"] = (
+                float(raw_score) if raw_score is not None else pd.NA
+            )
+            # Serialize per-row recommendations; always a JSON array (empty
+            # in runtime mode, non-empty in evaluation mode when the LLM
+            # emitted fixable-artifact suggestions).
+            recs = getattr(result, "all_recommendations", None) or []
+            df.at[df.index[i], "sparc_recommendations"] = json.dumps(
+                [r.model_dump(mode="json") for r in recs]
+            )
 
         logger.info("Finished evaluating predictions.")
         # Convert score column to nullable float type
         df[score_col] = df[score_col].astype('Float64')
+        df["sparc_score_1_to_5"] = df["sparc_score_1_to_5"].astype('Float64')
+        df["sparc_decision"] = df["sparc_decision"].astype('boolean')
         return df
 
     def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str,
                                                eval_model_params: Optional[Dict] = None) -> BaseLLMClient:
-        """Convert CLEAR's LLM object to ALTK's LLM Object."""
+        """Convert CLEAR's LLM object to ALTK's LLM Object.
+
+        The provider-compatibility knobs previously handled by ad-hoc
+        monkey-patches (free-form object types, prompt-based validation,
+        default generation kwargs, reasoning-budget retry) now live on
+        ``ValidatingLLMClient`` itself — see
+        ``altk.core.llm.output_parser.ValidatingLLMClient``.
+        """
+        default_gen = _forwardable_generation_kwargs(eval_model_params)
+        needs_prompt_validation = provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT
 
         # LiteLLMClient - use ALTK's native litellm support
         if isinstance(llm_client, LiteLLMClient):
             MetricsClientCls = get_llm("litellm.output_val")
-            # LiteLLM model format: provider/model_name (consistent with LiteLLMClient)
             litellm_model = f"{provider}/{model_name}"
-            # Forward inference parameters (e.g. max_tokens) so that the
-            # ALTK client passes them through to every litellm.completion
-            # call.  Without an explicit max_tokens some providers (watsonx)
-            # default to a very low value (1024) which is easily exhausted
-            # by reasoning-model "thinking" tokens, leaving no room for the
-            # actual response content.
-            lite_kwargs: Dict[str, Any] = {}
-            if eval_model_params:
-                if "max_tokens" in eval_model_params:
-                    lite_kwargs["max_tokens"] = eval_model_params["max_tokens"]
-                if "temperature" in eval_model_params:
-                    lite_kwargs["temperature"] = eval_model_params["temperature"]
-            altk_client = MetricsClientCls(model_name=litellm_model, **lite_kwargs)
-            # Relax validation so free-form "object" fields also accept the
-            # string representation produced by the patched Pydantic model.
-            _patch_validate(altk_client)
-            # Providers that don't support OpenAI-style response_format need
-            # prompt-based schema validation instead.
-            if provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT:
-                altk_client = _make_prompt_validated_wrapper(altk_client)
-            return altk_client
+            # litellm.completion accepts max_tokens/temperature as top-level
+            # kwargs, so keeping them as constructor kwargs continues to work.
+            return MetricsClientCls(
+                model_name=litellm_model,
+                free_form_object_as_str=True,
+                prompt_based_validation=needs_prompt_validation,
+                default_generation_kwargs=default_gen,
+                **default_gen,
+            )
 
         # LangChainClient - extract from underlying LangChain object
         if isinstance(llm_client, LangChainClient):
@@ -332,37 +142,27 @@ class ToolCallEvalUseCase(EvalUseCase):
 
         if provider == "watsonx":
             MetricsClientCls = get_llm("watsonx.output_val")
+            watsonx_kwargs: Dict[str, Any] = {
+                "model_id": llm.model_id,
+                "api_key": llm.api_key._secret_value,
+                "free_form_object_as_str": True,
+                "prompt_based_validation": True,
+                # Watsonx SDK expects generation params inside a ``params``
+                # dict, not as top-level kwargs. ALTK's watsonx client
+                # already merges default_generation_kwargs into that dict.
+                "default_generation_kwargs": {"params": default_gen} if default_gen else {},
+            }
             if llm.space_id:
-                altk_client = MetricsClientCls(
-                    model_id=llm.model_id,
-                    api_key=llm.api_key._secret_value,
-                    url=llm.url,
-                    space_id=llm.space_id,
-                )
+                watsonx_kwargs["url"] = llm.url
+                watsonx_kwargs["space_id"] = llm.space_id
             elif llm.project_id:
-                altk_client = MetricsClientCls(
-                    model_id=llm.model_id,
-                    api_key=llm.api_key._secret_value,
-                    url=llm.url._secret_value,
-                    project_id=llm.project_id,
-                )
+                watsonx_kwargs["url"] = llm.url._secret_value
+                watsonx_kwargs["project_id"] = llm.project_id
             else:
-                raise KeyError("Either space_id or project_id must be specified for watsonx inference.")
-            # Relax validation so free-form "object" fields also accept the
-            # string representation produced by the patched Pydantic model.
-            _patch_validate(altk_client)
-            # watsonx does not support OpenAI-style response_format, so use
-            # prompt-based schema validation instead.
-            altk_client = _make_prompt_validated_wrapper(altk_client)
-            # Inject inference parameters (e.g. max_tokens, temperature) into
-            # every LLM call via the watsonx `params` dict.  Without an
-            # explicit max_tokens, watsonx defaults to 1024 which is easily
-            # exhausted by reasoning-model "thinking" tokens.
-            # NOTE: must be applied *after* _make_prompt_validated_wrapper so
-            # that this is the outermost wrapper and `params` flows through.
-            if eval_model_params:
-                _inject_default_generation_args(altk_client, eval_model_params)
-            return altk_client
+                raise KeyError(
+                    "Either space_id or project_id must be specified for watsonx inference."
+                )
+            return MetricsClientCls(**watsonx_kwargs)
 
         elif provider == "azure":
             MetricsClientCls = get_llm("azure_openai.async.output_val")
@@ -393,31 +193,59 @@ class ToolCallEvalUseCase(EvalUseCase):
     def get_default_generation_model_inputs(row, config):
         return ""
 
-    def get_eval_from_results(self, result: SPARCReflectionResult) -> Tuple[str, float]:
-        """
-        Compute grade from LLMEvalKit pipeline result according to the specified logic.
-
-        Args:
-            result: PipelineResult from LLMEvalKit
+    def get_eval_from_results(
+        self, result: SPARCReflectionResult
+    ) -> Tuple[str, Optional[float], bool, Optional[float]]:
+        """Turn a SPARC reflection result into the fields CLEAR writes per row.
 
         Returns:
-            Grade as float in [0, 1]
+            (evaluation_text, normalized_score, decision_bool, raw_score_1_5)
+            - ``normalized_score``: SPARC's aggregate rubric mean (1-5) mapped
+              into [0, 1]. Falls back to 1.0 / 0.0 from the boolean decision
+              when the pipeline didn't produce a numeric rating (static-only
+              track, all-error, etc.).
+            - ``decision_bool``: True iff SPARC decided APPROVE.
+            - ``raw_score_1_5``: the 1-5 rubric mean (None when unavailable).
         """
         logger.debug("=== DEBUG: Full result structure ===")
         logger.debug(result)
-        if result.decision.name == "APPROVE":
-            return "Tool call is valid.", 1.0
-        else:
-            explanation_text = "\n".join([issue.explanation for issue in result.issues])
-            logger.debug("=== DEBUG: Explanation Text ===")
-            logger.debug(explanation_text)
-            return f"Tool call is invalid. Reasons:\n{explanation_text}", 0.0
+        decision_bool = result.decision.name == "APPROVE"
+        raw_score = result.score
+        normalized = result.normalized_score
+        if normalized is None:
+            # Static-only track / all-error: fall back to the boolean decision
+            # so CLEAR always has a numeric score to aggregate on.
+            normalized = 1.0 if decision_bool else 0.0
 
-    async def generate_results(self, df, llm_client, has_spec):
+        if decision_bool:
+            return "Tool call is valid.", normalized, True, raw_score
+        explanation_text = "\n".join(issue.explanation for issue in result.issues)
+        logger.debug("=== DEBUG: Explanation Text ===")
+        logger.debug(explanation_text)
+        return (
+            f"Tool call is invalid. Reasons:\n{explanation_text}",
+            normalized,
+            False,
+            raw_score,
+        )
+
+    async def generate_results(
+        self,
+        df,
+        llm_client,
+        has_spec,
+        track_name: str = "slow_track",
+        runtime_pipeline: bool = True,
+    ):
+        # Pick the SPARC track: the user-selected ``track_name`` is honored
+        # when we have tool specs; without specs we must fall back to
+        # ``SPEC_FREE`` regardless of the user's choice.
+        spec_track = Track(track_name)
         sparc_component = SPARCReflectionComponent(
             config=ComponentConfig(llm_client=llm_client),
-            track=Track.SLOW_TRACK if has_spec else Track.SPEC_FREE,
+            track=spec_track if has_spec else Track.SPEC_FREE,
             execution_mode=SPARCExecutionMode.ASYNC,
+            runtime_pipeline=runtime_pipeline,
         )
         reflection_results = []
         for _, example in tqdm(df.iterrows(), total=len(df), desc="Evaluating tool calls with SPARC"):
@@ -431,8 +259,13 @@ class ToolCallEvalUseCase(EvalUseCase):
             reflection_results.append(reflection_result)
         return reflection_results
 
-    async def generate_sparc_evaluation_results(self, df: pd.DataFrame, llm_client: BaseLLMClient) -> List[
-        SPARCReflectionResult]:
+    async def generate_sparc_evaluation_results(
+        self,
+        df: pd.DataFrame,
+        llm_client: BaseLLMClient,
+        track_name: str = "slow_track",
+        runtime_pipeline: bool = True,
+    ) -> List[SPARCReflectionResult]:
         """Generates sparc evaluation results."""
         # Dictionary to store results with their original indices
         results_dict = {}
@@ -442,16 +275,28 @@ class ToolCallEvalUseCase(EvalUseCase):
             mask = df.apply(lambda r:is_truth(r[self.SPECS_COL]),axis=1)
             df_with_spec = df[mask]
             if len(df_with_spec) > 0:
-                results_with_spec = await self.generate_results(df_with_spec, llm_client, has_spec=True)
+                results_with_spec = await self.generate_results(
+                    df_with_spec,
+                    llm_client,
+                    has_spec=True,
+                    track_name=track_name,
+                    runtime_pipeline=runtime_pipeline,
+                )
                 # Store results with their original indices
                 for idx, result in zip(df_with_spec.index, results_with_spec):
                     results_dict[idx] = result
             df_no_spec = df[~mask]
         else:
             df_no_spec = df
-        
+
         if len(df_no_spec) > 0:
-            results_no_spec = await self.generate_results(df_no_spec, llm_client, has_spec=False)
+            results_no_spec = await self.generate_results(
+                df_no_spec,
+                llm_client,
+                has_spec=False,
+                track_name=track_name,
+                runtime_pipeline=runtime_pipeline,
+            )
             # Store results with their original indices
             for idx, result in zip(df_no_spec.index, results_no_spec):
                 results_dict[idx] = result

@@ -121,13 +121,22 @@ def load_json_data(json_path, include_examples=True):
                 key=lambda row: -row["count"],
             ) + [row for row in issues_table if row["is_no_issue"]]
 
-            agents_data[agent_label] = {
+            entry = {
                 "total_evals": int(summary.get("total_interactions", 0)),
                 "avg_score": round(float(summary["avg_score"]), 2) if summary.get("avg_score") is not None else None,
                 "unique_issues": len(issues),
                 "unique_tasks": len(tasks_list),
                 "issues_table": issues_table,
+                "recommendations": None,
             }
+            if agent_type == "tools":
+                # Recommendations now travel inside the per-agent payload
+                # produced by build_json_results._aggregate_recommendations,
+                # so the dashboard just reads the key off the JSON.
+                recs = agent_type_payload.get("recommendations")
+                if recs and (recs.get("by_tool") or recs.get("by_system_prompt")):
+                    entry["recommendations"] = recs
+            agents_data[agent_label] = entry
 
     return {
         "unique_tasks": int(stats.get("total_traces", 0)),
@@ -234,6 +243,26 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .chat-message-content{font-size:14px;color:#1E293B;white-space:pre-wrap;word-break:break-word;line-height:1.6}
 .chat-message-tools{margin-top:10px;padding-top:10px;border-top:1px dashed #CBD5E1}
 .expand-indicator{display:block;margin-top:8px;color:#6366F1;font-weight:800;font-size:13px}
+.recs-block{margin-top:24px}
+.recs-subblock{margin-top:14px}
+.recs-subblock-title{font-size:14px;font-weight:800;color:#4338CA;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.rec-card{background:#fff;border:1px solid #D8E1EE;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.rec-card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.rec-target-pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:#EEF2FF;color:#4338CA}
+.rec-target-pill.system{background:#DBEAFE;color:#1D4ED8}
+.rec-target-pill.tool{background:#DCFCE7;color:#166534}
+.rec-target-pill.param{background:#FEF3C7;color:#92400E}
+.rec-scope{font-size:13px;color:#334155;font-weight:600}
+.rec-importance{margin-left:auto;font-size:12px;font-weight:700;color:#6366F1}
+.rec-count{font-size:12px;color:#64748B}
+.rec-rationale{font-size:13px;color:#475569;line-height:1.6;margin-bottom:10px}
+.rec-diff{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12.5px;background:#0F172A;color:#E2E8F0;padding:12px 14px;border-radius:10px;overflow:auto;max-height:260px;white-space:pre;line-height:1.5}
+.rec-diff .rec-line-add{color:#86EFAC}
+.rec-diff .rec-line-del{color:#FCA5A5}
+.rec-diff .rec-line-hunk{color:#93C5FD}
+.rec-tool-header{display:flex;align-items:baseline;gap:12px;margin:14px 0 6px}
+.rec-tool-name{font-size:15px;font-weight:800;color:#0F172A}
+.rec-tool-count{font-size:12px;color:#64748B}
 @media(max-width:768px){.container{padding:16px}.dashboard-header{padding:24px}.agent-metrics-grid{grid-template-columns:repeat(2,1fr)}}
 .info-tooltip{position:relative;display:inline-block}
 .info-tooltip-trigger{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:6px;border-radius:50%;background:#E2E8F0;color:#475569;font-size:11px;font-weight:700;cursor:help;vertical-align:middle}
@@ -567,7 +596,8 @@ function heatFg(val, min, max) {
         <div class="agent-metric"><div class="agent-metric-label">#Traces</div><div class="agent-metric-value">${ad.unique_tasks}</div></div>
       </div></div>
       <div class="section-header" style="margin-top:0"><div class="section-title">Discovered Issues</div><div class="section-subtitle">Recurring problems identified in this agent's outputs <span class="info-tooltip"><span class="info-tooltip-trigger" tabindex="0" aria-label="Issue matching explanation">i</span><span class="info-tooltip-bubble">Each llm call can be matched to any number of discovered issues, or to no issues.</span></span></div></div>
-      ${tableHtml}`;
+      ${tableHtml}
+      ${renderRecommendations(ad.recommendations)}`;
     container.appendChild(sec);
   }
 })();
@@ -578,6 +608,90 @@ function toggleIssueExamples(id, rowEl){
   el.style.display=isHidden?'table-row':'none';
   const indicator=rowEl.querySelector('.expand-indicator');
   if(indicator) indicator.textContent=isHidden?'▾ Examples':'▸ Examples';
+}
+
+// ─── SPARC recommendations renderer ─────────────────────────────────────
+function escHtml(s){return esc(s||'');}
+function renderDiff(raw){
+  if(!raw) return '';
+  const lines=String(raw).split('\n');
+  const out=lines.map(line=>{
+    const safe=escHtml(line);
+    if(line.startsWith('+++')||line.startsWith('---')) return `<span class="rec-line-hunk">${safe}</span>`;
+    if(line.startsWith('@@')) return `<span class="rec-line-hunk">${safe}</span>`;
+    if(line.startsWith('+')) return `<span class="rec-line-add">${safe}</span>`;
+    if(line.startsWith('-')) return `<span class="rec-line-del">${safe}</span>`;
+    return safe;
+  });
+  return `<div class="rec-diff">${out.join('\n')}</div>`;
+}
+function targetPillClass(target){
+  if(target==='system_prompt') return 'system';
+  if(target==='tool_description') return 'tool';
+  if(target==='parameter_description'||target==='parameter_examples') return 'param';
+  return '';
+}
+function renderRecCard(rec, scope){
+  const imp=(typeof rec.importance_mean==='number')?rec.importance_mean:(rec.importance||0);
+  const count=rec.count||1;
+  const cls=targetPillClass(rec.target||'system_prompt');
+  const rationale=rec.rationale?`<div class="rec-rationale">${escHtml(rec.rationale)}</div>`:'';
+  const scopeLabel=scope?`<span class="rec-scope">${escHtml(scope)}</span>`:'';
+  return `<div class="rec-card">
+    <div class="rec-card-head">
+      <span class="rec-target-pill ${cls}">${escHtml(rec.target||'')}</span>
+      ${scopeLabel}
+      <span class="rec-count">×${count}</span>
+      <span class="rec-importance">importance ${imp.toFixed(2)}</span>
+    </div>
+    ${rationale}
+    ${renderDiff(rec.diff)}
+  </div>`;
+}
+function renderRecommendations(recs){
+  if(!recs) return '';
+  const byTool=recs.by_tool||{};
+  const bySystem=recs.by_system_prompt||[];
+  const toolEntries=Object.entries(byTool);
+  if(!toolEntries.length && !bySystem.length) return '';
+
+  const header=`<div class="section-header" style="margin-top:28px">
+    <div class="section-title">SPARC Recommendations</div>
+    <div class="section-subtitle">Unified-diff suggestions derived from the call judgments (${recs.total||0} recommendation occurrence(s))</div>
+  </div>`;
+
+  let body='<div class="recs-block">';
+
+  if(bySystem.length){
+    body+='<div class="recs-subblock"><div class="recs-subblock-title">System Prompt</div>';
+    for(const r of bySystem){ body+=renderRecCard(r, null); }
+    body+='</div>';
+  }
+
+  if(toolEntries.length){
+    body+='<div class="recs-subblock"><div class="recs-subblock-title">Per-Tool Suggestions</div>';
+    // Sort tools by total recommendations descending
+    toolEntries.sort((a,b)=>{
+      const ca=a[1].reduce((s,x)=>s+(x.count||1),0);
+      const cb=b[1].reduce((s,x)=>s+(x.count||1),0);
+      return cb-ca || a[0].localeCompare(b[0]);
+    });
+    for(const [toolName, items] of toolEntries){
+      const total=items.reduce((s,x)=>s+(x.count||1),0);
+      body+=`<div class="rec-tool-header">
+        <span class="rec-tool-name">${escHtml(toolName)}</span>
+        <span class="rec-tool-count">${items.length} distinct suggestion(s), ${total} occurrence(s)</span>
+      </div>`;
+      for(const r of items){
+        const scope=r.parameter_name?`${toolName} · ${r.parameter_name}`:toolName;
+        body+=renderRecCard(r, scope);
+      }
+    }
+    body+='</div>';
+  }
+
+  body+='</div>';
+  return header+body;
 }
 </script>
 </body>

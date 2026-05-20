@@ -84,3 +84,19 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Caches
+.ruff_cache/
+
+# SPARC pipeline run outputs (keep tool_specs + scripts, ignore generated result
+# trees and large per-trace inputs).  The output*/ glob covers all per-track,
+# per-mode, and per-version variants (output, output_fast_track_runtime,
+# output_slow_track_eval_v2, output_round2_*, …).
+scripts/runs/*/output*/
+scripts/runs/*/input/
+scripts/output/
+scripts/sample_traces/
+
+# Comparison + analysis notes (regenerated locally, large)
+scripts/runs/COMPARISON*.md
+scripts/runs/JUDGEMENT_ANALYSIS.md
