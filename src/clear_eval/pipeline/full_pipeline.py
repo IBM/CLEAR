@@ -101,6 +101,7 @@ def convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info):
     logger.info(f"Custom formatted analysis results saved to {output_path}")
     save_ui_input_results(output_df, output_path, config)
 
+
 def save_ui_input_results(output_df, output_path, config):
     parquet_bytes = get_parquet_bytes(output_df)
     json_bytes = json.dumps(config, indent=2).encode()
