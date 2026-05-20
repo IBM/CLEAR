@@ -12,6 +12,16 @@ import re
 from clear_eval.pipeline.inference_utils.llm_client import run_parallel, run_async, get_llm_client
 logger = logging.getLogger(__name__)
 
+# SPARC-specific per-row columns produced by the tool-call use case. They are
+# carried through analysis CSVs unchanged so downstream aggregation
+# (build_json_results) and dashboards can read per-row judgments without
+# re-running SPARC.
+_SPARC_COLUMNS_PASSTHROUGH = (
+    "sparc_decision",
+    "sparc_score_1_to_5",
+    "sparc_recommendations",
+)
+
 def is_missing_or_error(eval_text):
     if pd.isna(eval_text) or not eval_text or not eval_text.strip() or \
         eval_text.startswith(ANALYSIS_SKIPPED) or eval_text.startswith("Error:"):
@@ -606,10 +616,17 @@ def convert_results_to_ui_input(df, config, task_data):
         df.loc[:, "recurring_issues_str"] = df.apply(lambda r: get_recurring_issues_list(r), axis=1)
         custom_output_df["recurring_issues_str"] = df["recurring_issues_str"]
 
+        # Carry SPARC per-row columns through unchanged. Aggregation happens
+        # in build_json_results._process_results_dir, which reads these.
+        for col in _SPARC_COLUMNS_PASSTHROUGH:
+            if col in df.columns:
+                custom_output_df[col] = df[col]
+
         required_cols =[config.get(r, r) for r in required_input_fields] + config.get("input_columns", []) + \
                          ["question_id", 'model_input', 'response',
                          'score', 'evaluation_text', 'evaluation_summary',
-                         'recurring_issues', 'recurring_issues_str', 'ground_truth', 'error']
+                         'recurring_issues', 'recurring_issues_str', 'ground_truth', 'error'] + \
+                         [c for c in _SPARC_COLUMNS_PASSTHROUGH if c in df.columns]
         required_cols = list(dict.fromkeys(required_cols))
 
         for col in required_cols:

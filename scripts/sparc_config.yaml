@@ -1,0 +1,29 @@
+from_raw_traces: false
+overwrite: true
+max_workers: 10
+memory_only: false
+
+inference_backend: litellm
+provider: watsonx
+eval_model_name: openai/gpt-oss-120b
+eval_model_params:
+  temperature: 0.0
+  max_tokens: 100000
+
+# SPARC track used for the tool-calling use case. One of:
+# slow_track | fast_track | spec_free | syntax | transformations_only
+# Overridden on the CLI by run_sparc.sh --track.
+track: slow_track
+
+# SPARC prompt variant:
+#   true  = runtime pipeline (fast, no actionable recommendations)
+#   false = evaluation-time pipeline (emits unified-diff recommendations
+#           with importance scores; meant for offline analysis).
+runtime_pipeline: true
+
+# When true, the pipeline splits each unified-format row (one LLM call) into
+# one analysis row per tool call and folds the assistant's reasoning into
+# each tool row's model_input. The split rows are routed to CLEAR's
+# task="tool_call" use case (SPARC). Set to false to skip SPARC entirely
+# and run only the standard reasoning analysis on the bundled rows.
+separate_tools: true
