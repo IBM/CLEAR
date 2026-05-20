@@ -60,6 +60,12 @@ def add_agentic_pipeline_args(parser: argparse.ArgumentParser) -> None:
              "If false: single combined evaluation per LLM call. "
              "If true: one evaluation per tool call with reasoning in input."
     )
+    group.add_argument(
+        "--max-files",
+        type=int,
+        help="Maximum number of files to evaluate (selects first N sorted files). "
+             "Useful for testing or limiting analysis scope."
+    )
     # Note: --max-workers is defined in add_clear_args_to_parser() in src/clear_eval/args.py
     # Do not add it here to avoid conflicts
 
@@ -126,11 +132,8 @@ def add_full_trajectory_args(parser: argparse.ArgumentParser) -> None:
         type=int,
         help="Model context window size (for full trajectory)"
     )
-    group.add_argument(
-        "--max-files",
-        type=int,
-        help="Limit files to process (for testing)"
-    )
+    # Note: --max-files is defined in add_agentic_pipeline_args() (shared across pipelines)
+    # Do not add it here to avoid conflicts
 
 
 def add_unified_pipeline_args(parser: argparse.ArgumentParser) -> None:

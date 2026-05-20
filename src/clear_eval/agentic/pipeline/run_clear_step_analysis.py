@@ -95,6 +95,7 @@ def convert_to_clear_format(
     output_dir: str,
     overwrite: bool = True,
     separate_tools: bool = False,
+    max_files: Optional[int] = None,
 ) -> None:
     """
     Convert CSV files to CLEAR format grouped by agent.
@@ -116,6 +117,7 @@ def convert_to_clear_format(
         overwrite: If False, skip conversion if output files already exist
         separate_tools: If True, split tool calls into separate rows for
             per-tool-call evaluation (tools_with_reasoning mode).
+        max_files: Maximum number of input CSV files to process (None = all)
     """
     output_dir = Path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -140,7 +142,9 @@ def convert_to_clear_format(
     agent_counter = Counter()
 
     input_path = Path(input_dir)
-    csv_files = list(input_path.glob('*.csv'))
+    csv_files = sorted(input_path.glob('*.csv'))
+    if max_files is not None and max_files > 0:
+        csv_files = csv_files[:max_files]
 
     logger.info(f"Converting {len(csv_files)} CSV files to CLEAR format...")
 
@@ -437,6 +441,7 @@ def run_step_analysis_pipeline(
             traces_data_dir, clear_data_dir,
             overwrite=overwrite,
             separate_tools=separate_tools,
+            max_files=config_dict.get('max_files'),
         )
 
         run_clear_analysis(
