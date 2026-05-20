@@ -690,6 +690,7 @@ def main():
     validate_required_config(config, ['data_dir', 'results_dir'], parser)
 
     # Get run output directory
+    user_provided_run_name = config.get('run_name') is not None
     output_dir, run_name = get_run_output_dir(
         config['results_dir'],
         config.get('run_name')
@@ -706,6 +707,17 @@ def main():
     if not traj_input_dir.exists():
         logger.error(f"Input directory does not exist: {traj_input_dir}")
         sys.exit(1)
+
+    # Validate run directory state
+    if output_dir.exists() and user_provided_run_name:
+        if config.get('overwrite', True):
+            logger.error(
+                f"Output directory already exists: {output_dir}\n"
+                f"Use --overwrite false to resume, or delete the existing directory."
+            )
+            sys.exit(1)
+        else:
+            logger.info(f"Resuming existing run: {run_name}")
 
     # Preprocess traces if needed
     csv_input_dir = preprocess_traces_if_needed(
