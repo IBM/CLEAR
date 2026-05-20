@@ -168,7 +168,7 @@ def prepare_traces_data(
     else:
         # Copy existing CSV files
         logger.info(f"Using trajectory CSVs from: {data_dir}")
-        
+
         try:
             if traces_data_dir.exists():
                 shutil.rmtree(traces_data_dir)

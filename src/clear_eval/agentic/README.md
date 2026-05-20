@@ -70,7 +70,7 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 ```bash
 run-clear-agentic-eval \
     --data-dir data/my_traces \
-    --results-dirr results \
+    --results-dir results \
     --from-raw-traces true \
     --eval-model-name gpt-4o \
     --provider openai
@@ -247,6 +247,9 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 | `run_name` | `--run-name` | timestamp | Unique identifier for this run |
 | `overwrite` | `--overwrite` | `true` | Overwrite existing results |
 | `max_workers` | `--max-workers` | `10` | Parallel workers |
+| `max_files` | `--max-files` | `null` | Maximum number of files to evaluate (null = all) |
+
+**Note on `max_files`:** Limits the number of trajectory CSV files to process (first N sorted by name). Preprocessing always runs fully; the limit applies when converting/evaluating. Works in both step-by-step analysis and full trajectory evaluation. Useful for quick testing on a subset of data.
 
 ### Advanced: Custom Evaluation Criteria
 
@@ -364,6 +367,19 @@ python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
 # Launch dashboard
 python -m clear_eval.agentic.dashboard.launch_dashboard
 # Upload: results/my_experiment/unified_ui_results.zip
+```
+
+### Testing with Limited Files
+
+```bash
+# Analyze only the first 10 files for quick testing
+python -m clear_eval.agentic.pipeline.run_clear_agentic_eval \
+    --data-dir data/mlflow_traces \
+    --results-dir results \
+    --from-raw-traces true \
+    --max-files 10 \
+    --eval-model-name gpt-4o \
+    --provider openai
 ```
 
 ### Rubric-Based Evaluation

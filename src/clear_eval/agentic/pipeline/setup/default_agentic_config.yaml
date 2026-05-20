@@ -22,6 +22,7 @@ from_raw_traces: false          # If true, preprocess raw traces first
 agent_framework: langgraph      # langgraph | crewai
 observability_framework: langfuse # mlflow | langfuse
 separate_tools: false
+max_files: null                 # Maximum number of files to evaluate (null = all)
 
 # Execution
 overwrite: true                 # Overwrite existing results
@@ -97,7 +98,6 @@ clear_analysis_types:           # Options: root_cause, issues, all, none
   - issues
 
 # Trajectory-specific execution
-max_files: null                 # Limit files to process (for testing)
 context_tokens: null            # Model context window (truncate long trajectories)
 
 # ============================================================================

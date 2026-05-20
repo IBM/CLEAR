@@ -153,7 +153,8 @@ def process_traces_to_traj_data(
     # Get the appropriate extractor
     extractor = get_extractor(agent_framework, observability_framework)
 
-    json_files = list(input_path.glob('*.json'))
+    json_files = sorted(input_path.glob('*.json'))
+
     logger.info("=" * 80)
     logger.info("PROCESSING TRACES")
     logger.info("=" * 80)
@@ -228,8 +229,11 @@ def process_traces_to_traj_data(
 
     logger.info("=" * 80)
     logger.info("TRACE PROCESSING COMPLETE")
-    logger.info(f"Total traces: {total_traces}, skipped: {total_skipped}, no LLM calls: {traces_with_no_llm_calss}, "
-                f"with llm calls: {processed_traces}, Total LLM calls: {total_llm_calls}")
+    logger.info(f"Total traces found: {total_traces}")
+    logger.info(f"Processed successfully: {processed_traces}")
+    logger.info(f"Skipped (already exist): {total_skipped}")
+    logger.info(f"Skipped (no LLM calls): {traces_with_no_llm_calss}")
+    logger.info(f"Total LLM calls extracted: {total_llm_calls}")
     logger.info("=" * 80)
 
     return str(output_path)
