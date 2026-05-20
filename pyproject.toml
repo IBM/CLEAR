@@ -41,7 +41,8 @@ dependencies = [
     "litellm>=1.83.0",
     "nest-asyncio",
     "scipy",
-    'scikit-learn'
+    'scikit-learn',
+    "botocore"  # Prevents litellm import warnings
 ]
 
 [project.optional-dependencies]
