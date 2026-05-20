@@ -1,0 +1,14 @@
+[
+    "Wrong tool selection contrary to workflow (e.g., using calculator for unit conversions or knowledge_lookup for conversions)",
+    "Invalid or unsupported tool parameters (unsupported unit pairs, topic mismatches, JSON string instead of object)",
+    "Missing required planning step before execution",
+    "Failure to chain tool outputs; hard-coding or reusing provided values instead of previous results",
+    "Incomplete computations (missing final ratios/percentages/conversions or final answers)",
+    "Omitting required intermediate steps/results and explicit tool-based conversions",
+    "Redundant or unnecessary tool calls for already provided facts, adding no progress and risking inconsistencies",
+    "Incorrect or inconsistent unit handling (mixing units, failing to convert to required units)",
+    "Not adapting to tool limitations (failing to acknowledge unsupported conversions and choose a workaround)",
+    "Mis-invoked tools or non-executed textual calls (parameters present but call not actually run)",
+    "Failing to cover all requested sub-tasks or outputs (e.g., partial rankings, missing entity names)",
+    "Mislabeling precision or neglecting to note rounding"
+]

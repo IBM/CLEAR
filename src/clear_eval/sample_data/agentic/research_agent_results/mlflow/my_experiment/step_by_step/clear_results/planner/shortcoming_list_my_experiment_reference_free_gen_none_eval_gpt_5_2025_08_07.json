@@ -1,0 +1,14 @@
+[
+    "Performed computations instead of restricting to data gathering",
+    "Provided final answers/explanations instead of only issuing tool calls",
+    "Used the wrong tool for the phase (calculator/unit_converter instead of knowledge_lookup)",
+    "Failed to use knowledge_lookup as required or omitted necessary calls",
+    "Queried invalid or unsupported topics/parameters (e.g., non-allowed topic names)",
+    "Incomplete coverage of required entities/facts (missed cities/countries/constants)",
+    "Redundant or duplicate lookups for the same topic (violated one-call-per-topic rule)",
+    "Produced narrative summaries instead of bare tool invocations/results",
+    "Performed unit conversions with disallowed tools or invalid/mismatched units",
+    "Did not stop after sufficient facts were fetched; proceeded to compute unnecessarily",
+    "Topic naming/format issues (case sensitivity, capitalization mismatches)",
+    "Did not gather needed conversion facts upfront when conversions are part of data collection"
+]

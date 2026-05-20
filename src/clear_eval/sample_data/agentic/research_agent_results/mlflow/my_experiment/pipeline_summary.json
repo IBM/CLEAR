@@ -1,0 +1,18 @@
+{
+  "created_at": "2026-05-07T20:14:24.809970",
+  "config": {
+    "run_name": "my_experiment",
+    "eval_model_name": "Azure/gpt-5-2025-08-07",
+    "provider": "openai",
+    "run_step_by_step": true,
+    "run_full_trajectory": true
+  },
+  "results": {
+    "step_by_step_success": true,
+    "full_trajectory_success": true
+  },
+  "output_structure": {
+    "step_by_step/": "Step-by-step CLEAR analysis results",
+    "full_trajectory/": "Full trajectory evaluation results"
+  }
+}

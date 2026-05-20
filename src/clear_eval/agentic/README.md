@@ -54,7 +54,56 @@ pip install -e .
 
 Configure your LLM provider credentials. See the [Providers and Credentials Guide](../../../docs/PROVIDERS.md) for provider-specific setup instructions.
 
-### 3. Run the Pipeline
+### 3. Generating Traces (Prerequisite)
+
+CLEAR evaluates traces from your agent's runs. In real scenarios you run your own agent with observability enabled and export the resulting traces.
+
+See [`examples/run_agent/`](../../../examples/run_agent/) for a complete working example — a LangGraph agent with MLflow or Langfuse tracing that exports JSON traces ready for CLEAR. For MLflow-specific tracing requirements, see the [MLflow Tracing Requirements](docs/MLFLOW_TRACING_REQUIREMENTS.md).
+
+**Using a different agent framework or observability platform?** You can preprocess your traces into the CSV intermediate representation and run with `--from-raw-traces false`. See [`research_agent_results/mlflow/my_experiment/traces_data/`](../sample_data/agentic/research_agent_results/mlflow/my_experiment/traces_data/) for concrete examples, and the [Intermediate Representation Reference](docs/INTERMEDIATE_REPR.md) for the full schema.
+
+The repo also ships pre-generated traces (produced by that example agent) so you can try CLEAR without running an agent yourself:
+
+```
+src/clear_eval/sample_data/agentic/
+├── research_agent_traces/
+│   ├── mlflow/                 # 20 MLflow JSON traces
+│   └── langfuse/               # 5 Langfuse JSON traces (examples)
+└── research_agent_results/
+    └── mlflow/                 # Pre-computed CLEAR results (20 traces)
+```
+
+### 4. Quick Smoke Test (3 Traces)
+
+Run CLEAR on a small subset of the sample traces to verify your installation:
+
+```bash
+run-clear-agentic-eval \
+    --data-dir src/clear_eval/sample_data/agentic/research_agent_traces/mlflow \
+    --results-dir my_smoke_test_results \
+    --from-raw-traces true \
+    --agent-framework langgraph \
+    --observability-framework mlflow \
+    --run-name smoke_test \
+    --max-files 3 \
+    --eval-model-name gpt-4o \
+    --provider openai
+```
+
+**Note:** Adjust `--provider` and `--eval-model-name` to match your setup. See the [Providers and Credentials Guide](../../../docs/PROVIDERS.md).
+
+### 5. View Pre-Computed Results (All 20 Traces)
+
+To explore complete results over all 20 traces without re-running evaluation, launch the dashboard and upload the pre-computed results:
+
+```bash
+run-clear-agentic-dashboard
+# Upload: src/clear_eval/sample_data/agentic/research_agent_results/mlflow/my_experiment/unified_ui_results.zip
+```
+
+The dashboard shows step-by-step CLEAR analysis per agent node, full trajectory evaluations and scores, interactive workflow visualization, path analysis, and temporal trends.
+
+### 6. Run the Pipeline on Your Own Data
 
 **Using Python module:**
 ```bash
@@ -76,7 +125,7 @@ run-clear-agentic-eval \
     --provider openai
 ```
 
-### 4. Launch the Dashboard
+### 7. Launch the Dashboard
 
 **Using Python module:**
 ```bash

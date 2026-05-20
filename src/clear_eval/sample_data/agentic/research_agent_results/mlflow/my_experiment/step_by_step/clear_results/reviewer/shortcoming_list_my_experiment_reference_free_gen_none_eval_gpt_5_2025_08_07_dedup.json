@@ -1,0 +1,10 @@
+[
+    "Missing required calculator/unit_converter use; performing arithmetic or conversions without tools",
+    "Claiming tool usage without evidence (false or unsupported tool-call assertions)",
+    "Incorrect verdict selection relative to criteria (e.g., passing despite unmet tool-use requirement; mislabeling needs_analysis vs needs_research)",
+    "Inaccurate or inconsistent rationale, including incorrect claims about data, math, or chain integrity",
+    "Poor verification of research lookups for all entities/constants (misreading logs or failing to confirm NOT FOUND entries)",
+    "Adding irrelevant or extra sections that violate the requested output format/template",
+    "Factual mistakes in proposed corrections or constants (e.g., wrong troy-ounce conversion factor)",
+    "Failing to explicitly confirm that all required entities were checked with tools and fully covered"
+]

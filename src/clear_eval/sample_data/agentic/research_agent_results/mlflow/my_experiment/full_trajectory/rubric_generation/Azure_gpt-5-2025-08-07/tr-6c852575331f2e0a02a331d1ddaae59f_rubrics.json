@@ -1,0 +1,60 @@
+{
+  "trajectory_name": "tr-6c852575331f2e0a02a331d1ddaae59f",
+  "source_file": "/Users/lilache/PycharmProjects/CLEAR/examples/run_agent/new/my_traces_mlflow_results/my_experiment/traces_data/tr-6c852575331f2e0a02a331d1ddaae59f.csv",
+  "judge_model": "Azure/gpt-5-2025-08-07",
+  "evaluation_timestamp": "2026-05-07T19:20:45.441490",
+  "evaluation_time_seconds": 42.89,
+  "raw_response": "{\n  \"task_summary\": \"Compute population density for all available cities, rank them by density (people per km2), and report the top three with exact densities.\",\n  \"complexity\": \"medium\",\n  \"rubrics\": [\n    {\n      \"id\": \"R1\",\n      \"description\": \"Gather all required data for every available city and normalize units before calculation.\",\n      \"criterion\": \"The trace shows the agent enumerated every available city and retrieved population and area for each; if area was not in km2, a conversion to km2 was performed or verified.\"\n    },\n    {\n      \"id\": \"R2\",\n      \"description\": \"Compute density correctly as people per km2 for each city.\",\n      \"criterion\": \"For each city, the computed density in the trace equals population divided by area_km2 (population/area_km2), with no inversion or missing factors.\"\n    },\n    {\n      \"id\": \"R3\",\n      \"description\": \"Rank all cities by computed density in descending order.\",\n      \"criterion\": \"The trace includes a sorted list of all cities by density from highest to lowest, and the identified top three correspond to the three highest density values.\"\n    },\n    {\n      \"id\": \"R4\",\n      \"description\": \"Provide the final results with full ranking and exact top-three densities.\",\n      \"criterion\": \"The final output contains a complete ranked list of all cities with densities labeled in people per km2, and separately names exactly three densest cities with density numbers that exactly match the computed values in the trace (no rounding or approximation).\"\n    }\n  ]\n}",
+  "parsed_evaluation": {
+    "task_summary": "Compute population density for all available cities, rank them by density (people per km2), and report the top three with exact densities.",
+    "complexity": "medium",
+    "rubrics": [
+      {
+        "id": "R1",
+        "description": "Gather all required data for every available city and normalize units before calculation.",
+        "criterion": "The trace shows the agent enumerated every available city and retrieved population and area for each; if area was not in km2, a conversion to km2 was performed or verified."
+      },
+      {
+        "id": "R2",
+        "description": "Compute density correctly as people per km2 for each city.",
+        "criterion": "For each city, the computed density in the trace equals population divided by area_km2 (population/area_km2), with no inversion or missing factors."
+      },
+      {
+        "id": "R3",
+        "description": "Rank all cities by computed density in descending order.",
+        "criterion": "The trace includes a sorted list of all cities by density from highest to lowest, and the identified top three correspond to the three highest density values."
+      },
+      {
+        "id": "R4",
+        "description": "Provide the final results with full ranking and exact top-three densities.",
+        "criterion": "The final output contains a complete ranked list of all cities with densities labeled in people per km2, and separately names exactly three densest cities with density numbers that exactly match the computed values in the trace (no rounding or approximation)."
+      }
+    ]
+  },
+  "task_objective": "Rank all available cities by population density (people per km2). Which three are densest and what are their exact densities?",
+  "task_summary": "Compute population density for all available cities, rank them by density (people per km2), and report the top three with exact densities.",
+  "complexity": "medium",
+  "rubrics": [
+    {
+      "id": "R1",
+      "description": "Gather all required data for every available city and normalize units before calculation.",
+      "criterion": "The trace shows the agent enumerated every available city and retrieved population and area for each; if area was not in km2, a conversion to km2 was performed or verified."
+    },
+    {
+      "id": "R2",
+      "description": "Compute density correctly as people per km2 for each city.",
+      "criterion": "For each city, the computed density in the trace equals population divided by area_km2 (population/area_km2), with no inversion or missing factors."
+    },
+    {
+      "id": "R3",
+      "description": "Rank all cities by computed density in descending order.",
+      "criterion": "The trace includes a sorted list of all cities by density from highest to lowest, and the identified top three correspond to the three highest density values."
+    },
+    {
+      "id": "R4",
+      "description": "Provide the final results with full ranking and exact top-three densities.",
+      "criterion": "The final output contains a complete ranked list of all cities with densities labeled in people per km2, and separately names exactly three densest cities with density numbers that exactly match the computed values in the trace (no rounding or approximation)."
+    }
+  ],
+  "num_rubrics": 4
+}

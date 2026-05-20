@@ -1,0 +1,50 @@
+{
+  "trajectory_name": "tr-006eee07eed4484592661b1bdba32a75",
+  "source_file": "/Users/lilache/PycharmProjects/CLEAR/examples/run_agent/new/my_traces_mlflow_results/my_experiment/traces_data/tr-006eee07eed4484592661b1bdba32a75.csv",
+  "judge_model": "Azure/gpt-5-2025-08-07",
+  "evaluation_timestamp": "2026-05-07T19:19:55.673281",
+  "evaluation_time_seconds": 35.7,
+  "raw_response": "{\n  \"task_summary\": \"Compute what percentage of the combined moons of Jupiter and Saturn are accounted for by Mars.\",\n  \"complexity\": \"simple\",\n  \"rubrics\": [\n    {\n      \"id\": \"R1\",\n      \"description\": \"Identify the moon counts used for Mars, Jupiter, and Saturn.\",\n      \"criterion\": \"The execution trace contains explicit numeric values for the number of moons of Mars, Jupiter, and Saturn prior to or during the calculation.\"\n    },\n    {\n      \"id\": \"R2\",\n      \"description\": \"Apply the correct percentage formula using only Jupiter and Saturn in the denominator.\",\n      \"criterion\": \"The trace shows the agent computed percentage = 100 * (Mars_moons) / (Jupiter_moons + Saturn_moons), and the reported result matches this computation within ±0.01 given the counts used.\"\n    },\n    {\n      \"id\": \"R3\",\n      \"description\": \"Provide a clear final numeric percentage answer.\",\n      \"criterion\": \"The agent's final output contains a single numeric percentage value answering the question (e.g., 'X%').\"\n    }\n  ]\n}",
+  "parsed_evaluation": {
+    "task_summary": "Compute what percentage of the combined moons of Jupiter and Saturn are accounted for by Mars.",
+    "complexity": "simple",
+    "rubrics": [
+      {
+        "id": "R1",
+        "description": "Identify the moon counts used for Mars, Jupiter, and Saturn.",
+        "criterion": "The execution trace contains explicit numeric values for the number of moons of Mars, Jupiter, and Saturn prior to or during the calculation."
+      },
+      {
+        "id": "R2",
+        "description": "Apply the correct percentage formula using only Jupiter and Saturn in the denominator.",
+        "criterion": "The trace shows the agent computed percentage = 100 * (Mars_moons) / (Jupiter_moons + Saturn_moons), and the reported result matches this computation within ±0.01 given the counts used."
+      },
+      {
+        "id": "R3",
+        "description": "Provide a clear final numeric percentage answer.",
+        "criterion": "The agent's final output contains a single numeric percentage value answering the question (e.g., 'X%')."
+      }
+    ]
+  },
+  "task_objective": "What percentage of the total moons of Jupiter and Saturn does Mars account for?",
+  "task_summary": "Compute what percentage of the combined moons of Jupiter and Saturn are accounted for by Mars.",
+  "complexity": "simple",
+  "rubrics": [
+    {
+      "id": "R1",
+      "description": "Identify the moon counts used for Mars, Jupiter, and Saturn.",
+      "criterion": "The execution trace contains explicit numeric values for the number of moons of Mars, Jupiter, and Saturn prior to or during the calculation."
+    },
+    {
+      "id": "R2",
+      "description": "Apply the correct percentage formula using only Jupiter and Saturn in the denominator.",
+      "criterion": "The trace shows the agent computed percentage = 100 * (Mars_moons) / (Jupiter_moons + Saturn_moons), and the reported result matches this computation within ±0.01 given the counts used."
+    },
+    {
+      "id": "R3",
+      "description": "Provide a clear final numeric percentage answer.",
+      "criterion": "The agent's final output contains a single numeric percentage value answering the question (e.g., 'X%')."
+    }
+  ],
+  "num_rubrics": 3
+}

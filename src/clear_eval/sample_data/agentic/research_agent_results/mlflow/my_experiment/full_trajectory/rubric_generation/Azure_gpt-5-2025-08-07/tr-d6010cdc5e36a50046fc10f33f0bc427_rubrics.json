@@ -1,0 +1,50 @@
+{
+  "trajectory_name": "tr-d6010cdc5e36a50046fc10f33f0bc427",
+  "source_file": "/Users/lilache/PycharmProjects/CLEAR/examples/run_agent/new/my_traces_mlflow_results/my_experiment/traces_data/tr-d6010cdc5e36a50046fc10f33f0bc427.csv",
+  "judge_model": "Azure/gpt-5-2025-08-07",
+  "evaluation_timestamp": "2026-05-07T19:20:22.717061",
+  "evaluation_time_seconds": 25.03,
+  "raw_response": "{\n  \"task_summary\": \"Provide the share of Brazil's GDP attributable to São Paulo, clearly scoped and sourced.\",\n  \"complexity\": \"simple\",\n  \"rubrics\": [\n    {\n      \"id\": \"R1\",\n      \"description\": \"Disambiguate whether the figure refers to the state or the city of São Paulo.\",\n      \"criterion\": \"The agent's final output explicitly states 'state of São Paulo' or 'city of São Paulo' (or an equivalent unambiguous term).\"\n    },\n    {\n      \"id\": \"R2\",\n      \"description\": \"Report a numeric fraction/percentage and the reference year of the data.\",\n      \"criterion\": \"The agent's final output contains a numeric share (e.g., a percentage or fraction) and a specific year (YYYY) associated with the figure.\"\n    },\n    {\n      \"id\": \"R3\",\n      \"description\": \"Cite a verifiable, reputable data source supporting the figure.\",\n      \"criterion\": \"The agent's final output includes a citation naming the data source organization (e.g., IBGE, SEADE, World Bank) and either a year or a URL sufficient to verify the claim.\"\n    }\n  ]\n}",
+  "parsed_evaluation": {
+    "task_summary": "Provide the share of Brazil's GDP attributable to São Paulo, clearly scoped and sourced.",
+    "complexity": "simple",
+    "rubrics": [
+      {
+        "id": "R1",
+        "description": "Disambiguate whether the figure refers to the state or the city of São Paulo.",
+        "criterion": "The agent's final output explicitly states 'state of São Paulo' or 'city of São Paulo' (or an equivalent unambiguous term)."
+      },
+      {
+        "id": "R2",
+        "description": "Report a numeric fraction/percentage and the reference year of the data.",
+        "criterion": "The agent's final output contains a numeric share (e.g., a percentage or fraction) and a specific year (YYYY) associated with the figure."
+      },
+      {
+        "id": "R3",
+        "description": "Cite a verifiable, reputable data source supporting the figure.",
+        "criterion": "The agent's final output includes a citation naming the data source organization (e.g., IBGE, SEADE, World Bank) and either a year or a URL sufficient to verify the claim."
+      }
+    ]
+  },
+  "task_objective": "What fraction of Brazil's GDP comes from Sao Paulo?",
+  "task_summary": "Provide the share of Brazil's GDP attributable to São Paulo, clearly scoped and sourced.",
+  "complexity": "simple",
+  "rubrics": [
+    {
+      "id": "R1",
+      "description": "Disambiguate whether the figure refers to the state or the city of São Paulo.",
+      "criterion": "The agent's final output explicitly states 'state of São Paulo' or 'city of São Paulo' (or an equivalent unambiguous term)."
+    },
+    {
+      "id": "R2",
+      "description": "Report a numeric fraction/percentage and the reference year of the data.",
+      "criterion": "The agent's final output contains a numeric share (e.g., a percentage or fraction) and a specific year (YYYY) associated with the figure."
+    },
+    {
+      "id": "R3",
+      "description": "Cite a verifiable, reputable data source supporting the figure.",
+      "criterion": "The agent's final output includes a citation naming the data source organization (e.g., IBGE, SEADE, World Bank) and either a year or a URL sufficient to verify the claim."
+    }
+  ],
+  "num_rubrics": 3
+}
