@@ -27,7 +27,7 @@ CLEAR also supports **multi-agent system evaluation** with specialized pipelines
 - **Full trajectory evaluation**: Assess complete task trajectories (success, quality, rubric-based)
 - **Interactive dashboard**: Visualize agent workflows, paths, and performance metrics
 
-📖 **[See the Agentic Workflows Documentation →](src/clear_eval/agentic/README.md)**
+📖 **[See the Agentic Workflows Documentation →](../src/clear_eval/agentic/README.md)**
 
 ---
 
@@ -220,7 +220,7 @@ Arguments can be provided via:
 
 ## 🔑Supported providers and credentials
 
-See the **[Providers and Credentials Guide](PROVIDERS.md)** for full details on all three inference backends (LangChain, LiteLLM, Direct HTTP Endpoint), supported providers, configuration examples, and required environment variables.
+See the **[Providers and Credentials Guide](providers.md)** for full details on all three inference backends (LangChain, LiteLLM, Direct HTTP Endpoint), supported providers, configuration examples, and required environment variables.
 
 ## 🔌 Using External Judges
 

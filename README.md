@@ -43,7 +43,7 @@ Evaluate standard LLM outputs — generation quality, correctness, and recurring
 | **Output** | Per-record scores, evaluation text, aggregated issue categories |
 | **Dashboard** | Streamlit-based interactive explorer |
 
-> 📖 **[Full LLM Analysis Guide →](docs/ANALYSIS_README.md)**
+> 📖 **[Full LLM Analysis Guide →](docs/llm-analysis.md)**
 
 ### 🤖 Agentic Analysis
 
@@ -56,7 +56,7 @@ Supports traces from LangGraph, CrewAI, and other frameworks via MLflow or Langf
 | **Output** | Per-step CLEAR analysis, trajectory-level scores, rubric evaluations |
 | **Dashboard** | NiceGUI-based workflow visualization with path and temporal analysis |
 
-> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](src/clear_eval/agentic/dashboard/README_DASHBOARD.md)**
+> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](docs/agentic/dashboard___.md)**
 
 ---
 
@@ -182,10 +182,10 @@ See the [Agentic Workflows Guide](src/clear_eval/agentic/README.md) for full det
 
 | Guide | Description |
 |-------|-------------|
-| 📝 [**LLM Analysis Guide**](docs/ANALYSIS_README.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
+| 📝 [**LLM Analysis Guide**](docs/llm-analysis.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
 | 🤖 [**Agentic Workflows Guide**](src/clear_eval/agentic/README.md) | Multi-agent evaluation — trace preprocessing, step-by-step and trajectory analysis, configuration reference |
-| 📊 [**Agentic Dashboard Guide**](src/clear_eval/agentic/dashboard/README_DASHBOARD.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
-| 🔑 [**Providers and Credentials**](docs/PROVIDERS.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
+| 📊 [**Agentic Dashboard Guide**](docs/agentic/dashboard___.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
+| 🔑 [**Providers and Credentials**](docs/providers.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
 
 ---
 
@@ -200,7 +200,7 @@ See the [Agentic Workflows Guide](src/clear_eval/agentic/README.md) for full det
 | Google Vertex AI | LiteLLM | GCP credentials |
 | [100+ more](https://docs.litellm.ai/docs/providers) | LiteLLM | Provider-specific |
 
-See the **[Providers and Credentials Guide](docs/PROVIDERS.md)** for backend configuration details and examples.
+See the **[Providers and Credentials Guide](docs/providers.md)** for backend configuration details and examples.
 
 ---
 
@@ -209,19 +209,21 @@ See the **[Providers and Credentials Guide](docs/PROVIDERS.md)** for backend con
 ```
 CLEAR/
 ├── README.md                              # This file
+├── docs/
+│   ├── llm-analysis.md                    # LLM Analysis Guide
+│   ├── providers.md                       # Providers and Credentials Guide
+│   └── agentic/                           # Agentic documentation
+│       ├── dashboard.md                   # Agentic Dashboard Guide
+│       ├── intermediate-representation.md # CSV format reference
+│       └── mlflow-tracing.md              # MLflow tracing guide
 ├── src/clear_eval/
 │   ├── pipeline/                          # LLM analysis pipeline
 │   ├── dashboard/                         # LLM dashboard (Streamlit)
 │   ├── agentic/
-│   │   ├── README.md                      # Agentic Workflows Guide
+│   │   ├── README.md                      # Agentic overview (links to docs/)
 │   │   ├── pipeline/                      # Agentic pipeline
-│   │   └── dashboard/
-│   │       ├── README_DASHBOARD.md        # Agentic Dashboard Guide
-│   │       └── ...
+│   │   └── dashboard/                     # Dashboard code
 │   └── sample_data/                       # Sample datasets
-├── docs/
-│   ├── ANALYSIS_README.md                 # LLM Analysis Guide
-│   └── PROVIDERS.md                       # Providers and Credentials Guide
 ├── examples/                              # Configuration examples
 └── tests/                                 # Test suite
 ```
