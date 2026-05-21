@@ -245,6 +245,7 @@ def run_aggregation_from_df(config, df, file_name_info, eval_llm=None):
     zip_path = f"{output_dir}/analysis_results_{file_name_info}.zip"
 
     if resume_enabled and os.path.exists(zip_path):
+        logger.info(f"Analysis results are already saved to {zip_path}. Returning.")
         return
 
     df = resolve_issues_and_map(df, config, eval_llm, resume_enabled, checkpoint_path,
