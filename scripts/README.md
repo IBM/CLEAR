@@ -8,15 +8,7 @@ them under the SPARC prompts.
 
 ## Prerequisites
 
-1. **Python 3.10+** with a venv. Both repos must be installed editable into
-   the same environment so changes to either show up immediately:
-
-   ```bash
-   cd /Users/osherelhadad/Documents/clear-sparc/altk-boost
-   pip install -e .
-   cd /Users/osherelhadad/Documents/clear-sparc/CLEAR
-   pip install -e .
-   ```
+1. **Python 3.10+** with a venv. Install CLEAR and and agent-lifecycle-toolkit
 
 2. A `.env` file at the CLEAR repo root with watsonx credentials:
 
