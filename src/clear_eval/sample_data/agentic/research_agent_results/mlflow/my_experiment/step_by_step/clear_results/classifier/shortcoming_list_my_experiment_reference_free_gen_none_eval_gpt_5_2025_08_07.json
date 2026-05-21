@@ -1,6 +1,0 @@
-[
-    "Misclassifying computation-only tasks as research-required",
-    "Failing to recognize that all necessary data is provided in the prompt",
-    "Overestimating the need for external lookups instead of doing straightforward calculations",
-    "Using a valid label but selecting the wrong category for the task"
-]
