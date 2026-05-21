@@ -52,15 +52,15 @@ pip install -e .
 
 ### 2. Set Up Credentials
 
-Configure your LLM provider credentials. See the [Providers and Credentials Guide](../../../docs/PROVIDERS.md) for provider-specific setup instructions.
+Configure your LLM provider credentials. See the [Providers and Credentials Guide](../../../docs/providers.md) for provider-specific setup instructions.
 
 ### 3. Generating Traces (Prerequisite)
 
 CLEAR evaluates traces from your agent's runs. In real scenarios you run your own agent with observability enabled and export the resulting traces.
 
-See [`examples/run_agent/`](../../../examples/run_agent/) for a complete working example — a LangGraph agent with MLflow or Langfuse tracing that exports JSON traces ready for CLEAR. For MLflow-specific tracing requirements, see the [MLflow Tracing Requirements](docs/MLFLOW_TRACING_REQUIREMENTS.md).
+See [`examples/run_agent/`](../../../examples/run_agent/) for a complete working example — a LangGraph agent with MLflow or Langfuse tracing that exports JSON traces ready for CLEAR. For MLflow-specific tracing requirements, see the [MLflow Tracing Requirements](../../../docs/agentic/mlflow-tracing.md).
 
-**Using a different agent framework or observability platform?** You can preprocess your traces into the CSV intermediate representation and run with `--from-raw-traces false`. See [`research_agent_results/mlflow/my_experiment/traces_data/`](../sample_data/agentic/research_agent_results/mlflow/my_experiment/traces_data/) for concrete examples, and the [Intermediate Representation Reference](docs/INTERMEDIATE_REPR.md) for the full schema.
+**Using a different agent framework or observability platform?** You can preprocess your traces into the CSV intermediate representation and run with `--from-raw-traces false`. See [`research_agent_results/mlflow/my_experiment/traces_data/`](../sample_data/agentic/research_agent_results/mlflow/my_experiment/traces_data/) for concrete examples, and the [Intermediate Representation Reference](../../../docs/agentic/intermediate-representation.md) for the full schema.
 
 The repo also ships pre-generated traces (produced by that example agent) so you can try CLEAR without running an agent yourself:
 
@@ -380,7 +380,7 @@ results/
 
 ## Dashboard
 
-See [dashboard/README_DASHBOARD.md](dashboard/README_DASHBOARD.md) for detailed documentation.
+See [docs/agentic/dashboard.md](../../../docs/agentic/dashboard___.md) for detailed documentation.
 
 ### Quick Launch
 
