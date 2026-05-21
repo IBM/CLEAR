@@ -42,12 +42,12 @@ dependencies = [
     "nest-asyncio",
     "scipy",
     'scikit-learn',
-    "botocore"  # Prevents litellm import warnings
+    "botocore"
 ]
 
 [project.optional-dependencies]
 tool-calls = [
-  "agent-lifecycle-toolkit[refraction] @ git+ssh://git@github.com/AgentToolkit/agent-lifecycle-toolkit.git"
+  "agent-lifecycle-toolkit"
 ]
 
 [tool.setuptools]
