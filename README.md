@@ -56,7 +56,7 @@ Supports traces from LangGraph, CrewAI, and other frameworks via MLflow or Langf
 | **Output** | Per-step CLEAR analysis, trajectory-level scores, rubric evaluations |
 | **Dashboard** | NiceGUI-based workflow visualization with path and temporal analysis |
 
-> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](docs/agentic/dashboard___.md)**
+> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](docs/agentic/dashboard.md)**
 
 ---
 
