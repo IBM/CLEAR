@@ -377,15 +377,33 @@ results/
 
 ## Dashboard
 
-See [docs/agentic/dashboard.md](../../../docs/agentic/dashboard___.md) for detailed documentation.
+See [docs/agentic/dashboard.md](../../../docs/agentic/dashboard.md) for detailed documentation.
 
 ### Quick Launch
 
+**Using CLI command:**
+```bash
+run-clear-agentic-dashboard
+```
+
+**Using Python module:**
 ```bash
 python -m clear_eval.agentic.dashboard.launch_dashboard
 ```
 
 Upload `unified_ui_results.zip` from your results directory.
+
+### CLI Options
+
+```bash
+run-clear-agentic-dashboard --port 8080 --host 0.0.0.0 --no-open
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--port` | Port to run the dashboard on | `8080` |
+| `--host` | Host address to bind to | `0.0.0.0` |
+| `--no-open` | Disable automatic browser launch | `False` |
 
 ### Features
 
