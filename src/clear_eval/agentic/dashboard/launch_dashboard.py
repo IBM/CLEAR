@@ -9,12 +9,30 @@ import sys
 from pathlib import Path
 
 
+def _is_port_available(host: str, port: int) -> bool:
+    """Check if a port is available for binding."""
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return True
+    except OSError:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Launch the Agentic Workflow Dashboard")
     parser.add_argument("--port", type=int, default=8080, help="Port to run the dashboard on (default: 8080)")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
     parser.add_argument("--no-open", action="store_true", help="Don't auto-open browser")
     args = parser.parse_args()
+
+    if not _is_port_available(args.host, args.port):
+        print(f"Error: Port {args.port} is already in use.")
+        print(f"Either stop the process using port {args.port}, or use a different port:")
+        print(f"  run-clear-agentic-dashboard --port {args.port + 1}")
+        sys.exit(1)
 
     # Ensure the server shuts down cleanly on termination signals,
     # so the port is released immediately instead of staying in TIME_WAIT.
