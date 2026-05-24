@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Agentic CLEAR: Automating Multi-Level Evaluation of LLM Agents</title>
+  <meta name="description" content="An open-source framework for automatic, dynamic, multi-level evaluation of LLM agent traces. Produces textual insights at system, node, and trace levels without predefined taxonomies." />
+  <meta property="og:title" content="Agentic CLEAR: Automating Multi-Level Evaluation of LLM Agents" />
+  <meta property="og:description" content="Open-source toolkit for automated agent evaluation across system, node, and trace levels." />
+  <meta property="og:url" content="https://github.com/IBM/CLEAR" />
+  <meta property="og:image" content="static/images/agent_clear_flow.png" />
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+
+  <meta name="twitter:title" content="Agentic CLEAR: Automating Multi-Level Evaluation of LLM Agents">
+  <meta name="twitter:description" content="Open-source toolkit for automated agent evaluation across system, node, and trace levels." />
+  <meta name="twitter:image" content="static/images/agent_clear_flow.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="keywords" content="LLM Agents, Agent Evaluation, LLM-as-a-Judge, Observability, Multi-Agent Systems, Error Analysis, CLEAR">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x1F50D;</text></svg>">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+
+<style>
+  body {
+    font-family: 'Noto Sans', sans-serif;
+    background: #ffffff;
+  }
+  .publication-title, .title {
+    font-family: 'Google Sans', sans-serif;
+  }
+  .publication-title {
+    color: #222;
+  }
+
+  section.sec-light { background-color: #ffffff; }
+  section.sec-tint  { background-color: #f5f7fa; }
+
+  section.sec-light h2.title.is-3,
+  section.sec-tint  h2.title.is-3 {
+    text-align: center;
+    position: relative;
+    padding-bottom: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  section.sec-light h2.title.is-3::after,
+  section.sec-tint  h2.title.is-3::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    width: 68px;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #4a90d9 0%, #1a56db 100%);
+  }
+
+  .subtitle-text {
+    font-size: 0.65em;
+    display: block;
+    margin-top: 8px;
+    line-height: 1.3;
+    font-weight: 400;
+    color: #4a4a4a;
+  }
+
+  .highlight-word {
+    background-color: #dbeafe;
+    padding: 0 6px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(26, 86, 219, 0.15);
+  }
+
+  /* Figures */
+  figure {
+    margin: 1.5rem 0;
+    text-align: center;
+  }
+  figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    background: white;
+    padding: 0.5rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  img.fig-hero    { max-width: 100%; }
+  img.fig-medium  { max-width: 660px; width: 100%; }
+  img.fig-large   { max-width: 920px; width: 100%; }
+  img.fig-xlarge  { max-width: 980px; width: 100%; }
+  figure.bordered img {
+    border: 1px solid #e5e5e5;
+  }
+  figcaption {
+    font-size: 0.95rem;
+    color: #4a4a4a;
+    margin-top: 0.8rem;
+    line-height: 1.55;
+    text-align: left;
+    max-width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  figcaption .fig-label {
+    font-weight: 600;
+    color: #222;
+  }
+
+  /* Key stats strip */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0 1rem;
+  }
+  .stat-card {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 1.4rem 1.3rem;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: #1a56db;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+  .stat-label {
+    font-size: 0.9rem;
+    color: #4a4a4a;
+    line-height: 1.4;
+  }
+
+  /* Contribution cards */
+  .contrib-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.1rem;
+    margin: 1.5rem 0;
+  }
+  .contrib-card {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 1.5rem 1.4rem;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .contrib-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  }
+  .contrib-card .contrib-num {
+    position: absolute;
+    top: -14px;
+    left: 1.3rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4a90d9 0%, #1a56db 100%);
+    color: white;
+    font-family: 'Google Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 8px rgba(26, 86, 219, 0.3);
+  }
+  .contrib-card h4 {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #222;
+    margin: 0.4rem 0 0.5rem;
+    line-height: 1.3;
+  }
+  .contrib-card p {
+    font-size: 0.92rem;
+    color: #4a4a4a;
+    margin: 0;
+    line-height: 1.55;
+  }
+  @media (max-width: 768px) {
+    .contrib-cards { grid-template-columns: 1fr; gap: 1.4rem; }
+  }
+
+  /* TL;DR callout */
+  .tldr-box {
+    background: #eff6ff;
+    border-left: 4px solid #1a56db;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1.5rem 0;
+  }
+  .tldr-box .tldr-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #1a56db;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .tldr-box p {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  /* Method steps */
+  .method-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 2.5rem 0 2rem;
+    position: relative;
+  }
+  .method-steps::before {
+    content: '';
+    position: absolute;
+    top: 28px;
+    left: 12.5%;
+    right: 12.5%;
+    height: 2px;
+    background: linear-gradient(to right, #e5e5e5 0%, #1a56db 50%, #e5e5e5 100%);
+    z-index: 0;
+  }
+  .method-step {
+    position: relative;
+    z-index: 1;
+    padding: 0 0.9rem;
+    text-align: center;
+  }
+  .method-step .num {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #1a56db;
+    color: #1a56db;
+    font-family: 'Google Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 2px 8px rgba(26, 86, 219, 0.15);
+  }
+  .method-step h4 {
+    font-family: 'Google Sans', sans-serif;
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #222;
+    line-height: 1.3;
+  }
+  .method-step p {
+    font-size: 0.88rem;
+    color: #4a4a4a;
+    margin: 0;
+    line-height: 1.5;
+  }
+  @media (max-width: 768px) {
+    .method-steps {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+    .method-steps::before { display: none; }
+    .method-step { text-align: left; padding: 0; display: flex; gap: 1rem; align-items: flex-start; }
+    .method-step .num { margin: 0; flex-shrink: 0; }
+  }
+
+  /* Code blocks */
+  .code-block {
+    background: #1e293b;
+    color: #e2e8f0;
+    font-family: 'Inconsolata', 'Courier New', monospace;
+    font-size: 0.9rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    line-height: 1.8;
+    margin: 1rem 0;
+  }
+  .code-block .comment { color: #64748b; }
+  .code-block .cmd { color: #7dd3fc; }
+  .code-block .flag { color: #a5b4fc; }
+  .code-block .value { color: #86efac; }
+
+  /* Table */
+  table.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  table.results-table th,
+  table.results-table td {
+    padding: 0.7rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #efefef;
+  }
+  table.results-table th {
+    background: #f0f4ff;
+    font-weight: 600;
+    color: #222;
+    font-size: 0.88rem;
+  }
+  table.results-table tr:last-child td { border-bottom: none; }
+  table.results-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.results-table tr.highlight td {
+    background: #eff6ff;
+    font-weight: 500;
+  }
+
+  /* BibTeX */
+  pre.bibtex {
+    background: #282c34;
+    color: #abb2bf;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.55;
+    white-space: pre;
+  }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .feature-item {
+    padding: 1rem;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    background: white;
+  }
+  .feature-item h5 {
+    font-family: 'Google Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+    color: #1a56db;
+  }
+  .feature-item p {
+    font-size: 0.85rem;
+    color: #4a4a4a;
+    margin: 0;
+    line-height: 1.4;
+  }
+  @media (max-width: 768px) {
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Publication links */
+  .publication-links .button {
+    position: relative;
+    overflow: hidden;
+  }
+  .publication-links .button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: button-shine-initial 2s ease-out 0.5s 1 forwards, button-shine-regular 4s linear 3s infinite;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .publication-links .link-block:nth-child(1) .button::before { animation-delay: 0.2s, 2.2s; }
+  .publication-links .link-block:nth-child(2) .button::before { animation-delay: 0.4s, 2.4s; }
+  .publication-links .link-block:nth-child(3) .button::before { animation-delay: 0.6s, 2.6s; }
+  .publication-links .link-block:nth-child(4) .button::before { animation-delay: 0.8s, 2.8s; }
+  .publication-links .link-block:nth-child(5) .button::before { animation-delay: 1.0s, 3.0s; }
+  .publication-links .link-block:nth-child(6) .button::before { animation-delay: 1.2s, 3.2s; }
+  .publication-links .button span { position: relative; z-index: 2; }
+  @keyframes button-shine-initial { 0% { left: -100%; } 100% { left: 100%; } }
+  @keyframes button-shine-regular { 0% { left: -100%; } 50% { left: -100%; } 100% { left: 100%; } }
+
+  /* Issues comparison table */
+  .issues-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .issues-table th, .issues-table td {
+    padding: 0.6rem 0.9rem;
+    text-align: left;
+    border-bottom: 1px solid #efefef;
+    vertical-align: top;
+  }
+  .issues-table th {
+    background: #f0f4ff;
+    font-weight: 600;
+    color: #222;
+  }
+  .issues-table tr:last-child td { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-2 publication-title">
+            Agentic CLEAR
+            <span class="subtitle-text">
+              Automating Multi-Level Evaluation of LLM Agents
+            </span>
+          </h1>
+
+          <!-- Links -->
+          <div class="publication-links" style="margin-top: 1.5rem;">
+            <span class="link-block">
+              <a href="https://arxiv.org/abs/2605.22608" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="ai ai-arxiv"></i></span>
+                <span>Paper</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://github.com/IBM/CLEAR" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fab fa-github"></i></span>
+                <span>Code</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://pypi.org/project/clear-eval/" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fab fa-python"></i></span>
+                <span>PyPI</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="#BibTeX" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-quote-left"></i></span>
+                <span>BibTeX</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="https://ibm.biz/ACLEAR-Video" target="_blank" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-video"></i></span>
+                <span>Video</span>
+              </a>
+            </span>
+            <span class="link-block">
+              <a href="mailto:Asaf.Yehudai@ibm.com" class="external-link button is-normal is-rounded is-dark">
+                <span class="icon"><i class="fas fa-envelope"></i></span>
+                <span>Contact</span>
+              </a>
+            </span>
+          </div>
+
+          <!-- Authors -->
+          <div class="is-size-5 publication-authors" style="margin-top: 1.5rem;">
+            <span class="author-block"><strong>Asaf Yehudai</strong>*,</span>
+            <span class="author-block"><strong>Lilach Eden</strong>*,</span>
+            <span class="author-block"><strong>Michal Shmueli-Scheuer</strong></span>
+            <br>
+            <span class="author-block" style="margin-top: 0.5rem; display: inline-block;">
+              IBM Research
+            </span>
+            <br>
+            <span class="is-size-6 has-text-grey" style="margin-top: 0.4rem; display: inline-block;">*Equal contribution &nbsp;|&nbsp; ACL 2026</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEASER FIGURE -->
+<section class="section sec-light" style="padding-top: 1rem;">
+  <div class="container is-max-desktop">
+    <figure>
+      <img src="static/images/agent_clear_flow.png" class="fig-hero" alt="Agentic CLEAR Pipeline: from traces through multi-level evaluation to interactive dashboard">
+      <figcaption>
+        <span class="fig-label">Figure 1.</span> The Agentic CLEAR pipeline. Starting from execution traces, we apply multi-level per-trace evaluation via an LLM Judge (Step-wise, Trace-wise, and Rubric-based), then aggregate insights using CLEAR into system-wide and node-specific patterns, and surface them in an interactive UI.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- TL;DR AND KEY NUMBERS -->
+<section class="section sec-tint">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">TL;DR</h2>
+    <div class="tldr-box">
+      <div class="tldr-label">The problem</div>
+      <p style="margin-bottom: 1rem;">
+        Agent observability platforms capture execution traces but lack meaningful evaluation. Developers must manually inspect large numbers of traces to identify systemic failures. Research-driven error taxonomies are static, rigid, and require extensive human annotation.
+      </p>
+      <div class="tldr-label">What we do</div>
+      <p>
+        <strong>Agentic CLEAR</strong> is an open-source Python package that automatically evaluates agent traces at <strong>three levels of granularity</strong> (system, node, trace), dynamically surfaces recurring failure patterns without predefined taxonomies, and presents them in an <strong>interactive dashboard</strong>. Just <code>pip install clear-eval</code> and run a single CLI command.
+      </p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num">4</div>
+        <div class="stat-label">Benchmarks evaluated (AppWorld, GAIA, SWE-bench, TAU-bench)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">7</div>
+        <div class="stat-label">Agentic configurations (agents + models + benchmarks)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">1,129</div>
+        <div class="stat-label">Execution traces analyzed across all settings</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Evaluation granularities: system, node, and trace level</div>
+      </div>
+    </div>
+
+    <h3 class="title is-4" style="text-align: center; margin-top: 3rem; margin-bottom: 1.75rem;">Our Contributions</h3>
+    <div class="contrib-cards">
+      <div class="contrib-card">
+        <div class="contrib-num">1</div>
+        <h4>Dynamic Evaluation Methodology</h4>
+        <p>A multi-level method that produces <strong>automatic, dynamic, and granular</strong> evaluation insights — adapting to the target system and domain without predefined error categories.</p>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-num">2</div>
+        <h4>Open-Source Package</h4>
+        <p>A pip-installable Python package (<code>clear-eval</code>) with <strong>easy integration</strong>, OpenTelemetry-compatible trace ingestion, and an interactive visual dashboard.</p>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-num">3</div>
+        <h4>Empirical Validation</h4>
+        <p>Demonstrated efficacy across <strong>4 benchmarks, 7 agentic settings</strong>, and tens of thousands of LLM calls — showing alignment with human-annotated errors and predictive signal for task success.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GETTING STARTED / CODE -->
+<section class="section sec-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Getting Started</h2>
+
+    <div class="content">
+      <p>Agentic CLEAR is available as a PyPI package. Install and run the full pipeline with just a few commands:</p>
+    </div>
+
+    <div class="code-block"><span class="comment"># Install</span><br><span class="cmd">pip install</span> <span class="value">clear-eval</span><br><br><span class="comment"># Run evaluation on your agent traces</span><br><span class="cmd">run-clear-agentic-eval</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--data-dir</span> <span class="value">data/my_traces</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--results-dir</span> <span class="value">results</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--from-raw-traces</span> <span class="value">true</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--agent-framework</span> <span class="value">langgraph</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--observability-framework</span> <span class="value">mlflow</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--eval-model-name</span> <span class="value">gpt-4o</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--provider</span> <span class="value">openai</span><br><br><span class="comment"># Launch the interactive dashboard</span><br><span class="cmd">run-clear-agentic-dashboard</span><br><span class="comment"># Upload the generated unified_ui_results.zip</span></div>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Supported Frameworks</h3>
+    <div style="overflow-x: auto;">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Agent Framework</th>
+            <th>Observability Platform</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>LangGraph</td><td>MLflow</td><td>Supported</td></tr>
+          <tr><td>LangGraph</td><td>Langfuse</td><td>Supported</td></tr>
+          <tr><td>CrewAI</td><td>Langfuse</td><td>Supported</td></tr>
+          <tr><td><em>Custom</em></td><td><em>Any (via CSV)</em></td><td>Supported</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="content" style="margin-top: 1.5rem;">
+      <p>For other frameworks, preprocess your traces to the CSV intermediate representation and use <code>--from-raw-traces false</code>. CLEAR uses <a href="https://docs.litellm.ai/docs/providers" target="_blank">LiteLLM</a> as its inference backend, supporting 100+ LLM providers.</p>
+    </div>
+
+    <h3 class="title is-4" style="margin-top: 2rem;">Quick Smoke Test</h3>
+    <div class="code-block"><span class="comment"># Run on sample data (3 traces, ~2 minutes)</span><br><span class="cmd">run-clear-agentic-eval</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--data-dir</span> <span class="value">src/clear_eval/sample_data/agentic/research_agent_traces/mlflow</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--results-dir</span> <span class="value">my_smoke_test_results</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--from-raw-traces</span> <span class="value">true</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--agent-framework</span> <span class="value">langgraph</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--observability-framework</span> <span class="value">mlflow</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--max-files</span> <span class="value">3</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--eval-model-name</span> <span class="value">gpt-4o</span> \<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--provider</span> <span class="value">openai</span><br><br><span class="comment"># Or view pre-computed results immediately</span><br><span class="cmd">run-clear-agentic-dashboard</span><br><span class="comment"># Upload: src/clear_eval/sample_data/agentic/research_agent_results/mlflow/my_experiment/unified_ui_results.zip</span></div>
+  </div>
+</section>
+
+<!-- LLM ANALYSIS (CLEAR Core) -->
+<section class="section sec-tint">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">CLEAR: LLM Error Analysis</h2>
+    <div class="content">
+      <p>
+        At its core, CLEAR transforms instance-level LLM judge feedback into <strong>structured, system-level insights</strong>. Rather than just scores, it automatically discovers recurring issues across your dataset, quantifies their frequency, and lets you drill down to concrete examples.
+      </p>
+    </div>
+
+    <figure class="bordered">
+      <img src="static/images/clear_pipeline_fig.png" class="fig-hero" alt="CLEAR Framework: from dataset and target system through LLM judge evaluation and Key Point Analysis to interactive UI">
+      <figcaption>
+        <span class="fig-label">Figure 2.</span> The CLEAR Framework. (a) Pipeline &mdash; Given a dataset (D) and a target system (s), the system generates responses (R). A judge (J) provides per-instance textual feedback and a score. A Key Point Analysis module (K) extracts recurring issues and maps them to the individual judgments. The discovered issues can be explored via the UI (b).
+      </figcaption>
+    </figure>
+
+    <div class="method-steps" style="margin-top: 2.5rem;">
+      <div class="method-step">
+        <div class="num">1</div>
+        <h4>Generate Responses</h4>
+        <p>Run your target system on the dataset, or provide pre-existing model outputs.</p>
+      </div>
+      <div class="method-step">
+        <div class="num">2</div>
+        <h4>LLM Judge Evaluation</h4>
+        <p>An LLM judge scores each response and provides textual critique explaining what went wrong.</p>
+      </div>
+      <div class="method-step">
+        <div class="num">3</div>
+        <h4>Key Point Analysis</h4>
+        <p>Cluster critiques into concise recurring issues via LLM-based KPA, with frequency quantification.</p>
+      </div>
+      <div class="method-step">
+        <div class="num">4</div>
+        <h4>Interactive Dashboard</h4>
+        <p>Explore issues, filter by type or score, compare subsets, and drill down to specific examples.</p>
+      </div>
+    </div>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Dashboard</h3>
+    <figure class="bordered">
+      <img src="static/images/clear_ui.png" class="fig-xlarge" alt="CLEAR LLM Analysis UI showing issues view, filtering, comparison, and instance-level analysis">
+      <figcaption>
+        <span class="fig-label">Figure 3.</span> The CLEAR interactive UI. (a) Entry point for exploring results. (b) Issues View with frequency distribution. (c) Filtering by issue types and scores. (d) Comparison View contrasting issue frequencies between full dataset and filtered subsets. (e/f) Instance-level view with judge feedback and mapped issues.
+      </figcaption>
+    </figure>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Example: Issues Discovered</h3>
+    <div class="columns is-desktop" style="margin-top: 1rem;">
+      <div class="column is-half">
+        <h4 class="has-text-weight-semibold" style="margin-bottom: 0.6rem; color: #1a56db; font-size: 0.95rem;">GSM8K (Mixtral 8x7B, task-specific mode)</h4>
+        <div style="overflow-x: auto;">
+          <table class="results-table" style="font-size: 0.84rem;">
+            <thead><tr><th>Issue</th><th class="num">Freq</th></tr></thead>
+            <tbody>
+              <tr><td>Mathematical errors in calculations, including rounding and final steps</td><td class="num">13.2%</td></tr>
+              <tr><td>Incorrect understanding of problem statements leading to flawed reasoning</td><td class="num">11.8%</td></tr>
+              <tr><td>Failure to fully consider or correctly interpret all given information</td><td class="num">5.8%</td></tr>
+              <tr><td>Incomplete answers due to missing necessary steps or calculations</td><td class="num">5.5%</td></tr>
+              <tr><td>Logical errors despite clear reasoning</td><td class="num">4.3%</td></tr>
+              <tr><td>Misunderstanding or incorrect application of mathematical concepts</td><td class="num">3.3%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="column is-half">
+        <h4 class="has-text-weight-semibold" style="margin-bottom: 0.6rem; color: #1a56db; font-size: 0.95rem;">TechQA / RAG (Mixtral 8x7B, general mode)</h4>
+        <div style="overflow-x: auto;">
+          <table class="results-table" style="font-size: 0.84rem;">
+            <thead><tr><th>Issue</th><th class="num">Freq</th></tr></thead>
+            <tbody>
+              <tr><td>Omission of necessary details or steps</td><td class="num">36.3%</td></tr>
+              <tr><td>Lack of specificity and completeness in responses</td><td class="num">31.2%</td></tr>
+              <tr><td>Omission of relevant links or references</td><td class="num">9.2%</td></tr>
+              <tr><td>Inaccurate or irrelevant information</td><td class="num">8.6%</td></tr>
+              <tr><td>Failure to provide actionable insights or solutions</td><td class="num">8.3%</td></tr>
+              <tr><td>Misinterpretation or misuse of context</td><td class="num">4.5%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="has-text-grey" style="font-size: 0.86rem; margin-top: 0.5rem;">Issues adapt to both the task domain and the specific model under evaluation. GPT-4o judge, LLM-based KPA.</p>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Evaluation Modes</h3>
+    <div class="content">
+      <ul>
+        <li><strong>General:</strong> Issues are discovered dynamically using a general-purpose evaluation prompt &mdash; broad, exploratory assessment without prior knowledge.</li>
+        <li><strong>Task-specific:</strong> Users provide specific issues as evaluation criteria, guiding the judge while allowing additional discoveries.</li>
+        <li><strong>Static:</strong> A predefined list of issues is mapped directly to evaluation texts, without dynamic discovery.</li>
+      </ul>
+    </div>
+
+    <h3 class="title is-4" style="margin-top: 2rem;">Quick Start (LLM Analysis)</h3>
+    <div class="code-block"><span class="comment"># Run on sample GSM8K data with default config</span><br><span class="cmd">run-clear-eval-analysis</span> <span class="flag">--provider</span> <span class="value">openai</span> <span class="flag">--eval-model-name</span> <span class="value">gpt-4o</span><br><br><span class="comment"># Launch the Streamlit dashboard</span><br><span class="cmd">run-clear-eval-dashboard</span><br><span class="comment"># Upload the ZIP from results/gsm8k/sample_output/</span></div>
+
+    <div class="content" style="margin-top: 1.5rem;">
+      <p><strong>Published at AAAI 2026</strong> &mdash; <a href="https://ojs.aaai.org/index.php/AAAI/article/view/42398" target="_blank">Paper</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- AGENTIC METHOD -->
+<section class="section sec-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Agentic CLEAR: Multi-Level Agent Evaluation</h2>
+    <div class="content">
+      <p>Extending CLEAR to multi-agent systems, <strong>Agentic CLEAR</strong> operates above the observability layer, processing execution traces through a two-stage pipeline to produce insights at <em>system</em>, <em>node</em>, and <em>trace</em> levels:</p>
+    </div>
+
+    <div class="method-steps">
+      <div class="method-step">
+        <div class="num">1</div>
+        <h4>Ingest Traces</h4>
+        <p>Accept OpenTelemetry-compatible traces from MLflow, Langfuse, or custom CSV. Convert to unified intermediate representation.</p>
+      </div>
+      <div class="method-step">
+        <div class="num">2</div>
+        <h4>Multi-Level Evaluation</h4>
+        <p>An LLM judge evaluates each trace at three levels: step-wise (per LLM call), trace-wise (full trajectory), and rubric-based (auto-generated criteria).</p>
+      </div>
+      <div class="method-step">
+        <div class="num">3</div>
+        <h4>CLEAR Aggregation</h4>
+        <p>Cluster and summarize instance-level feedback into system-wide patterns and node-specific recurring issues.</p>
+      </div>
+      <div class="method-step">
+        <div class="num">4</div>
+        <h4>Interactive Dashboard</h4>
+        <p>Explore results across System, Node, and Trace views with filtering, drill-down, and path analysis.</p>
+      </div>
+    </div>
+
+    <div class="content" style="margin-top: 1.5rem;">
+      <p>
+        The evaluation adapts dynamically to any agent architecture and task domain. Issues are discovered without predefined taxonomies — the system identifies what matters for <em>your</em> specific agent and dataset.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD UI -->
+<section class="section sec-tint">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Interactive Dashboard</h2>
+
+    <figure class="bordered">
+      <img src="static/images/agentic_clear_ui.png" class="fig-xlarge" alt="Agentic CLEAR interactive dashboard showing system view, node analysis, and trace explorer">
+      <figcaption>
+        <span class="fig-label">Figure 4.</span> The interactive UI of Agentic CLEAR. (a) Top-level navigation across analysis tabs. (b) <strong>System View</strong> with agent topology, global scores, and system-wide issues. (c-d) <strong>Node View</strong> with issue filtering and per-instance scoring. (e-h) <strong>Trace View</strong> with search, rubric evaluation, and step-level dimension scores.
+      </figcaption>
+    </figure>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Dashboard Features</h3>
+    <div class="feature-grid">
+      <div class="feature-item">
+        <h5>Workflow View</h5>
+        <p>Interactive graph of agents and transitions with call counts and edge weights</p>
+      </div>
+      <div class="feature-item">
+        <h5>Node Analysis</h5>
+        <p>Per-agent CLEAR issues, score distributions, and drill-down into individual records</p>
+      </div>
+      <div class="feature-item">
+        <h5>Trajectory Explorer</h5>
+        <p>Browse trajectories with filtering by length, agent, or score range</p>
+      </div>
+      <div class="feature-item">
+        <h5>Path Analysis</h5>
+        <p>Common path patterns, success vs. failure analysis, dead-end detection</p>
+      </div>
+      <div class="feature-item">
+        <h5>Temporal Analysis</h5>
+        <p>Agent position analysis and score progression across trajectory steps</p>
+      </div>
+      <div class="feature-item">
+        <h5>Score Prediction</h5>
+        <p>ROC curve analysis for predicting trajectory success from step scores</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPERIMENTAL SETUP -->
+<section class="section sec-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Experimental Setup</h2>
+    <div class="content">
+      <p>We evaluate Agentic CLEAR across diverse agent architectures, LLMs, and benchmarks, using traces from HAL, TRAIL, and the AppWorld leaderboard:</p>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Benchmark</th>
+            <th>Agent</th>
+            <th>Model</th>
+            <th class="num"># Traces</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>AppWorld</strong></td><td>CUGA</td><td>GPT-4o</td><td class="num">417</td><td>Leaderboard</td></tr>
+          <tr><td><strong>GAIA</strong></td><td>Generalist Agent</td><td>Claude 4.5 Sonnet</td><td class="num">165</td><td>HAL</td></tr>
+          <tr><td></td><td>Generalist Agent</td><td>GPT-4.1</td><td class="num">165</td><td>HAL</td></tr>
+          <tr><td></td><td>HF DeepResearch</td><td>Claude 4.5 Sonnet</td><td class="num">165</td><td>HAL</td></tr>
+          <tr><td></td><td>HF DeepResearch</td><td>OpenAI o3</td><td class="num">117</td><td>TRAIL</td></tr>
+          <tr><td><strong>SWE-bench Verified</strong></td><td>Generalist Agent</td><td>Claude 4.5 Sonnet</td><td class="num">50</td><td>HAL</td></tr>
+          <tr><td><strong>TAU-bench (Airline)</strong></td><td>Generalist Agent</td><td>Claude 3.7 Sonnet</td><td class="num">50</td><td>HAL</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="content" style="margin-top: 1.5rem;">
+      <p>As judges, we employ <strong>GPT-5</strong> and <strong>OSS-120B</strong> (in high thinking mode). All traces are evaluated using both judges with trace-wise evaluation, followed by CLEAR aggregation for issue discovery.</p>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section class="section sec-tint">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Results</h2>
+
+    <h3 class="title is-4">Discovered Issues</h3>
+    <div class="content">
+      <p>Agentic CLEAR surfaced <strong>195 unique recurring issues</strong> across all configurations, revealing both universal error patterns and domain-specific failures — without any benchmark-specific prompting.</p>
+    </div>
+
+    <div class="columns is-desktop" style="margin-top: 1rem;">
+      <div class="column is-half">
+        <h4 class="has-text-weight-semibold" style="margin-bottom: 0.6rem; color: #1a56db; font-size: 0.95rem;">Universal Patterns</h4>
+        <ul style="font-size: 0.92rem; line-height: 1.7;">
+          <li>Redundant and inefficient tool usage</li>
+          <li>Insufficient error handling and recovery</li>
+          <li>Incomplete workflows and task abandonment</li>
+          <li>Output formatting and schema compliance failures</li>
+        </ul>
+      </div>
+      <div class="column is-half">
+        <h4 class="has-text-weight-semibold" style="margin-bottom: 0.6rem; color: #1a56db; font-size: 0.95rem;">Domain-Specific (examples)</h4>
+        <ul style="font-size: 0.92rem; line-height: 1.7;">
+          <li><strong>GAIA:</strong> Sourcing and verification failures</li>
+          <li><strong>AppWorld:</strong> Incomplete executions, contaminated carts</li>
+          <li><strong>SWE-bench:</strong> Monkey-patching, broken diff output</li>
+          <li><strong>TAU-bench:</strong> Policy violations, unauthorized actions</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4 class="has-text-weight-semibold" style="margin-top: 2rem; margin-bottom: 0.8rem;">System-Level vs. Node-Level Issues (CUGA on AppWorld)</h4>
+    <div style="overflow-x: auto;">
+      <table class="issues-table">
+        <thead>
+          <tr>
+            <th style="width: 50%;">System-Level Issues</th>
+            <th style="width: 50%;">TaskDecompositionAgent (Node-Level)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Execution flow management and processing strategy flaws</td>
+            <td>Assumes unsupported app capabilities; violates strict app constraints</td>
+          </tr>
+          <tr>
+            <td>Validation and preconditions gaps: skips critical pre/post-action checks</td>
+            <td>Workflow coherence errors: reasoning, tasks, and ordering don't align</td>
+          </tr>
+          <tr>
+            <td>Blockage handling failures: does not prompt for missing info</td>
+            <td>Fails to return the user's intent verbatim for single-app tasks</td>
+          </tr>
+          <tr>
+            <td>Incomplete execution: stops short of finishing the core task</td>
+            <td>App boundary and handoff mistakes: wrong app assignment</td>
+          </tr>
+          <tr>
+            <td>Entity resolution weaknesses: brittle matching/normalization</td>
+            <td>Insufficient disambiguation criteria for selecting among items</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="has-text-grey" style="font-size: 0.86rem; margin-top: 0.5rem;">Top 5 issues (sorted by frequency) generated by GPT-5 judge. System-level captures broad failure modes; node-level pinpoints component-specific root causes.</p>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Alignment with Human Error Taxonomies</h3>
+    <div class="content">
+      <p>We validate that our automatically generated issues capture meaningful error patterns by mapping them to the TRAIL taxonomy of 12 reasoning/planning error categories (covering 94% of ground-truth labels):</p>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th class="num">Micro F1</th>
+            <th class="num">Macro Cat F1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Random (GT freq)</td><td class="num">0.342</td><td class="num">0.288</td></tr>
+          <tr><td>Always top-4</td><td class="num">0.459</td><td class="num">0.199</td></tr>
+          <tr><td>OSS-120B (full)</td><td class="num">0.377</td><td class="num">0.261</td></tr>
+          <tr><td>OSS-120B (full+partial)</td><td class="num">0.427</td><td class="num">0.374</td></tr>
+          <tr><td>GPT-5 (full)</td><td class="num">0.467</td><td class="num">0.368</td></tr>
+          <tr class="highlight"><td><strong>GPT-5 (full+partial)</strong></td><td class="num"><strong>0.497</strong></td><td class="num"><strong>0.459</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="has-text-grey" style="font-size: 0.88rem; margin-top: 0.5rem;">Error category prediction performance against TRAIL (Planning and Reasoning categories). Our generated issues cover 12 of 12 relevant TRAIL categories without predefined definitions.</p>
+
+    <h3 class="title is-4" style="margin-top: 2.5rem;">Score Prediction (AUC)</h3>
+    <div class="content">
+      <p>Agentic CLEAR provides three methods to predict trace success: Step-wise (average step score), Trace-level (holistic judgment), and Rubric-based (proportion of rubrics fulfilled):</p>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table class="results-table" style="font-size: 0.85rem;">
+        <thead>
+          <tr>
+            <th rowspan="2">Benchmark</th>
+            <th rowspan="2">Agent</th>
+            <th rowspan="2">Model</th>
+            <th colspan="2" style="text-align: center;">Step-Wise</th>
+            <th colspan="2" style="text-align: center;">Trace</th>
+            <th colspan="2" style="text-align: center;">Rubric</th>
+          </tr>
+          <tr>
+            <th class="num">OSS-120B</th><th class="num">GPT-5</th>
+            <th class="num">OSS-120B</th><th class="num">GPT-5</th>
+            <th class="num">OSS-120B</th><th class="num">GPT-5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight"><td>AppWorld</td><td>CUGA</td><td>GPT-4o</td><td class="num">0.758</td><td class="num">0.823</td><td class="num">0.837</td><td class="num"><strong>0.890</strong></td><td class="num">0.778</td><td class="num">0.828</td></tr>
+          <tr><td>GAIA</td><td>Generalist</td><td>Claude 4.5 Sonnet</td><td class="num">0.664</td><td class="num">0.632</td><td class="num">0.712</td><td class="num">0.720</td><td class="num">0.596</td><td class="num">0.566</td></tr>
+          <tr><td>GAIA</td><td>Generalist</td><td>GPT-4.1</td><td class="num">0.707</td><td class="num">0.742</td><td class="num">0.839</td><td class="num">0.848</td><td class="num">0.560</td><td class="num">0.597</td></tr>
+          <tr><td>GAIA</td><td>HF DeepResearch</td><td>Claude 4.5 Sonnet</td><td class="num">0.541</td><td class="num">0.546</td><td class="num">0.609</td><td class="num">0.716</td><td class="num">0.537</td><td class="num">0.571</td></tr>
+          <tr><td>GAIA</td><td>HF DeepResearch</td><td>OpenAI o3</td><td class="num">0.783</td><td class="num">0.706</td><td class="num">0.774</td><td class="num">0.819</td><td class="num">0.729</td><td class="num">0.736</td></tr>
+          <tr><td>SWE-bench</td><td>Generalist</td><td>Claude 4.5 Sonnet</td><td class="num">0.788</td><td class="num">0.779</td><td class="num">0.661</td><td class="num">0.803</td><td class="num">0.505</td><td class="num">0.524</td></tr>
+          <tr><td>TAU-bench</td><td>Generalist</td><td>Claude 3.7 Sonnet</td><td class="num">0.409</td><td class="num">0.529</td><td class="num">0.618</td><td class="num">0.554</td><td class="num">0.539</td><td class="num">0.597</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="has-text-grey" style="font-size: 0.88rem; margin-top: 0.5rem;">AUC for predicting trajectory success. The trace-level method is generally the strongest predictor, with a peak of 0.890 on AppWorld (GPT-5 judge).</p>
+  </div>
+</section>
+
+<!-- ABSTRACT -->
+<section class="section sec-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Abstract</h2>
+    <div class="content">
+      <p>
+        Agentic systems are becoming more capable: agents define strategies, take actions, and interact with different environments. This autonomy poses serious challenges for overseeing and assessing agent behavior. Most current tools are limited, focusing on observability with basic evaluation or creating a static taxonomy of agent errors.
+      </p>
+      <p>
+        To address this gap, we present <strong>Agentic CLEAR</strong>, an automatic, dynamic, and easy-to-use evaluation framework. It produces textual insights into the agent behavior on three levels of granularity: system, trace, and node. Agentic CLEAR operates above the observability layer, enabling seamless integration and featuring an intuitive UI that makes agent evaluation highly accessible.
+      </p>
+      <p>
+        In our experiments on four benchmarks, seven agentic settings, and tens of thousands of LLM calls, we show that Agentic CLEAR produces high-quality, data-driven, insightful feedback. Our analysis shows strong alignment with human-annotated errors and the ability to predict task success rate.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- OUTPUT STRUCTURE -->
+<section class="section sec-tint">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">Output Structure</h2>
+    <div class="content">
+      <p>The pipeline produces a structured output directory with all evaluation results:</p>
+    </div>
+    <div class="code-block" style="font-size: 0.82rem; line-height: 1.5;">results/<br>└── &lt;run_name&gt;/<br>&nbsp;&nbsp;&nbsp;&nbsp;├── traces_data/              <span class="comment"># Preprocessed CSV files</span><br>&nbsp;&nbsp;&nbsp;&nbsp;├── step_by_step/             <span class="comment"># Step-by-step CLEAR results</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── clear_data/           <span class="comment"># Grouped by agent node</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── clear_results/        <span class="comment"># Per-agent analysis + issues</span><br>&nbsp;&nbsp;&nbsp;&nbsp;├── full_trajectory/          <span class="comment"># Full trajectory results</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── task_success/         <span class="comment"># Binary success evaluation</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── full_trajectory/      <span class="comment"># Multi-dimensional scores</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── rubric_generation/    <span class="comment"># Auto-generated rubrics</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── rubric/               <span class="comment"># Rubric-based evaluation</span><br>&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── clear_analysis/       <span class="comment"># Root cause + issues</span><br>&nbsp;&nbsp;&nbsp;&nbsp;├── unified_ui_results.zip    <span class="comment"># Dashboard input</span><br>&nbsp;&nbsp;&nbsp;&nbsp;└── pipeline_summary.json     <span class="comment"># Execution metadata</span></div>
+  </div>
+</section>
+
+<!-- BIBTEX -->
+<section class="section sec-light" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title is-3">Citation</h2>
+    <pre class="bibtex"><code>@article{yehudai2026agentic,
+  title={Agentic CLEAR: Automating Multi-Level Evaluation of LLM Agents},
+  author={Yehudai, Asaf and Eden, Lilach and Shmueli-Scheuer, Michal},
+  journal={arXiv preprint arXiv:2605.22608},
+  year={2026}
+}</code></pre>
+    <div class="content" style="margin-top: 1.5rem;">
+      <p>If you use the LLM Analysis mode, please also cite:</p>
+    </div>
+    <pre class="bibtex"><code>@inproceedings{yehudai2026clear,
+  title={CLEAR: Error analysis via llm-as-a-judge made easy},
+  author={Yehudai, Asaf and Eden, Lilach and Perlitz, Yotam and Bar-Haim, Roy and Shmueli-Scheuer, Michal},
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={40},
+  number={48},
+  pages={41736--41738},
+  year={2026}
+}</code></pre>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" style="background-color: #f5f7fa; padding: 2rem 1.5rem;">
+  <div class="container is-max-desktop has-text-centered">
+    <p class="has-text-grey">
+      <strong>IBM Research</strong> &nbsp;|&nbsp; Apache 2.0 License
+    </p>
+    <p class="has-text-grey" style="margin-top: 0.6rem;">
+      <a href="https://github.com/IBM/CLEAR">github.com/IBM/CLEAR</a>
+      &nbsp;&middot;&nbsp;
+      <a href="https://pypi.org/project/clear-eval/">PyPI: clear-eval</a>
+      &nbsp;&middot;&nbsp;
+      <a href="mailto:Asaf.Yehudai@ibm.com">Asaf.Yehudai@ibm.com</a>
+    </p>
+    <p class="has-text-grey is-size-7" style="margin-top: 1rem;">
+      Page template adapted from <a href="https://nerfies.github.io/">Nerfies</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
