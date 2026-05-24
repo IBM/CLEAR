@@ -80,7 +80,7 @@ run-clear-eval-analysis --help
 
 ### 1. Set your provider credentials
 
-CLEAR requires a supported LLM provider. Set the appropriate environment variables for your provider (e.g., `OPENAI_API_KEY` for OpenAI). Adjust `--provider` and `--eval-model-name` in the commands below to match your setup. See the [Providers and Credentials Guide](docs/providers.md) for all supported providers and backends.
+CLEAR requires a supported LLM provider. Set the appropriate environment variables for your provider (e.g., `OPENAI_API_KEY` for OpenAI). Adjust `--provider` and `--eval-model-name` in the commands below to match your setup. See [Provider Configuration](#provider-configuration) for details.
 
 ### 2. LLM Analysis
 
@@ -128,9 +128,38 @@ run-clear-agentic-dashboard
 
 ---
 
-## Supported Providers
+## Provider Configuration
 
-CLEAR supports [100+ LLM providers](https://docs.litellm.ai/docs/providers) via LiteLLM, including OpenAI, Anthropic, WatsonX, AWS Bedrock, and Google Vertex AI. See the **[Providers and Credentials Guide](docs/providers.md)** for setup instructions.
+CLEAR uses [LiteLLM](https://docs.litellm.ai/docs/providers) as its inference backend, supporting 100+ LLM providers (OpenAI, Anthropic, WatsonX, AWS Bedrock, Google Vertex AI, and more).
+
+**Parameters:**
+
+| Parameter | CLI Flag | Description |
+|-----------|----------|-------------|
+| `provider` | `--provider` | LiteLLM provider name (e.g., `openai`, `anthropic`, `bedrock`, `vertex_ai`) |
+| `eval_model_name` | `--eval-model-name` | Model identifier (e.g., `gpt-4o`, `claude-3-5-sonnet-20241022`) |
+| `eval_model_params` | `--eval-model-params` | Additional model parameters as JSON (e.g., `{"temperature": 0}`) |
+| `endpoint_url` | `--endpoint-url` | Custom endpoint URL for local/self-hosted models |
+
+**Cloud provider example:**
+
+```bash
+export OPENAI_API_KEY="..."
+run-clear-eval-analysis --provider openai --eval-model-name gpt-4o
+```
+
+**Local model example (vLLM, llama.cpp, Ollama, etc.):**
+
+```bash
+run-clear-eval-analysis \
+    --provider openai \
+    --eval-model-name my-local-model \
+    --endpoint-url http://localhost:8000/v1
+```
+
+No credentials are needed when using `--endpoint-url` with a local server.
+
+Set the required environment variables for your provider according to [LiteLLM's documentation](https://docs.litellm.ai/docs/providers).
 
 ---
 
@@ -141,7 +170,6 @@ CLEAR supports [100+ LLM providers](https://docs.litellm.ai/docs/providers) via 
 | [**Agentic Workflows Guide**](src/clear_eval/agentic/README.md) | Multi-agent evaluation — trace preprocessing, step-by-step and trajectory analysis, configuration reference |
 | [**Agentic Dashboard Guide**](docs/agentic/dashboard.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
 | [**LLM Analysis Guide**](docs/llm-analysis.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
-| [**Providers and Credentials**](docs/providers.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
 
 ---
 
