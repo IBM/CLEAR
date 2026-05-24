@@ -8,19 +8,13 @@
 
 ---
 
-## 🎯 What is CLEAR?
+## What is CLEAR?
 
-CLEAR provides systematic error analysis for:
-- **Single LLM Responses** — Analyze quality issues in model outputs for tasks like Q&A, summarization, and generation
-- **Agentic Workflows** — Evaluate complex workflows with multiple components, tool usage, and multi-step task trajectories
-
-It combines automated LLM-as-a-judge evaluation with interactive dashboards to help you:
+CLEAR provides systematic error analysis for LLM-based systems. It combines automated LLM-as-a-judge evaluation with interactive dashboards to help you:
 - Identify recurring error patterns across your dataset
 - Quantify issue frequencies and severity
 - Drill down into specific failure cases
 - Prioritize improvements based on data-driven insights
-
-## ⚙️ How It Works
 
 CLEAR operates in two phases:
 
@@ -29,55 +23,36 @@ CLEAR operates in two phases:
 
 ---
 
-## 🔀 Two Analysis Modes
+## Two Analysis Modes
 
-CLEAR supports two distinct analysis modes, each with its own pipeline, dashboard, and documentation:
-
-### 📝 LLM Analysis
+### LLM Analysis
 
 Evaluate standard LLM outputs — generation quality, correctness, and recurring error patterns. Provide a CSV with prompts and responses, and CLEAR will score each instance, generate textual critiques, and surface system-level issues.
 
-| | |
-|---|---|
-| **Input** | CSV with model inputs and responses |
-| **Output** | Per-record scores, evaluation text, aggregated issue categories |
-| **Dashboard** | Streamlit-based interactive explorer |
+- **Input:** CSV with model inputs and responses
+- **Output:** Per-record scores, evaluation text, aggregated issue categories
+- **Dashboard:** Streamlit-based interactive explorer
 
-> 📖 **[Full LLM Analysis Guide →](docs/llm-analysis.md)**
+> **[LLM Analysis Guide →](docs/llm-analysis.md)**
 
-### 🤖 Agentic Analysis
+### Agentic Analysis
 
 Evaluate multi-agent system trajectories — step-by-step agent interactions and full trajectory analysis.
 Supports traces from LangGraph, CrewAI, and other frameworks via MLflow or Langfuse.
 
-| | |
-|---|---|
-| **Input** | Raw JSON traces or preprocessed trajectory CSVs |
-| **Output** | Per-step CLEAR analysis, trajectory-level scores, rubric evaluations |
-| **Dashboard** | NiceGUI-based workflow visualization with path and temporal analysis |
+- **Input:** Raw JSON traces or preprocessed trajectory CSVs (each trace captures one complete agent task execution)
+- **Output:** Per-step CLEAR analysis, trajectory-level scores, rubric evaluations
+- **Dashboard:** NiceGUI-based workflow visualization with path and temporal analysis
 
-> 📖 **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)** | **[Agentic Dashboard Guide →](docs/agentic/dashboard.md)**
+> **[Agentic Workflows Guide →](src/clear_eval/agentic/README.md)**
 
 ---
 
-## ✨ Key Features
-
-| |                                                               |
-|---|---------------------------------------------------------------|
-| 🧑‍⚖️ **LLM-as-a-Judge** | Automated evaluation for any text generation task             |
-| 🤖 **Agentic Workflows** | Evaluate agent trajectories - step by step and as a whole     |
-| 🔌 **Multiple Backends** | LangChain, LiteLLM (100+ providers), or direct HTTP endpoints |
-| 🧩 **External Judges** | Plug in custom evaluation functions                           |
-| 📊 **Interactive Dashboards** | Standard and agentic-specific visualizations                  |
-| 🛠️ **Flexible Configuration** | YAML config files, CLI flags, or Python API                   |
-
----
-
-## 📦 Installation
+## Installation
 
 **Requires Python 3.10+**
 
-#### Option 1: pip (recommended)
+#### Option 1: pip
 
 ```bash
 pip install clear-eval
@@ -93,143 +68,112 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
+Verify the installation:
+
+```bash
+run-clear-eval-analysis --help
+```
+
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Set your provider credentials
 
-CLEAR requires a supported LLM provider. Set the appropriate environment variables for your provider (e.g., `OPENAI_API_KEY` for OpenAI). See the [Providers and Credentials Guide](docs/PROVIDERS.md) for all supported providers and backends.
+CLEAR requires a supported LLM provider. Set the appropriate environment variables for your provider (e.g., `OPENAI_API_KEY` for OpenAI). Adjust `--provider` and `--eval-model-name` in the commands below to match your setup. See the [Providers and Credentials Guide](docs/providers.md) for all supported providers and backends.
 
-### 2. Run on sample data
+### 2. LLM Analysis
 
-With no data path specified, CLEAR runs on a built-in [GSM8K sample dataset](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/sample_data/gsm8k/gsm8k_default_predictions.csv) using [default settings](https://github.com/IBM/CLEAR/blob/main/src/clear_eval/pipeline/setup/default_config.yaml):
+This evaluates GSM8K math problem responses and surfaces recurring quality issues:
 
 ```bash
 run-clear-eval-analysis --provider openai --eval-model-name gpt-4o
 ```
 
-Results are saved to `results/gsm8k/sample_output/`.
-
-### 3. Run on your own data
-
-```bash
-run-clear-eval-analysis \
-    --provider openai \
-    --eval-model-name gpt-4o \
-    --data-path path/to/your_data.csv \
-    --output-dir results/my_run/ \
-    --run-name my_run
-```
-
-Your CSV should contain at minimum `id`, `model_input`, and `response` columns. See the [LLM Analysis Guide](docs/ANALYSIS_README.md#input-data-format) for the full input format specification.
-
-### 4. View results
+Results are saved to `results/gsm8k/sample_output/`. View them:
 
 ```bash
 run-clear-eval-dashboard
 ```
 
-Upload the generated ZIP file from the results directory to explore issues, scores, and individual examples.
+> **[Full LLM Analysis Guide →](docs/llm-analysis.md)** — input formats, CLI arguments, configuration, Python API, and external judges.
 
----
+### 3. Agentic Analysis
 
-## 🔍 Usage Overview
+These two modes are independent — this section does not require step 2.
 
-### 📝 LLM Analysis (CLI)
-
-```bash
-# Full pipeline
-run-clear-eval-analysis --provider openai --eval-model-name gpt-4o --config_path path/to/config.yaml
-
-# Evaluation only (using existing responses)
-run-clear-eval-evaluation --provider openai --eval-model-name gpt-4o --config_path path/to/config.yaml
-```
-
-### 📝 LLM Analysis (Python)
-
-```python
-from clear_eval.analysis_runner import run_clear_eval_analysis
-
-run_clear_eval_analysis(
-    run_name="my_run",
-    provider="openai",
-    data_path="my_data.csv",
-    eval_model_name="gpt-4o",
-    output_dir="results/",
-)
-```
-
-### 🤖 Agentic Analysis
+Run CLEAR on sample agent traces (3 traces, each capturing one complete agent task execution, ~2 minutes):
 
 ```bash
 run-clear-agentic-eval \
-    --data-dir data/my_traces \
-    --results-dir results \
+    --data-dir src/clear_eval/sample_data/agentic/research_agent_traces/mlflow \
+    --results-dir my_smoke_test_results \
     --from-raw-traces true \
+    --agent-framework langgraph \
+    --observability-framework mlflow \
+    --run-name smoke_test \
+    --max-files 3 \
     --eval-model-name gpt-4o \
     --provider openai
-
-# Launch agentic dashboard
-run-clear-agentic-dashboard
 ```
 
-See the [Agentic Workflows Guide](src/clear_eval/agentic/README.md) for full details.
+View pre-computed results (all 20 traces) without re-running:
+
+```bash
+run-clear-agentic-dashboard
+# Upload: src/clear_eval/sample_data/agentic/research_agent_results/mlflow/my_experiment/unified_ui_results.zip
+```
+
+> **[Full Agentic Guide →](src/clear_eval/agentic/README.md)** — trace generation, configuration, output structure, and dashboard features.
 
 ---
 
-## 📚 Documentation
+## Supported Providers
+
+CLEAR supports [100+ LLM providers](https://docs.litellm.ai/docs/providers) via LiteLLM, including OpenAI, Anthropic, WatsonX, AWS Bedrock, and Google Vertex AI. See the **[Providers and Credentials Guide](docs/providers.md)** for setup instructions.
+
+---
+
+## Documentation
 
 | Guide | Description |
 |-------|-------------|
-| 📝 [**LLM Analysis Guide**](docs/llm-analysis.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
-| 🤖 [**Agentic Workflows Guide**](src/clear_eval/agentic/README.md) | Multi-agent evaluation — trace preprocessing, step-by-step and trajectory analysis, configuration reference |
-| 📊 [**Agentic Dashboard Guide**](docs/agentic/dashboard___.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
-| 🔑 [**Providers and Credentials**](docs/providers.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
+| [**Agentic Workflows Guide**](src/clear_eval/agentic/README.md) | Multi-agent evaluation — trace preprocessing, step-by-step and trajectory analysis, configuration reference |
+| [**Agentic Dashboard Guide**](docs/agentic/dashboard.md) | Dashboard features — workflow view, node analysis, trajectory explorer, path and temporal analysis |
+| [**LLM Analysis Guide**](docs/llm-analysis.md) | Full pipeline reference — input formats, CLI arguments, configuration, and external judges |
+| [**Providers and Credentials**](docs/providers.md) | Inference backends (LangChain, LiteLLM, Endpoint), provider setup, and configuration examples |
 
 ---
 
-## 🔑 Supported Providers
+## Citation
 
-| Provider | Backend | Credentials |
-|----------|---------|-------------|
-| OpenAI | LangChain, LiteLLM, Endpoint | `OPENAI_API_KEY` |
-| WatsonX | LangChain, LiteLLM, Endpoint | `WATSONX_APIKEY`, `WATSONX_URL`, `WATSONX_PROJECT_ID` |
-| Anthropic | LiteLLM | `ANTHROPIC_API_KEY` |
-| AWS Bedrock | LiteLLM | AWS credentials |
-| Google Vertex AI | LiteLLM | GCP credentials |
-| [100+ more](https://docs.litellm.ai/docs/providers) | LiteLLM | Provider-specific |
+If you use CLEAR in your research, please cite the relevant paper(s):
 
-See the **[Providers and Credentials Guide](docs/providers.md)** for backend configuration details and examples.
-
----
-
-## 🗂️ Project Structure
-
+**LLM Analysis** ([AAAI 2026](https://ojs.aaai.org/index.php/AAAI/article/view/42398)):
+```bibtex
+@inproceedings{yehudai2026clear,
+  title={CLEAR: Error analysis via llm-as-a-judge made easy},
+  author={Yehudai, Asaf and Eden, Lilach and Perlitz, Yotam and Bar-Haim, Roy and Shmueli-Scheuer, Michal},
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={40},
+  number={48},
+  pages={41736--41738},
+  year={2026}
+}
 ```
-CLEAR/
-├── README.md                              # This file
-├── docs/
-│   ├── llm-analysis.md                    # LLM Analysis Guide
-│   ├── providers.md                       # Providers and Credentials Guide
-│   └── agentic/                           # Agentic documentation
-│       ├── dashboard.md                   # Agentic Dashboard Guide
-│       ├── intermediate-representation.md # CSV format reference
-│       └── mlflow-tracing.md              # MLflow tracing guide
-├── src/clear_eval/
-│   ├── pipeline/                          # LLM analysis pipeline
-│   ├── dashboard/                         # LLM dashboard (Streamlit)
-│   ├── agentic/
-│   │   ├── README.md                      # Agentic overview (links to docs/)
-│   │   ├── pipeline/                      # Agentic pipeline
-│   │   └── dashboard/                     # Dashboard code
-│   └── sample_data/                       # Sample datasets
-├── examples/                              # Configuration examples
-└── tests/                                 # Test suite
+
+**Agentic Analysis** (ACL 2026, to appear — [preprint](https://arxiv.org/abs/2605.22608)):
+```bibtex
+@article{yehudai2026agentic,
+  title={Agentic CLEAR: Automating Multi-Level Evaluation of LLM Agents},
+  author={Yehudai, Asaf and Eden, Lilach and Shmueli-Scheuer, Michal},
+  journal={arXiv preprint arXiv:2605.22608},
+  year={2026}
+}
 ```
 
 ---
 
-## 📄 License
+## License
 
 Apache 2.0 — see [LICENSE](LICENSE) for details.
