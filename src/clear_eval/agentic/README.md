@@ -103,6 +103,16 @@ run-clear-agentic-dashboard
 
 The dashboard shows step-by-step CLEAR analysis per agent node, full trajectory evaluations and scores, interactive workflow visualization, path analysis, and temporal trends.
 
+**Large-scale results (CUGA agent on AppWorld benchmark):**
+
+```bash
+# Download from GitHub Release (~259MB)
+gh release download cuga-appworld-output-v1 --pattern "*.zip"
+
+# Launch dashboard and upload the downloaded ZIP
+run-clear-agentic-dashboard
+```
+
 ### 6. Run the Pipeline on Your Own Data
 
 **Using Python module:**
