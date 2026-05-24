@@ -148,17 +148,20 @@ def prepare_traces_data(
     else:
         traces_data_dir = output_paths['base'] / 'traces_data'
     
+    overwrite = config.get('overwrite', False)
+
     if from_raw_traces:
-        # Process raw JSON traces
+        # Process raw JSON traces — always runs; skips individual CSVs that
+        # already exist when overwrite=false (handles interrupted runs)
         logger.info(f"Preprocessing raw traces from: {data_dir}")
-        
+
         try:
             process_traces_to_traj_data(
                 input_dir=str(data_dir),
                 output_dir=str(traces_data_dir),
                 agent_framework=config.get('agent_framework'),
                 observability_framework=config.get('observability_framework'),
-                overwrite=config.get('overwrite', True),
+                overwrite=overwrite,
             )
             logger.info(f"✓ Traces preprocessed")
             return traces_data_dir
@@ -167,8 +170,14 @@ def prepare_traces_data(
             return None
     else:
         # Copy existing CSV files
-        logger.info(f"Using trajectory CSVs from: {data_dir}")
+        # If not overwriting and traces_data already has CSVs, reuse as-is
+        if not overwrite and traces_data_dir.exists():
+            csv_count = len(list(traces_data_dir.glob('*.csv')))
+            if csv_count > 0:
+                logger.info(f"Reusing existing traces_data ({csv_count} CSVs)")
+                return traces_data_dir
 
+        logger.info(f"Copying trajectory CSVs from: {data_dir}")
         try:
             if traces_data_dir.exists():
                 shutil.rmtree(traces_data_dir)
@@ -325,20 +334,16 @@ def main():
     # Extract parameters
     data_dir = Path(config['data_dir'])
     from_raw_traces = config.get('from_raw_traces')
-    overwrite = config.get('overwrite', True)
-    user_provided_run_name = config.get('run_name') is not None
 
     # Validate input directory exists
     if not data_dir.exists():
         parser.error(f"Input directory does not exist: {data_dir}")
 
-    # Validate run directory state
-    if output_dir.exists() and user_provided_run_name:
+    # Log if output dir already exists
+    if output_dir.exists():
+        overwrite = config.get('overwrite', False)
         if overwrite:
-            parser.error(
-                f"Output directory already exists: {output_dir}\n"
-                f"Use --overwrite false to resume, or delete the existing directory."
-            )
+            logger.info(f"Re-running existing run with overwrite: {run_name}")
         else:
             logger.info(f"Resuming existing run: {run_name}")
     

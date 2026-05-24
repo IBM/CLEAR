@@ -25,7 +25,7 @@ separate_tools: false
 max_files: null                 # Maximum number of files to evaluate (null = all)
 
 # Execution
-overwrite: true                 # If true: requires fresh run_name (fails if exists). If false: resume mode.
+overwrite: false                # If true: re-run steps even if outputs exist. If false: skip completed steps.
 max_workers: 10                 # Number of parallel workers
 run_name: null                  # Unique identifier for this run (used in output path)
 

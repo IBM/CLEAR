@@ -642,7 +642,6 @@ Argument Precedence (lowest to highest):
     validate_required_config(config_dict, ['data_dir', 'results_dir'], parser)
 
     # Get run output directory
-    user_provided_run_name = config_dict.get('run_name') is not None
     results_dir, run_name = get_run_output_dir(
         config_dict['results_dir'],
         config_dict.get('run_name')
@@ -655,16 +654,13 @@ Argument Precedence (lowest to highest):
     # Extract parameters
     from_raw_traces = config_dict.get('from_raw_traces')
     data_dir = config_dict['data_dir']
-    overwrite = config_dict.get('overwrite', True)
+    overwrite = config_dict.get('overwrite', False)
     memory_only = config_dict.get('memory_only')
 
-    # Validate run directory state
-    if results_dir.exists() and user_provided_run_name:
+    # Log if output dir already exists
+    if results_dir.exists():
         if overwrite:
-            parser.error(
-                f"Output directory already exists: {results_dir}\n"
-                f"Use --overwrite false to resume, or delete the existing directory."
-            )
+            logger.info(f"Re-running existing run with overwrite: {run_name}")
         else:
             logger.info(f"Resuming existing run: {run_name}")
 
