@@ -54,14 +54,11 @@
   figcaption { font-size: 0.92rem; color: #4a4a4a; margin-top: 0.8rem; line-height: 1.55; text-align: left; max-width: 780px; margin-left: auto; margin-right: auto; }
   figcaption .fig-label { font-weight: 600; color: #222; }
 
-  /* UI figure with IBM trimmed */
-  .ui-figure-wrap { overflow: hidden; border-radius: 6px; border: 1px solid #e5e5e5; cursor: zoom-in; }
-  .ui-figure-wrap img { margin-bottom: -70px; display: block; max-width: 100%; }
+  /* UI figure — opens full size in new tab on click */
+  .ui-figure-wrap img { display: block; width: 100%; border-radius: 6px; border: 1px solid #e5e5e5; }
+  .ui-figure-wrap a { display: block; cursor: pointer; }
+  .ui-figure-wrap a:hover img { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
 
-  /* Lightbox overlay */
-  .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; cursor: zoom-out; justify-content: center; align-items: center; padding: 2rem; }
-  .lightbox.active { display: flex; }
-  .lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
 
   /* Calmer agentic pipeline figure */
   .fig-calm { filter: saturate(0.7) brightness(1.02); }
@@ -291,8 +288,8 @@
   <div class="container is-max-desktop">
     <h2 class="title is-3">Dashboard</h2>
     <figure>
-      <div class="ui-figure-wrap" onclick="openLightbox('static/images/agentic_clear_ui.png')">
-        <img src="static/images/agentic_clear_ui.png" alt="Agentic CLEAR interactive dashboard">
+      <div class="ui-figure-wrap">
+        <a href="static/images/Agentic_CLEAR_UI_figure_v7_new.pdf#navpanes=0" target="_blank"><img src="static/images/agentic_clear_ui.png" alt="Agentic CLEAR interactive dashboard (click for high-res PDF)"></a>
       </div>
       <figcaption><span class="fig-label">Agentic CLEAR Dashboard.</span> A hierarchical UI with three views: <strong>System View</strong> reconstructs the multi-agent topology and surfaces global issues; <strong>Node View</strong> enables per-component error analysis with filtering; <strong>Trace View</strong> provides step-level inspection with rubric evaluation and dimension scores.</figcaption>
     </figure>
@@ -482,8 +479,8 @@
   <div class="container is-max-desktop">
     <h2 class="title is-3">Dashboard</h2>
     <figure>
-      <div class="ui-figure-wrap" onclick="openLightbox('static/images/clear_ui.png')">
-        <img src="static/images/clear_ui.png" alt="CLEAR LLM Analysis interactive UI">
+      <div class="ui-figure-wrap">
+        <a href="static/images/clear_ui.pdf#navpanes=0" target="_blank"><img src="static/images/clear_ui.png" alt="CLEAR LLM Analysis interactive UI (click for high-res PDF)"></a>
       </div>
       <figcaption><span class="fig-label">CLEAR Dashboard.</span> The Streamlit-based interface provides: an <strong>Issues View</strong> showing error distribution and frequency; a <strong>Filtering Mechanism</strong> to isolate examples by issue type or score range; a <strong>Comparison View</strong> contrasting filtered vs. full-dataset distributions; and a <strong>Model Behavior</strong> panel for instance-level inspection of judge feedback.</figcaption>
     </figure>
@@ -641,23 +638,7 @@
   </div>
 </footer>
 
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <img id="lightbox-img" src="" alt="Enlarged view">
-</div>
-
 <script>
-function openLightbox(src) {
-  document.getElementById('lightbox-img').src = src;
-  document.getElementById('lightbox').classList.add('active');
-}
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('active');
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeLightbox();
-});
-
 function switchMainTab(tab) {
   document.querySelectorAll('.main-tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.main-tab-btn').forEach(el => el.classList.remove('active'));
