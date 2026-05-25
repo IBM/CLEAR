@@ -55,14 +55,19 @@
   figcaption .fig-label { font-weight: 600; color: #222; }
 
   /* UI figure with IBM trimmed */
-  .ui-figure-wrap { overflow: hidden; border-radius: 6px; border: 1px solid #e5e5e5; }
-  .ui-figure-wrap img { margin-bottom: -90px; display: block; max-width: 100%; }
+  .ui-figure-wrap { overflow: hidden; border-radius: 6px; border: 1px solid #e5e5e5; cursor: zoom-in; }
+  .ui-figure-wrap img { margin-bottom: -70px; display: block; max-width: 100%; }
+
+  /* Lightbox overlay */
+  .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; cursor: zoom-out; justify-content: center; align-items: center; padding: 2rem; }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
 
   /* Calmer agentic pipeline figure */
   .fig-calm { filter: saturate(0.7) brightness(1.02); }
 
-  /* Gentler heatmap figure */
-  .fig-gentle { filter: saturate(0.55) brightness(1.08) contrast(0.9); opacity: 0.88; }
+  /* Gentler heatmap figure — no blur, just softer colors */
+  .fig-gentle { filter: saturate(0.65) brightness(1.05); opacity: 0.92; }
 
   /* Tables */
   table.results-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.9rem; background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
@@ -83,11 +88,18 @@
   .issues-table tr:last-child td { border-bottom: none; }
 
   /* Feature grid */
-  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
-  .feature-item { padding: 1rem; border: 1px solid #e5e5e5; border-radius: 8px; background: white; }
+  .feature-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-rows: auto !important;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    width: 100%;
+  }
+  .feature-item { padding: 1rem; border: 1px solid #e5e5e5; border-radius: 8px; background: white; min-width: 0; }
   .feature-item h5 { font-family: 'Google Sans', sans-serif; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; color: #1a56db; }
   .feature-item p { font-size: 0.85rem; color: #4a4a4a; margin: 0; line-height: 1.4; }
-  @media (max-width: 768px) { .feature-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { .feature-grid { grid-template-columns: 1fr !important; } }
 
   /* BibTeX */
   pre.bibtex { background: #282c34; color: #abb2bf; font-family: 'Courier New', monospace; font-size: 0.83rem; padding: 1.25rem 1.5rem; border-radius: 6px; overflow-x: auto; line-height: 1.55; white-space: pre; }
@@ -121,11 +133,24 @@
   .issue-panel.active { display: block; }
 
   /* Pipeline description grid */
-  .pipeline-desc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-top: 0; }
-  .pipeline-desc-item { padding: 0.8rem 0.9rem; border-top: 3px solid #1a56db; background: #f8faff; border-radius: 0 0 8px 8px; }
+  .pipeline-desc {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-rows: auto !important;
+    gap: 0.6rem;
+    margin-top: 0;
+    width: 100%;
+  }
+  .pipeline-desc-item {
+    padding: 0.8rem 0.9rem;
+    border-top: 3px solid #1a56db;
+    background: #f8faff;
+    border-radius: 0 0 8px 8px;
+    min-width: 0;
+  }
   .pipeline-desc-item h5 { font-family: 'Google Sans', sans-serif; font-weight: 600; font-size: 0.88rem; color: #1a56db; margin-bottom: 0.25rem; text-align: center; }
   .pipeline-desc-item p { font-size: 0.8rem; color: #4a4a4a; margin: 0; line-height: 1.4; text-align: center; }
-  @media (max-width: 768px) { .pipeline-desc { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) { .pipeline-desc { grid-template-columns: 1fr !important; } }
 
   /* Pipeline figure with caption on top */
   .pipeline-figure { margin-bottom: 0; }
@@ -141,9 +166,9 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h1 class="title is-2 publication-title">
+          <h1 class="title is-2 publication-title" id="page-title">
             Agentic CLEAR
-            <span class="subtitle-text">Automating Multi-Level Evaluation of LLM Agents</span>
+            <span class="subtitle-text" id="page-subtitle">Automating Multi-Level Evaluation of LLM Agents</span>
           </h1>
 
           <div class="publication-links" style="margin-top: 1.5rem;">
@@ -174,8 +199,9 @@
             </span>
           </div>
 
-          <div class="is-size-6 publication-authors" style="margin-top: 1rem;">
-            <span class="has-text-grey">IBM Research &nbsp;|&nbsp; ACL 2026 &nbsp;|&nbsp; AAAI 2026</span>
+          <div class="is-size-6 publication-authors" style="margin-top: 1rem;" id="page-authors">
+            <span id="authors-text"><strong>Asaf Yehudai</strong>*, <strong>Lilach Eden</strong>*, <strong>Michal Shmueli-Scheuer</strong></span>
+            <br><span class="has-text-grey">IBM Research &nbsp;|&nbsp; <span id="venue-text">ACL 2026</span></span>
           </div>
 
           <!-- Main tab toggle -->
@@ -265,7 +291,7 @@
   <div class="container is-max-desktop">
     <h2 class="title is-3">Dashboard</h2>
     <figure>
-      <div class="ui-figure-wrap">
+      <div class="ui-figure-wrap" onclick="openLightbox('static/images/agentic_clear_ui.png')">
         <img src="static/images/agentic_clear_ui.png" alt="Agentic CLEAR interactive dashboard">
       </div>
       <figcaption><span class="fig-label">Agentic CLEAR Dashboard.</span> A hierarchical UI with three views: <strong>System View</strong> reconstructs the multi-agent topology and surfaces global issues; <strong>Node View</strong> enables per-component error analysis with filtering; <strong>Trace View</strong> provides step-level inspection with rubric evaluation and dimension scores.</figcaption>
@@ -316,7 +342,7 @@
       <p class="has-text-grey" style="font-size: 0.85rem; margin-bottom: 0.8rem;">CUGA agent on AppWorld (GPT-4o backbone, GPT-5 judge). Issues sorted by frequency.</p>
       <div style="overflow-x: auto;">
         <table class="issues-table">
-          <thead><tr><th style="width:50%">System-Level Issues</th><th style="width:50%">TaskDecompositionAgent (Node-Level)</th></tr></thead>
+          <thead><tr><th style="width:50%; text-transform: none;">System-Level Issues</th><th style="width:50%; text-transform: none;">TaskDecompositionAgent (Node-Level)</th></tr></thead>
           <tbody>
             <tr><td>Execution flow management flaws: inefficient execution and incomplete coverage</td><td>Assumes unsupported app capabilities; violates strict app constraints</td></tr>
             <tr><td>Validation and preconditions gaps: skips critical pre/post-action checks</td><td>Workflow coherence errors: reasoning, tasks, and ordering don't align</td></tr>
@@ -338,7 +364,7 @@
       <p class="has-text-grey" style="font-size: 0.85rem; margin-bottom: 0.8rem;">Same agent (HAL Generalist), same model (Claude 4.5 Sonnet), GPT-5 judge. Domain-specific issues emerge without benchmark-specific prompting.</p>
       <div style="overflow-x: auto;">
         <table class="issues-table">
-          <thead><tr><th style="width:50%">GAIA (Research Tasks)</th><th style="width:50%">SWE-bench Verified (Code Tasks)</th></tr></thead>
+          <thead><tr><th style="width:50%; text-transform: none;">GAIA (Research Tasks)</th><th style="width:50%; text-transform: none;">SWE-bench Verified (Code Tasks)</th></tr></thead>
           <tbody>
             <tr><td>Lack of cross-verification across independent sources</td><td>Broken patch output: malformed diffs and missing hunks</td></tr>
             <tr><td>Sourcing failures: unreliable or unverifiable references</td><td>Monkey-patching instead of maintainable overrides</td></tr>
@@ -360,7 +386,7 @@
       <p class="has-text-grey" style="font-size: 0.85rem; margin-bottom: 0.8rem;">HAL Generalist Agent on GAIA, GPT-5 judge. Shared issues dominate, but each model shows unique tendencies.</p>
       <div style="overflow-x: auto;">
         <table class="issues-table">
-          <thead><tr><th style="width:50%">GPT-4.1 Backbone</th><th style="width:50%">Claude 4.5 Sonnet Backbone</th></tr></thead>
+          <thead><tr><th style="width:50%; text-transform: none;">GPT-4.1 Backbone</th><th style="width:50%; text-transform: none;">Claude 4.5 Sonnet Backbone</th></tr></thead>
           <tbody>
             <tr><td>Source verification gaps (shared)</td><td>Source verification gaps (shared)</td></tr>
             <tr><td>Tool misuse and redundant calls (shared)</td><td>Tool misuse and redundant calls (shared)</td></tr>
@@ -456,7 +482,7 @@
   <div class="container is-max-desktop">
     <h2 class="title is-3">Dashboard</h2>
     <figure>
-      <div class="ui-figure-wrap">
+      <div class="ui-figure-wrap" onclick="openLightbox('static/images/clear_ui.png')">
         <img src="static/images/clear_ui.png" alt="CLEAR LLM Analysis interactive UI">
       </div>
       <figcaption><span class="fig-label">CLEAR Dashboard.</span> The Streamlit-based interface provides: an <strong>Issues View</strong> showing error distribution and frequency; a <strong>Filtering Mechanism</strong> to isolate examples by issue type or score range; a <strong>Comparison View</strong> contrasting filtered vs. full-dataset distributions; and a <strong>Model Behavior</strong> panel for instance-level inspection of judge feedback.</figcaption>
@@ -546,6 +572,37 @@
   </div>
 </section>
 
+<!-- LLM USER STUDY -->
+<section class="section sec-light">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3">User Study</h2>
+    <div class="content">
+      <p>We conducted a user study with <strong>12 AI practitioners and researchers</strong> who used CLEAR on three datasets and provided feedback via structured questionnaires.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.2rem; text-align: center;">
+        <div style="font-family: 'Google Sans', sans-serif; font-size: 2rem; font-weight: 600; color: #1a56db;">4.33</div>
+        <div style="font-size: 0.85rem; color: #4a4a4a;">Ability to detect issues they would have overlooked (Likert 1-5)</div>
+      </div>
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.2rem; text-align: center;">
+        <div style="font-family: 'Google Sans', sans-serif; font-size: 2rem; font-weight: 600; color: #1a56db;">4.25</div>
+        <div style="font-size: 0.85rem; color: #4a4a4a;">Time-saving and better than existing practices</div>
+      </div>
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.2rem; text-align: center;">
+        <div style="font-family: 'Google Sans', sans-serif; font-size: 2rem; font-weight: 600; color: #1a56db;">74%</div>
+        <div style="font-size: 0.85rem; color: #4a4a4a;">Would take action based on the output</div>
+      </div>
+      <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.2rem; text-align: center;">
+        <div style="font-family: 'Google Sans', sans-serif; font-size: 2rem; font-weight: 600; color: #1a56db;">75%</div>
+        <div style="font-size: 0.85rem; color: #4a4a4a;">Currently rely on manual inspection for error analysis</div>
+      </div>
+    </div>
+    <div class="content">
+      <p>Participants appreciated the automation of error detection, the visual exploration interface, and the ability to identify common failure modes at scale (4.16 average). The tool was seen as actionable and time-saving compared to manual workflows.</p>
+    </div>
+  </div>
+</section>
+
 </div><!-- end llm tab -->
 
 <!-- ==================== SHARED: BIBTEX ==================== -->
@@ -584,7 +641,23 @@
   </div>
 </footer>
 
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="Enlarged view">
+</div>
+
 <script>
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+
 function switchMainTab(tab) {
   document.querySelectorAll('.main-tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.main-tab-btn').forEach(el => el.classList.remove('active'));
@@ -595,6 +668,22 @@ function switchMainTab(tab) {
       btn.classList.add('active');
     }
   });
+  // Update title and authors
+  var title = document.getElementById('page-title');
+  var subtitle = document.getElementById('page-subtitle');
+  var authors = document.getElementById('authors-text');
+  var venue = document.getElementById('venue-text');
+  if (tab === 'agentic') {
+    title.firstChild.textContent = 'Agentic CLEAR';
+    subtitle.textContent = 'Automating Multi-Level Evaluation of LLM Agents';
+    authors.innerHTML = '<strong>Asaf Yehudai</strong>*, <strong>Lilach Eden</strong>*, <strong>Michal Shmueli-Scheuer</strong>';
+    venue.textContent = 'ACL 2026';
+  } else {
+    title.firstChild.textContent = 'CLEAR';
+    subtitle.textContent = 'Comprehensive LLM Error Analysis and Reporting';
+    authors.innerHTML = '<strong>Asaf Yehudai</strong>, <strong>Lilach Eden</strong>, <strong>Yotam Perlitz</strong>, <strong>Roy Bar-Haim</strong>, <strong>Michal Shmueli-Scheuer</strong>';
+    venue.textContent = 'AAAI 2026';
+  }
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
