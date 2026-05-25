@@ -513,22 +513,43 @@
 
         <h4 class="has-text-weight-semibold" style="margin-top: 1.5rem;">Discovered Issues</h4>
         <div class="content">
-          <p>Agentic CLEAR surfaced <strong>195 unique recurring issues</strong> across all configurations. Universal patterns include redundant tool usage, insufficient error handling, incomplete workflows, and schema compliance failures. Domain-specific issues emerge without any benchmark-specific prompting:</p>
+          <p>Agentic CLEAR surfaced <strong>195 unique recurring issues</strong> across all configurations. Domain-specific issues emerge without any benchmark-specific prompting. The multi-level analysis reveals different failure patterns at the system level vs. individual node level:</p>
         </div>
-        <div class="columns is-desktop">
-          <div class="column is-half">
-            <ul style="font-size: 0.9rem; line-height: 1.7;">
-              <li><strong>GAIA:</strong> Sourcing and verification failures</li>
-              <li><strong>AppWorld:</strong> Incomplete executions, contaminated carts</li>
-            </ul>
-          </div>
-          <div class="column is-half">
-            <ul style="font-size: 0.9rem; line-height: 1.7;">
-              <li><strong>SWE-bench:</strong> Monkey-patching, broken diff output</li>
-              <li><strong>TAU-bench:</strong> Policy violations, unauthorized actions</li>
-            </ul>
-          </div>
+
+        <h5 style="margin-top: 1.5rem; margin-bottom: 0.8rem; font-family: 'Google Sans', sans-serif; font-size: 0.95rem; color: #1a56db;">System-Level vs. Node-Level Issues (CUGA agent on AppWorld, GPT-5 judge)</h5>
+        <div style="overflow-x: auto;">
+          <table class="issues-table">
+            <thead>
+              <tr>
+                <th style="width: 50%;">System-Level Issues</th>
+                <th style="width: 50%;">TaskDecompositionAgent (Node-Level)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Execution flow management and processing strategy flaws: inefficient execution and incomplete coverage</td>
+                <td>Assumes unsupported app capabilities; violates strict app constraints</td>
+              </tr>
+              <tr>
+                <td>Validation and preconditions gaps: skips critical pre/post-action checks, neglects idempotency</td>
+                <td>Workflow coherence errors: reasoning, tasks, and ordering don't align; steps lack clear dependencies</td>
+              </tr>
+              <tr>
+                <td>Blockage handling failures: does not prompt for missing info, avoids practical fallbacks</td>
+                <td>Fails to return the user's intent verbatim for single-app tasks; paraphrases or alters details</td>
+              </tr>
+              <tr>
+                <td>Incomplete execution: stops short of finishing the core task (checkout, send, save)</td>
+                <td>App boundary and handoff mistakes: wrong app assignment, unclear division of responsibilities</td>
+              </tr>
+              <tr>
+                <td>Entity resolution weaknesses: brittle matching/normalization and poor disambiguation</td>
+                <td>Insufficient disambiguation criteria for selecting among multiple emails/items or handling time zones</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <p class="has-text-grey" style="font-size: 0.86rem; margin-top: 0.5rem;">Top 5 issues sorted by frequency. System-level captures broad failure modes; node-level pinpoints component-specific root causes within a single planning agent.</p>
 
         <h4 class="has-text-weight-semibold" style="margin-top: 1.5rem;">Alignment with Human Taxonomies (TRAIL)</h4>
         <figure>
