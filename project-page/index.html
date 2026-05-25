@@ -72,16 +72,67 @@
   figcaption .fig-label { font-weight: 600; color: #222; }
 
   /* Tables */
-  table.results-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; background: white; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; }
-  table.results-table th, table.results-table td { padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid #efefef; }
-  table.results-table th { background: #f0f4ff; font-weight: 600; color: #222; font-size: 0.88rem; }
+  table.results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.92rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+  table.results-table th, table.results-table td {
+    padding: 0.8rem 1.1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  table.results-table th {
+    background: linear-gradient(to bottom, #f8faff, #f0f4ff);
+    font-weight: 600;
+    color: #1e3a5f;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  table.results-table tbody tr { transition: background-color 0.15s ease; }
+  table.results-table tbody tr:hover { background-color: #f8fafc; }
   table.results-table tr:last-child td { border-bottom: none; }
-  table.results-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  table.results-table tr.highlight td { background: #eff6ff; font-weight: 500; }
+  table.results-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Google Sans', sans-serif; font-weight: 500; }
+  table.results-table tr.highlight td { background: linear-gradient(to right, #eff6ff, #f0f7ff); font-weight: 600; }
+  table.results-table tr.highlight:hover td { background: linear-gradient(to right, #e8f1ff, #eaf4ff); }
+  table.results-table td strong { color: #1a56db; }
 
-  .issues-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: white; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; }
-  .issues-table th, .issues-table td { padding: 0.6rem 0.9rem; text-align: left; border-bottom: 1px solid #efefef; vertical-align: top; }
-  .issues-table th { background: #f0f4ff; font-weight: 600; color: #222; }
+  .issues-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.88rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  }
+  .issues-table th, .issues-table td {
+    padding: 0.7rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+  }
+  .issues-table th {
+    background: linear-gradient(to bottom, #f8faff, #f0f4ff);
+    font-weight: 600;
+    color: #1e3a5f;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .issues-table tbody tr { transition: background-color 0.15s ease; }
+  .issues-table tbody tr:hover { background-color: #f8fafc; }
   .issues-table tr:last-child td { border-bottom: none; }
 
   /* Method steps */
@@ -480,35 +531,20 @@
         </div>
 
         <h4 class="has-text-weight-semibold" style="margin-top: 1.5rem;">Alignment with Human Taxonomies (TRAIL)</h4>
-        <div style="overflow-x: auto;">
-          <table class="results-table" style="font-size: 0.9rem;">
-            <thead><tr><th>Method</th><th class="num">Micro F1</th><th class="num">Macro Cat F1</th></tr></thead>
-            <tbody>
-              <tr><td>Random (GT freq)</td><td class="num">0.342</td><td class="num">0.288</td></tr>
-              <tr><td>Always top-4</td><td class="num">0.459</td><td class="num">0.199</td></tr>
-              <tr><td>OSS-120B (full+partial)</td><td class="num">0.427</td><td class="num">0.374</td></tr>
-              <tr class="highlight"><td><strong>GPT-5 (full+partial)</strong></td><td class="num"><strong>0.497</strong></td><td class="num"><strong>0.459</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="has-text-grey" style="font-size: 0.86rem; margin-top: 0.5rem;">Generated issues cover 12 of 12 relevant TRAIL categories without predefined definitions.</p>
+        <figure>
+          <img src="static/images/table2_figure.png" class="fig-medium" alt="Error category prediction performance against TRAIL taxonomy">
+          <figcaption>
+            <span class="fig-label">Table 2.</span> Error category prediction performance against TRAIL (Planning and Reasoning categories). Generated issues cover 12 of 12 relevant TRAIL categories without predefined definitions.
+          </figcaption>
+        </figure>
 
         <h4 class="has-text-weight-semibold" style="margin-top: 1.5rem;">Score Prediction (AUC)</h4>
-        <div style="overflow-x: auto;">
-          <table class="results-table" style="font-size: 0.82rem;">
-            <thead>
-              <tr><th>Benchmark</th><th>Agent</th><th>Model</th><th class="num">Step-Wise</th><th class="num">Trace</th><th class="num">Rubric</th></tr>
-            </thead>
-            <tbody>
-              <tr class="highlight"><td>AppWorld</td><td>CUGA</td><td>GPT-4o</td><td class="num">0.823</td><td class="num"><strong>0.890</strong></td><td class="num">0.828</td></tr>
-              <tr><td>GAIA</td><td>Generalist</td><td>GPT-4.1</td><td class="num">0.742</td><td class="num">0.848</td><td class="num">0.597</td></tr>
-              <tr><td>GAIA</td><td>HF DeepResearch</td><td>OpenAI o3</td><td class="num">0.706</td><td class="num">0.819</td><td class="num">0.736</td></tr>
-              <tr><td>SWE-bench</td><td>Generalist</td><td>Claude 4.5 Sonnet</td><td class="num">0.779</td><td class="num">0.803</td><td class="num">0.524</td></tr>
-              <tr><td>TAU-bench</td><td>Generalist</td><td>Claude 3.7 Sonnet</td><td class="num">0.529</td><td class="num">0.554</td><td class="num">0.597</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="has-text-grey" style="font-size: 0.86rem; margin-top: 0.5rem;">AUC for predicting trajectory success (GPT-5 judge). Trace-level evaluation is generally the strongest predictor.</p>
+        <figure>
+          <img src="static/images/table3_figure (1).png" class="fig-large" alt="AUC heatmap for predicting trajectory success across benchmarks, agents, and evaluation methods">
+          <figcaption>
+            <span class="fig-label">Table 1.</span> AUC for predicting trajectory success using Agentic CLEAR scores. Trace-level evaluation is generally the strongest predictor, with a peak of 0.890 on AppWorld (GPT-5 judge).
+          </figcaption>
+        </figure>
 
       </div><!-- end tab-agentic -->
 
