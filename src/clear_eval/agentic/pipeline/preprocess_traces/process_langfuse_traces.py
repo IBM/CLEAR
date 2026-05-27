@@ -184,16 +184,89 @@ def _sort_and_filter_generations(
     return [o for o in gens if predicate(o)]
 
 
+# ----------------- component name resolution -----------------
+
+# Metadata keys checked for agent/component name (top-level and attributes)
+_AGENT_NAME_KEYS = (
+    "agent", "agent_name", "agent_role", "graph.node.id", "crew_agent_role",
+)
+
+
+def _get_agent_from_obs(obs: Dict[str, Any]) -> str:
+    """
+    Try to extract an agent/component name from a single observation.
+
+    Checks (in order):
+      1. metadata top-level and metadata.attributes for agent-related keys
+      2. input.agent.role (CrewAI stores agent details in the AGENT span input)
+
+    Returns the name if found, or "" otherwise.
+    """
+    md = safe_json(obs.get("metadata")) or {}
+    attrs = md.get("attributes") or {}
+    for key in _AGENT_NAME_KEYS:
+        val = md.get(key) or attrs.get(key)
+        if val and isinstance(val, str) and val.strip():
+            return val.strip()
+
+    obs_input = safe_json(obs.get("input")) or {}
+    if isinstance(obs_input, dict):
+        agent_info = obs_input.get("agent")
+        if isinstance(agent_info, dict):
+            role = agent_info.get("role")
+            if role and isinstance(role, str) and role.strip():
+                return role.strip()
+
+    return ""
+
+
+_MAX_PARENT_DEPTH = 3
+
+
+def _resolve_agent_name(
+    obs: Dict[str, Any],
+    observations: List[Dict[str, Any]],
+    fallback: str = "unknown_agent",
+) -> str:
+    """
+    Resolve the agent/component name for an observation.
+
+    Applies _get_agent_from_obs to the observation itself, then walks up the
+    parent chain (up to _MAX_PARENT_DEPTH levels) until a name is found.
+    """
+    # Try the observation itself
+    name = _get_agent_from_obs(obs)
+    if name:
+        return name
+
+    # Walk parent chain with depth limit
+    obs_by_id = {o.get("id"): o for o in observations if o.get("id")}
+    current = obs
+
+    for _ in range(_MAX_PARENT_DEPTH):
+        parent_id = current.get("parentObservationId") or current.get("parent_observation_id")
+        if not parent_id:
+            break
+        parent = obs_by_id.get(parent_id)
+        if not parent:
+            break
+        name = _get_agent_from_obs(parent)
+        if name:
+            return name
+        current = parent
+
+    return fallback
+
+
 # ----------------- framework-specific -----------------
 
-def _langgraph_agent_name(obs: Dict[str, Any]) -> str:
+def _langgraph_agent_name(obs: Dict[str, Any], observations: List[Dict[str, Any]]) -> str:
     md = safe_json(obs.get("metadata")) or {}
     return md.get("langgraph_node") or obs.get("name") or "unknown_node"
 
 
-def _crewai_agent_name(obs: Dict[str, Any]) -> str:
-    md = safe_json(obs.get("metadata")) or {}
-    return md.get("agent") or md.get("agent_name") or obs.get("name") or "unknown_agent"
+def _crewai_agent_name(obs: Dict[str, Any], observations: List[Dict[str, Any]]) -> str:
+    return _resolve_agent_name(obs, observations, fallback="unknown_agent")
 
 
 def _langgraph_filter(obs: Dict[str, Any]) -> bool:
@@ -222,7 +295,7 @@ def _extract_llm_call_records(
     json_data: Any,
     file_name: str,
     predicate: Callable[[Dict[str, Any]], bool],
-    name_func: Callable[[Dict[str, Any]], str],
+    name_func: Callable[[Dict[str, Any], List[Dict[str, Any]]], str],
     system_trunc_limit: int = 50_000,
 ) -> List[Dict[str, Any]]:
     """
@@ -237,7 +310,7 @@ def _extract_llm_call_records(
 
     llm_calls: List[Dict[str, Any]] = []
     for obs in gens:
-        agent_name = name_func(obs)
+        agent_name = name_func(obs, observations)
         llm_calls.append(_extract_llm_call_record(
             trace_id=trace_id,
             session_id=session_id or "",
