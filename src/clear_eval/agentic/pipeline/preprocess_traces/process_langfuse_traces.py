@@ -203,7 +203,7 @@ def _get_agent_from_obs(obs: Dict[str, Any]) -> str:
     Returns the name if found, or "" otherwise.
     """
     md = safe_json(obs.get("metadata")) or {}
-    attrs = md.get("attributes") or {}
+    attrs = safe_json(md.get("attributes")) or {}
     for key in _AGENT_NAME_KEYS:
         val = md.get(key) or attrs.get(key)
         if val and isinstance(val, str) and val.strip():
@@ -240,6 +240,8 @@ def _resolve_agent_name(
         return name
 
     # Walk parent chain with depth limit
+    if not observations:
+        return fallback
     obs_by_id = {o.get("id"): o for o in observations if o.get("id")}
     current = obs
 
