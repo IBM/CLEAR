@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Providers whose LLM endpoints do NOT support response_format with a Pydantic
 # model (OpenAI-style structured output). For these we flip ALTK's
 # ``prompt_based_validation`` knob — see altk.core.llm.ValidatingLLMClient.
-_PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx"}
+_PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx", "rits"}
 
 
 def _forwardable_generation_kwargs(eval_model_params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -106,6 +106,36 @@ class ToolCallEvalUseCase(EvalUseCase):
         df["sparc_decision"] = df["sparc_decision"].astype('boolean')
         return df
 
+    def _create_rits_altk_client(self, model_name: str, default_gen: Dict[str, Any],
+                                  eval_model_params: Optional[Dict] = None) -> BaseLLMClient:
+        """Create ALTK OpenAI client configured for RITS."""
+        from clear_eval.pipeline.inference_utils.langchain_chat_models import get_rits_base
+        import os
+        
+        rits_api_key = os.getenv("RITS_API_KEY")
+        if not rits_api_key:
+            raise KeyError("RITS_API_KEY env var required for RITS.")
+        
+        # Check if api_base is already provided in params
+        if eval_model_params and "api_base" in eval_model_params:
+            base_url = eval_model_params["api_base"]
+        else:
+            # Construct URL from model name
+            model_base = get_rits_base(model_name)
+            base_url = f"https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com/{model_base}/v1"
+        
+        # Use OpenAI ALTK client with RITS configuration
+        MetricsClientCls = get_llm("openai.async.output_val")
+        return MetricsClientCls(
+            model=model_name,
+            api_key="/",  # RITS uses header-based auth, not API key in URL
+            base_url=base_url,
+            default_headers={"RITS_API_KEY": rits_api_key},
+            free_form_object_as_str=True,
+            prompt_based_validation=True,
+            default_generation_kwargs=default_gen,
+        )
+
     def clear_llm_client_to_altk_llm_client(self, llm_client, provider: str, model_name: str,
                                                eval_model_params: Optional[Dict] = None) -> BaseLLMClient:
         """Convert CLEAR's LLM object to ALTK's LLM Object.
@@ -118,6 +148,10 @@ class ToolCallEvalUseCase(EvalUseCase):
         """
         default_gen = _forwardable_generation_kwargs(eval_model_params)
         needs_prompt_validation = provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT
+
+        # RITS uses OpenAI-compatible API - handle it specially
+        if provider == "rits":
+            return self._create_rits_altk_client(model_name, default_gen, eval_model_params)
 
         # LiteLLMClient - use ALTK's native litellm support
         if isinstance(llm_client, LiteLLMClient):
