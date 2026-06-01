@@ -452,26 +452,78 @@ def write_csv(rows: list[dict], out_path: Path) -> None:
         writer.writerows(rows)
 
 
+def process_single_trace(trace_path: Path, output_path: Path, specs_dir: Path) -> bool:
+    """Process a single trace file and write CSV to output_path.
+    Returns True on success, False on error."""
+    try:
+        trace = load_json(trace_path)
+        rows, basename = convert_trace(trace, specs_dir)
+        if len(rows) > 2:
+            write_csv(rows, output_path)
+            print(f"[ok] {trace_path} -> {output_path} ({len(rows)} rows)")
+            return True
+        else:
+            print(f"[x] {trace_path} has only {len(rows)} rows")
+            return False
+    except Exception as e:
+        print(f"[err] {trace_path}: {e}", file=sys.stderr)
+        return False
+
+
+def process_directory_tree(input_dir: Path, output_dir: Path, specs_dir: Path) -> int:
+    """Process all JSON files in input_dir, mirroring folder structure in output_dir.
+    Returns 0 on success, 1 if any errors occurred."""
+    if not input_dir.is_dir():
+        print(f"[err] input-dir does not exist or is not a directory: {input_dir}", file=sys.stderr)
+        return 1
+    
+    # Find all JSON files recursively
+    json_files = list(input_dir.rglob("*.json"))
+    if not json_files:
+        print(f"[warn] no JSON files found in {input_dir}")
+        return 0
+    
+    print(f"Found {len(json_files)} JSON file(s) to process")
+    rc = 0
+    
+    for json_path in json_files:
+        # Calculate relative path from input_dir
+        rel_path = json_path.relative_to(input_dir)
+        # Create corresponding CSV path in output_dir (same structure, .csv extension)
+        csv_path = output_dir / rel_path.with_suffix(".csv")
+        
+        if not process_single_trace(json_path, csv_path, specs_dir):
+            rc = 1
+    
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     here = Path(__file__).resolve().parent
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("traces", nargs="+", type=Path, help="input trace JSON files")
+    ap.add_argument("traces", nargs="*", type=Path, help="input trace JSON files (ignored if --input-dir is provided)")
+    ap.add_argument("--input-dir", type=Path, help="process all JSON files in this directory tree, mirroring structure in output-dir")
     ap.add_argument("--output-dir", type=Path, required=True, help="directory for CSV outputs")
     ap.add_argument("--specs-dir", type=Path, default=here / "tool_specs", help="dir containing <slug>[_<subset>].json tool specs")
     args = ap.parse_args(argv)
 
-    rc = 0
-    for trace_path in args.traces:
-        try:
-            trace = load_json(trace_path)
-            rows, basename = convert_trace(trace, args.specs_dir)
-            out_path = args.output_dir / f"{basename}__{sanitize_filename(trace_path.stem)}.csv"
-            write_csv(rows, out_path)
-            print(f"[ok] {trace_path} -> {out_path} ({len(rows)} rows)")
-        except Exception as e:
-            print(f"[err] {trace_path}: {e}", file=sys.stderr)
-            rc = 1
-    return rc
+    # Validate arguments
+    if args.input_dir:
+        # input-dir mode: ignore traces argument
+        if args.traces:
+            print("[warn] --input-dir provided; ignoring positional trace arguments")
+        return process_directory_tree(args.input_dir, args.output_dir, args.specs_dir)
+    else:
+        # traces mode: require at least one trace file
+        if not args.traces:
+            ap.error("either provide trace files or use --input-dir")
+        
+        rc = 0
+        for trace_path in args.traces:
+            out_path = args.output_dir / f"{sanitize_filename(trace_path.stem)}.csv"
+            if not process_single_trace(trace_path, out_path, args.specs_dir):
+                rc = 1
+        return rc
 
 
 if __name__ == "__main__":
