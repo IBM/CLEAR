@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run CLEAR + SPARC tool-calling evaluation on the three converted CSVs
-# (tau2_retail, tau2_airline, appworld) using watsonx + openai/gpt-oss-120b.
+# (tau2_retail, tau2_airline, appworld) using watsonx/rits + openai/gpt-oss-120b.
 #
 # Per-benchmark input CSVs live under scripts/runs/<bench>/input/. Results go to
 # scripts/runs/<bench>/output_<track>/<bench>/ so slow- and fast-track passes
@@ -54,9 +54,28 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-: "${WATSONX_APIKEY?missing WATSONX_APIKEY}"
-: "${WATSONX_URL?missing WATSONX_URL}"
-: "${WATSONX_PROJECT_ID?missing WATSONX_PROJECT_ID}"
+# Detect provider from sparc_config.yaml and validate required credentials
+provider=$(grep "^provider:" scripts/sparc_config.yaml | awk '{print $2}' | tr -d '"' | tr -d "'")
+if [ -z "$provider" ]; then
+  echo "error: provider not found in scripts/sparc_config.yaml" >&2
+  exit 1
+fi
+
+case "$provider" in
+  watsonx)
+    : "${WATSONX_APIKEY?missing WATSONX_APIKEY}"
+    : "${WATSONX_URL?missing WATSONX_URL}"
+    : "${WATSONX_PROJECT_ID?missing WATSONX_PROJECT_ID}"
+    ;;
+  rits)
+    : "${RITS_API_KEY?missing RITS_API_KEY}"
+    ;;
+  *)
+    echo "error: unsupported provider '$provider' in sparc_config.yaml" >&2
+    echo "       supported providers: watsonx, rits" >&2
+    exit 2
+    ;;
+esac
 
 # Build a track-specific config file by overriding the `track:` line in
 # sparc_config.yaml. Keeps the base YAML as the single source of truth.
