@@ -119,19 +119,27 @@ class ToolCallEvalUseCase(EvalUseCase):
         default_gen = _forwardable_generation_kwargs(eval_model_params)
         needs_prompt_validation = provider in _PROVIDERS_WITHOUT_STRUCTURED_OUTPUT
 
+        # ALTK provider subclasses stash any extra ``**kwargs`` and replay them
+        # into every generate call. Passing the validation knobs there leaks
+        # ``free_form_object_as_str`` / ``prompt_based_validation`` /
+        # ``default_generation_kwargs`` into the underlying SDK (watsonx's
+        # ``ModelInference.achat`` rejects them). Use ``configure_validation``
+        # — ALTK's documented post-construction API — so the knobs only live
+        # on the wrapper.
+        def _configure(client: BaseLLMClient) -> BaseLLMClient:
+            return client.configure_validation(
+                free_form_object_as_str=True,
+                prompt_based_validation=needs_prompt_validation,
+                default_generation_kwargs=default_gen,
+            )
+
         # LiteLLMClient - use ALTK's native litellm support
         if isinstance(llm_client, LiteLLMClient):
             MetricsClientCls = get_llm("litellm.output_val")
             litellm_model = f"{provider}/{model_name}"
             # litellm.completion accepts max_tokens/temperature as top-level
             # kwargs, so keeping them as constructor kwargs continues to work.
-            return MetricsClientCls(
-                model_name=litellm_model,
-                free_form_object_as_str=True,
-                prompt_based_validation=needs_prompt_validation,
-                default_generation_kwargs=default_gen,
-                **default_gen,
-            )
+            return _configure(MetricsClientCls(model_name=litellm_model, **default_gen))
 
         # LangChainClient - extract from underlying LangChain object
         if isinstance(llm_client, LangChainClient):
@@ -145,12 +153,6 @@ class ToolCallEvalUseCase(EvalUseCase):
             watsonx_kwargs: Dict[str, Any] = {
                 "model_id": llm.model_id,
                 "api_key": llm.api_key._secret_value,
-                "free_form_object_as_str": True,
-                "prompt_based_validation": True,
-                # Watsonx SDK expects generation params inside a ``params``
-                # dict, not as top-level kwargs. ALTK's watsonx client
-                # already merges default_generation_kwargs into that dict.
-                "default_generation_kwargs": {"params": default_gen} if default_gen else {},
             }
             if llm.space_id:
                 watsonx_kwargs["url"] = llm.url
@@ -162,7 +164,15 @@ class ToolCallEvalUseCase(EvalUseCase):
                 raise KeyError(
                     "Either space_id or project_id must be specified for watsonx inference."
                 )
-            return MetricsClientCls(**watsonx_kwargs)
+            # Watsonx SDK expects generation params inside a ``params`` dict,
+            # not top-level. configure_validation merges these into every
+            # generate call.
+            client = MetricsClientCls(**watsonx_kwargs)
+            return client.configure_validation(
+                free_form_object_as_str=True,
+                prompt_based_validation=True,
+                default_generation_kwargs={"params": default_gen} if default_gen else {},
+            )
 
         elif provider == "azure":
             MetricsClientCls = get_llm("azure_openai.async.output_val")
