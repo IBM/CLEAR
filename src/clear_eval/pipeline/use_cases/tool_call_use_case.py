@@ -207,12 +207,6 @@ class ToolCallEvalUseCase(EvalUseCase):
                 default_generation_kwargs={"params": default_gen} if default_gen else {},
             )
 
-        elif provider == "azure":
-            MetricsClientCls = get_llm("azure_openai.async.output_val")
-            return MetricsClientCls(
-                model=model_name,
-                api_key=llm.api_key._secret_value,
-            )
         elif provider == "openai":
             MetricsClientCls = get_llm("openai.async.output_val")
             kwargs = {"model": llm.model_name}
