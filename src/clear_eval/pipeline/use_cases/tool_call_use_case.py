@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Providers whose LLM endpoints do NOT support response_format with a Pydantic
 # model (OpenAI-style structured output). For these we flip ALTK's
 # ``prompt_based_validation`` knob — see altk.core.llm.ValidatingLLMClient.
-_PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx", "rits"}
+_PROVIDERS_WITHOUT_STRUCTURED_OUTPUT = {"watsonx", "rits", "openai"}
 
 
 def _forwardable_generation_kwargs(eval_model_params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
