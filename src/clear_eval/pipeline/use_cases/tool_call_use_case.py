@@ -168,11 +168,11 @@ class ToolCallEvalUseCase(EvalUseCase):
 
         # LiteLLMClient - use ALTK's native litellm support
         if isinstance(llm_client, LiteLLMClient):
-            MetricsClientCls = get_llm("litellm.output_val")
+            client = get_llm("litellm.output_val")
             litellm_model = f"{provider}/{model_name}"
             # litellm.completion accepts max_tokens/temperature as top-level
             # kwargs, so keeping them as constructor kwargs continues to work.
-            return _configure(MetricsClientCls(model_name=litellm_model, **default_gen))
+            return _configure(client(model_name=litellm_model, **default_gen))
 
         # LangChainClient - extract from underlying LangChain object
         if isinstance(llm_client, LangChainClient):
