@@ -241,6 +241,7 @@ def run_aggregation_from_df(config, df, file_name_info, eval_llm=None):
     resume_enabled = config['resume_enabled']
     format_mode = get_issues_format(config)
     checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{file_name_info}.csv"
+    config['checkpoint_path'] = checkpoint_path
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     deduplicated_shortcomings_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}_dedup.json"
     zip_path = f"{output_dir}/analysis_results_{file_name_info}.zip"
@@ -271,6 +272,7 @@ def run_eval_pipeline(config):
 
     generate_issues = config.get("generate_issues", True)
     checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{run_info}.csv"
+    config['checkpoint_path'] = checkpoint_path
     zip_path = f"{output_dir}/analysis_results_{run_info}.zip"
 
     # If final output exists, nothing to do

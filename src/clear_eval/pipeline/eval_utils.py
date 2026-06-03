@@ -42,6 +42,16 @@ async def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
     return parse_evaluation_response(content)
 
 
+def _get_checkpoint_cache_path(config, stage_suffix):
+    """Build a cache file path for run_parallel checkpointing."""
+    checkpoint_path = config.get('checkpoint_path', '')
+    if checkpoint_path:
+        # Derive cache path from the main checkpoint CSV path
+        return checkpoint_path.replace('.csv', f'_cache_{stage_suffix}.jsonl')
+    output_dir = config.get('output_dir', '.')
+    return os.path.join(output_dir, f"cache_{stage_suffix}.jsonl")
+
+
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
     """Evaluates predictions and adds scores."""
     logger.info(f"\n--- Evaluating Predictions ---")
@@ -62,13 +72,19 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
     for idx, row in df.iterrows():
         inputs.append((row, config, llm, get_evaluation_prompt_func))
 
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "eval") if checkpoint_every else None
+
     results = run_parallel(
         func=evaluate_row,
         inputs=inputs,
-        use_async=True,
         max_workers=config['max_workers'],
         error_prefix="Evaluation: ",
-        progress_desc="Evaluating predictions"
+        progress_desc="Evaluating predictions",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
     )
 
     for i, result in enumerate(results):
@@ -93,18 +109,24 @@ def produce_summaries_per_record(df, llm, config):
 
     logger.info(f"Generating evaluation summaries for {len(inputs)} items ...")
 
-    results = run_parallel(
-        func=generate_evaluation_summary,
-        inputs=inputs,
-        use_async=True,
-        max_workers=config['max_workers'],
-        error_prefix="Summary: ",
-        progress_desc="Generating evaluation summaries"
-    )
-
     df[EVALUATION_SUMMARY_COL] = ""
     if ERROR_COL not in df.columns:
         df[ERROR_COL] = [[] for _ in range(len(df))]
+
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "summary") if checkpoint_every else None
+
+    results = run_parallel(
+        func=generate_evaluation_summary,
+        inputs=inputs,
+        max_workers=config['max_workers'],
+        error_prefix="Summary: ",
+        progress_desc="Generating evaluation summaries",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
+    )
 
     for i, result in enumerate(results):
         if result.is_success:
@@ -433,7 +455,6 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
     results = run_parallel(
         func=analyze_shortcoming_row,
         inputs=inputs,
-        use_async=True,
         max_workers=max_workers,
         error_prefix="Mapping: ",
         progress_desc="Analyzing shortcomings"
@@ -519,13 +540,19 @@ def generate_model_predictions(df, llm, config):
     for i, row in df.iterrows():
         inputs.append((llm, row[config['model_input_column']], row[config['qid_column']]))
 
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "gen") if checkpoint_every else None
+
     results = run_parallel(
         func=predict_row,
         inputs=inputs,
-        use_async=True,
         max_workers=config["max_workers"],
         error_prefix="Prediction: ",
-        progress_desc="Generating predictions"
+        progress_desc="Generating predictions",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
     )
 
     for i, result in enumerate(results):

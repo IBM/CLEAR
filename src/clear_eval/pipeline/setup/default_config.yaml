@@ -83,4 +83,4 @@ max_eval_text_for_synthesis: 1000
 # Both analyze low-scoring examples, but recommendations frame issues as actionable advice for developers
 issues_format: "shortcomings"
 
-
+checkpoint_every: 50
