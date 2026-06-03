@@ -415,7 +415,9 @@ async def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list,
-                                use_full_text, qid_col, max_workers, high_score_threshold, score_col = SCORE_COL, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
+                                use_full_text, qid_col, max_workers, high_score_threshold,
+                                score_col = SCORE_COL, format_mode=DEFAULT_ISSUES_FORMAT_MODE,
+                                checkpoint_every = 0, cache_path = None):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
     logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
     df[IDENTIFIED_SHORTCOMING_COL] = ""
@@ -452,12 +454,17 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
             inputs.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
 
+    item_ids = [row.get(qid_col, f"row_{idx}") for idx, row in df.iterrows()] if checkpoint_every else None
+
     results = run_parallel(
         func=analyze_shortcoming_row,
         inputs=inputs,
         max_workers=max_workers,
         error_prefix="Mapping: ",
-        progress_desc="Analyzing shortcomings"
+        progress_desc="Analyzing shortcomings",
+        checkpoint_every = checkpoint_every,
+        checkpoint_path = cache_path,
+        item_ids = item_ids,
     )
 
     for i, result in enumerate(results):
