@@ -354,14 +354,15 @@ if __name__ == "__main__":
     df = pd.read_csv(sample_data_file)
 
     # for provider in ["watsonx"]:
-    for provider in ["openai", "watsonx"]:
+    for provider in ["rits"]:#, "watsonx"]:
         # for inference_backend in ["litellm"]:
         for inference_backend in ["langchain", "litellm"]:
             print(f"=======provider: {provider}, inference_backend: {inference_backend}======")
             # model_name = "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
             model_name = "gpt-4.1" if provider == "openai" else "openai/gpt-oss-120b"
             config = load_config(DEFAULT_CONFIG_PATH, user_config_path=None, provider=provider , eval_model_name=model_name, inference_backend=inference_backend)
-
+            config["checkpoint_every"] = 5
+            df = df.rename(columns={"context":"model_input"})
             llm = get_eval_llm_from_config(config)
 
             tool_call_use_case = ToolCallEvalUseCase()
