@@ -264,27 +264,33 @@ class ToolCallEvalUseCase(EvalUseCase):
             raw_score,
         )
 
-    def generate_results(
+    def generate_sparc_evaluation_results(
         self,
-        df,
-        llm_client,
-        has_spec,
-        config,
+        df: pd.DataFrame,
+        llm_client: BaseLLMClient,
+        config: dict,
         track_name: str = "slow_track",
         runtime_pipeline: bool = True,
-        cache_suffix: str = "",
-    ):
-        # Pick the SPARC track: the user-selected ``track_name`` is honored
-        # when we have tool specs; without specs we must fall back to
-        # ``SPEC_FREE`` regardless of the user's choice.
+    ) -> List[SPARCReflectionResult]:
+        """Evaluate all rows in a single parallel pass, selecting track per row."""
         spec_track = Track(track_name)
         component_config = ComponentConfig(llm_client=llm_client)
-        track = spec_track if has_spec else Track.SPEC_FREE
+
+        # Determine per-row whether spec is available
+        has_spec_col = self.SPECS_COL in df.columns
+
+        def _row_has_spec(row):
+            if not has_spec_col:
+                return False
+            val = row.get(self.SPECS_COL)
+            return val is not None and not pd.isna(val) and bool(val)
 
         async def _evaluate_single(example_row):
             # Each concurrent call gets its own component instance to avoid
             # shared mutable state (SPARCReflectionComponent._arun sets
             # self._tool_specs per call — not safe under concurrency).
+            row_has_spec = _row_has_spec(example_row)
+            track = spec_track if row_has_spec else Track.SPEC_FREE
             sparc_component = SPARCReflectionComponent(
                 config=component_config,
                 track=track,
@@ -293,7 +299,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             )
             run_input = SPARCReflectionRunInput(
                 messages=json.loads(example_row[self.CONTEXT_COL]),
-                tool_specs=json.loads(example_row[self.SPECS_COL]) if has_spec else [],
+                tool_specs=json.loads(example_row[self.SPECS_COL]) if row_has_spec else [],
                 tool_calls=[json.loads(example_row[self.RESPONSE_COL])],
             )
             reflection_result = await sparc_component.aprocess(run_input, phase=AgentPhase.RUNTIME)
@@ -310,87 +316,35 @@ class ToolCallEvalUseCase(EvalUseCase):
         if checkpoint_every:
             checkpoint_base = config.get('checkpoint_path', '')
             if checkpoint_base:
-                cache_path = checkpoint_base.replace('.csv', f'_cache_sparc{cache_suffix}.jsonl')
+                cache_path = checkpoint_base.replace('.csv', '_cache_sparc.jsonl')
             else:
                 output_dir = config.get('output_dir', '.')
-                cache_path = os.path.join(output_dir, f"cache_sparc{cache_suffix}.jsonl")
+                cache_path = os.path.join(output_dir, "cache_sparc.jsonl")
 
         parallel_results = run_parallel(
             func=_evaluate_single,
             inputs=inputs,
             max_workers=config.get('max_workers', 10),
             error_prefix="SPARC: ",
-            progress_desc=f"Evaluating tool calls with SPARC{cache_suffix}",
+            progress_desc="Evaluating tool calls with SPARC",
             checkpoint_every=checkpoint_every,
             checkpoint_path=cache_path,
             item_ids=item_ids,
         )
 
         # Reconstruct SPARCReflectionResult from dicts
+        from altk.pre_tool.core import SPARCReflectionDecision
         reflection_results = []
         for pr in parallel_results:
             if pr.is_success:
                 reflection_results.append(SPARCReflectionResult.model_validate(pr.result))
             else:
-                # On failure, create a minimal REJECT result
                 logger.error(f"SPARC evaluation failed: {pr.error}")
-                from altk.pre_tool.core import SPARCReflectionDecision
                 reflection_results.append(SPARCReflectionResult(
                     decision=SPARCReflectionDecision.REJECT,
                     issues=[],
                     score=None,
                 ))
-        return reflection_results
-
-    def generate_sparc_evaluation_results(
-        self,
-        df: pd.DataFrame,
-        llm_client: BaseLLMClient,
-        config: dict,
-        track_name: str = "slow_track",
-        runtime_pipeline: bool = True,
-    ) -> List[SPARCReflectionResult]:
-        """Generates sparc evaluation results."""
-        # Dictionary to store results with their original indices
-        results_dict = {}
-
-        if self.SPECS_COL in df.columns:
-            is_truth = lambda x: x is not None and not pd.isna(x) and bool(x)
-            mask = df.apply(lambda r:is_truth(r[self.SPECS_COL]),axis=1)
-            df_with_spec = df[mask]
-            if len(df_with_spec) > 0:
-                results_with_spec = self.generate_results(
-                    df_with_spec,
-                    llm_client,
-                    has_spec=True,
-                    config=config,
-                    track_name=track_name,
-                    runtime_pipeline=runtime_pipeline,
-                    cache_suffix="_spec",
-                )
-                # Store results with their original indices
-                for idx, result in zip(df_with_spec.index, results_with_spec):
-                    results_dict[idx] = result
-            df_no_spec = df[~mask]
-        else:
-            df_no_spec = df
-
-        if len(df_no_spec) > 0:
-            results_no_spec = self.generate_results(
-                df_no_spec,
-                llm_client,
-                has_spec=False,
-                config=config,
-                track_name=track_name,
-                runtime_pipeline=runtime_pipeline,
-                cache_suffix="_nospec",
-            )
-            # Store results with their original indices
-            for idx, result in zip(df_no_spec.index, results_no_spec):
-                results_dict[idx] = result
-
-        # Return results in the original dataframe order
-        reflection_results = [results_dict[idx] for idx in df.index]
         return reflection_results
 
 
