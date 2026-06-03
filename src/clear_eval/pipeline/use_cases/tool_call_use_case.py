@@ -62,7 +62,7 @@ class ToolCallEvalUseCase(EvalUseCase):
           - ``sparc_recommendations``: JSON array of SPARCRecommendation dicts
             (unified-diff + importance). Empty array ``"[]"`` in runtime mode.
         """
-        logger.info(f"\n--- Evaluating Tool calls predictionsPredictions ---")
+        logger.info(f"\n--- Evaluating Tool calls Predictions ---")
         df[EVALUATION_TEXT_COL] = ""
         df[score_col] = pd.NA  # Use Pandas NA for missing scores
         df["sparc_decision"] = pd.NA
