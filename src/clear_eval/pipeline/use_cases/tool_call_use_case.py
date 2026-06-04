@@ -18,6 +18,8 @@ from clear_eval.pipeline.full_pipeline import get_eval_llm_from_config
 
 logger = logging.getLogger(__name__)
 
+# Suppress verbose per-call logs from SPARC/ALTK internals
+logging.getLogger("altk").setLevel(logging.WARNING)
 
 # Providers whose LLM endpoints do NOT support response_format with a Pydantic
 # model (OpenAI-style structured output). For these we flip ALTK's
