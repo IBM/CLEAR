@@ -4,7 +4,7 @@ from importlib.resources import files
 from typing import Any, Dict, Tuple, List, Optional
 import pandas as pd
 from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL, DEFAULT_ISSUES_FORMAT_MODE
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from altk.core.toolkit import AgentPhase, ComponentConfig
 from altk.pre_tool.core import SPARCReflectionRunInput, Track, SPARCReflectionResult, SPARCExecutionMode
@@ -73,13 +73,16 @@ class ToolCallEvalUseCase(EvalUseCase):
                                                                    config.get("eval_model_name"),
                                                                    config.get("eval_model_params"))
 
+        # runtime_pipeline = True: surface issues. False: surface recommendations
+        format_mode = config.get('issues_format', DEFAULT_ISSUES_FORMAT_MODE)
+        runtime_pipeline = bool(format_mode==DEFAULT_ISSUES_FORMAT_MODE)
         # call sparc with pipeline over examples, results store sorted results over the examples
         results = self.generate_sparc_evaluation_results(
             df=df,
             llm_client=altk_llm_client,
             config=config,
             track_name=config.get("track", "slow_track"),
-            runtime_pipeline=bool(config.get("runtime_pipeline", True)),
+            runtime_pipeline=runtime_pipeline
         )
 
         for i, result in enumerate(results):
