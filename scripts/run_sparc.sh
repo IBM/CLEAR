@@ -2,15 +2,16 @@
 # Run CLEAR + SPARC tool-calling evaluation on the three converted CSVs
 # (tau2_retail, tau2_airline, appworld) using watsonx/rits + openai/gpt-oss-120b.
 #
-# Per-benchmark input CSVs live under scripts/runs/<bench>/input/. Results go to
-# scripts/runs/<bench>/output_<track>/<bench>/ so slow- and fast-track passes
+# Per-benchmark input CSVs live under scripts/runs/input/<bench>/<agent_type>
+# Results go to
+# "scripts/runs/output/$bench/$agent_type/${track}_${mode}"
 # don't clobber each other.
 #
 # Usage:
-#   ./run_sparc.sh                       # slow_track, all 3 benches
-#   ./run_sparc.sh --track fast_track    # fast_track, all 3 benches
-#   ./run_sparc.sh tau2_airline          # slow_track, single bench
-#   ./run_sparc.sh --track fast_track tau2_retail appworld
+#   ./run_sparc.sh                                           # slow_track, all benches & agent types
+#   ./run_sparc.sh tau2_retail                               # slow_track, specific bench, all agent types
+#   ./run_sparc.sh appworld --agent-types agent1 agent2      # specific bench & agents
+#   ./run_sparc.sh appworld --agent-types agent1 agent2 --track fast_track
 set -euo pipefail
 
 here="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -18,14 +19,34 @@ root="$(dirname "$here")"
 cd "$root"
 
 track="slow_track"
-mode="runtime"   # runtime = fast prompts / no recommendations; eval = recs on
+#mode="eval"   # runtime = fast prompts / no recommendations; eval = recs on
+agent_types=()   # list of agent types to process
+benches=()       # list of benchmarks to process
+
+# Parse all arguments (options and positional)
 while [ $# -gt 0 ]; do
   case "$1" in
     --track)     track="$2";  shift 2 ;;
     --track=*)   track="${1#--track=}"; shift ;;
     --mode)      mode="$2";   shift 2 ;;
     --mode=*)    mode="${1#--mode=}";   shift ;;
-    *) break ;;
+    --agent-types)
+      shift
+      # Collect all following non-option arguments as agent types
+      while [ $# -gt 0 ] && [[ "$1" != --* ]]; do
+        agent_types+=("$1")
+        shift
+      done
+      ;;
+    --*)
+      echo "error: unknown option '$1'" >&2
+      exit 2
+      ;;
+    *)
+      # Positional argument (benchmark name)
+      benches+=("$1")
+      shift
+      ;;
   esac
 done
 
@@ -98,19 +119,48 @@ else:
 pathlib.Path(out).write_text(src)
 PY
 
-if [ $# -eq 0 ]; then
-  benches=(tau2_retail tau2_airline appworld)
-else
-  benches=("$@")
+# If no benchmarks specified, discover all from input directory
+if [ ${#benches[@]} -eq 0 ]; then
+  for bench_dir in scripts/runs/input/*/; do
+    [ -d "$bench_dir" ] || continue
+    benches+=("$(basename "$bench_dir")")
+  done
+  if [ ${#benches[@]} -eq 0 ]; then
+    echo "error: no benchmarks found in scripts/runs/input/" >&2
+    exit 1
+  fi
 fi
 
 for bench in "${benches[@]}"; do
-  data_dir="scripts/runs/$bench/input"
-  results_dir="scripts/runs/$bench/output_${track}_${mode}"
-  echo "=== running SPARC ($track, $mode) on $bench ==="
-  python -m clear_eval.agentic.pipeline.run_clear_step_analysis \
-    --agentic-config-path "$tmp_cfg" \
-    --data-dir "$data_dir" \
-    --results-dir "$results_dir" \
-    --run-name "$bench"
+  # If agent_types not specified via --agent-type, discover from input directory
+  if [ ${#agent_types[@]} -eq 0 ]; then
+    discovered_agent_types=()
+    for agent_dir in scripts/runs/input/"$bench"/*/; do
+      [ -d "$agent_dir" ] || continue
+      discovered_agent_types+=("$(basename "$agent_dir")")
+    done
+    if [ ${#discovered_agent_types[@]} -eq 0 ]; then
+      echo "warning: no agent types found for benchmark '$bench', skipping" >&2
+      continue
+    fi
+    current_agent_types=("${discovered_agent_types[@]}")
+  else
+    current_agent_types=("${agent_types[@]}")
+  fi
+
+  for agent_type in "${current_agent_types[@]}"; do
+    data_dir="scripts/runs/input/$bench/$agent_type/"
+    results_dir="scripts/runs/output/$bench/$agent_type/${track}_${mode}"
+
+    if [ ! -d "$data_dir" ]; then
+      echo "warning: input directory not found: $data_dir, skipping" >&2
+      continue
+    fi
+
+    echo "=== running SPARC ($track, $mode) on $bench / $agent_type ==="
+    python -m clear_eval.agentic.pipeline.run_clear_step_analysis \
+      --agentic-config-path "$tmp_cfg" \
+      --data-dir "$data_dir" \
+      --results-dir "$results_dir"
+  done
 done
