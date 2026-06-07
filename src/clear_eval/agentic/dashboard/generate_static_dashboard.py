@@ -698,7 +698,7 @@ function renderRecommendations(recs){
 </html>"""
 
 
-def generate_html(json_path, output_path=None, include_examples=False):
+def generate_html(json_path, output_path=None, include_examples=True):
     """Generate static HTML dashboard from a clear_results.json file."""
     data = load_json_data(json_path, include_examples=include_examples)
     logging.info(f"Generating Static HTML report  from {json_path}")
