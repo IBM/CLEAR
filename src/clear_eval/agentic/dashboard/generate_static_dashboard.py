@@ -42,7 +42,7 @@ def _maybe_parse_json_text(value):
     return value
 
 
-def load_json_data(json_path, include_examples=True):
+def load_json_data(json_path, num_examples=3):
     """Load all dashboard data from clear_results.json and map it to the HTML data shape."""
     json_path = Path(json_path)
 
@@ -79,8 +79,8 @@ def load_json_data(json_path, include_examples=True):
             for issue in issues:
                 issue_text = issue.get("issue_text") or issue.get("issue_id") or ""
                 examples = []
-                if include_examples:
-                    for occurrence in issue.get("occurrences", [])[:3]:
+                if num_examples:
+                    for occurrence in issue.get("occurrences", [])[:num_examples]:
                         tasks_list.add(occurrence.get("trace_id"))
                         span_reference = occurrence.get("span_reference", {})
                         input_output_pair = occurrence.get("input_output_pair", {})
@@ -698,9 +698,9 @@ function renderRecommendations(recs){
 </html>"""
 
 
-def generate_html(json_path, output_path=None, include_examples=True):
+def generate_html(json_path, output_path=None, num_examples=3):
     """Generate static HTML dashboard from a clear_results.json file."""
-    data = load_json_data(json_path, include_examples=include_examples)
+    data = load_json_data(json_path, num_examples=num_examples)
     logging.info(f"Generating Static HTML report  from {json_path}")
 
     input_path = Path(json_path)
