@@ -19,7 +19,7 @@ root="$(dirname "$here")"
 cd "$root"
 
 track="slow_track"
-mode="eval"   # runtime = fast prompts / no recommendations; eval = recs on
+mode="runtime"   # runtime = fast prompts / no recommendations; eval = recs on
 agent_types=()   # list of agent types to process
 benches=()       # list of benchmarks to process
 
