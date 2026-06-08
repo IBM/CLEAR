@@ -19,7 +19,7 @@ root="$(dirname "$here")"
 cd "$root"
 
 track="slow_track"
-#mode="eval"   # runtime = fast prompts / no recommendations; eval = recs on
+mode="eval"   # runtime = fast prompts / no recommendations; eval = recs on
 agent_types=()   # list of agent types to process
 benches=()       # list of benchmarks to process
 
@@ -59,7 +59,13 @@ case "$mode" in
   *) echo "error: invalid --mode '$mode' (use runtime|eval)" >&2; exit 2 ;;
 esac
 # `runtime_pipeline: true` == runtime mode; `false` == eval mode.
-if [ "$mode" = "runtime" ]; then rp=true; else rp=false; fi
+if [ "$mode" = "runtime" ]; then
+  rp=true
+  issues_format="shortcomings"
+else
+  rp=false
+  issues_format="recommendations"
+fi
 
 if [ ! -f .env ]; then
   echo "error: $root/.env not found" >&2
@@ -161,6 +167,7 @@ for bench in "${benches[@]}"; do
     python -m clear_eval.agentic.pipeline.run_clear_step_analysis \
       --agentic-config-path "$tmp_cfg" \
       --data-dir "$data_dir" \
-      --results-dir "$results_dir"
+      --results-dir "$results_dir" \
+      --issues-format="$issues_format"
   done
 done
