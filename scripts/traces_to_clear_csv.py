@@ -220,6 +220,23 @@ def _convert_tau2_style(children: list[dict], ctx: _Ctx, session_attrs: dict) ->
     if policy:
         messages.append({"role": "system", "content": policy})
 
+    # The first user turn normally arrives via an `initial_observation` span
+    # (handled in the loop below). Some harnesses/benchmarks (e.g. appworld)
+    # emit no such span -- there the task itself IS the first user message, so
+    # inject it from `exgentic.session.task` right after the system prompt.
+    # When an initial_observation span is present (e.g. tau2, where
+    # `session.task` holds the system policy, not the user turn) we leave it
+    # alone to avoid duplicating the user message.
+    has_initial_obs = any(
+        get_attr(s, "gen_ai.tool.name") == INITIAL_OBS for s in children
+    )
+    if not has_initial_obs:
+        task_text = str(session_attrs.get("exgentic.session.task", "") or "")
+        if task_text:
+            messages.append({"role": "user", "content": task_text})
+            if not ctx.intent:
+                ctx.intent = task_text[:INTENT_LIMIT]
+
     for span in children:
         tool_name = get_attr(span, "gen_ai.tool.name")
         tool_id = get_attr(span, "gen_ai.tool.id", "")
