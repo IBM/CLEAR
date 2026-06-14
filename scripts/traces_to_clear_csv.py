@@ -27,7 +27,8 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, List
+from tqdm import tqdm
 
 CSV_FIELDNAMES = [
     "id", "Name", "intent", "task_id", "step_in_trace_general",
@@ -477,10 +478,10 @@ def process_single_trace(trace_path: Path, output_path: Path, specs_dir: Path) -
         rows, basename = convert_trace(trace, specs_dir)
         if len(rows) > 2:
             write_csv(rows, output_path)
-            print(f"[ok] {trace_path} -> {output_path} ({len(rows)} rows)")
+           # print(f"[ok] {trace_path} -> {output_path} ({len(rows)} rows)")
             return True
         else:
-            print(f"[x] {trace_path} has only {len(rows)} rows")
+           # print(f"[x] {trace_path} has only {len(rows)} rows")
             return False
     except Exception as e:
         print(f"[err] {trace_path}: {e}", file=sys.stderr)
@@ -499,48 +500,51 @@ def process_directory_tree(input_dir: Path, output_dir: Path, specs_dir: Path) -
     if not json_files:
         print(f"[warn] no JSON files found in {input_dir}")
         return 0
-    
-    print(f"Found {len(json_files)} JSON file(s) to process")
+    print(f"Processing {input_dir}\nFound {len(json_files)} JSON file(s) to process")
     rc = 0
     
-    for json_path in json_files:
+    for json_path in tqdm(json_files):
         # Calculate relative path from input_dir
         rel_path = json_path.relative_to(input_dir)
         # Create corresponding CSV path in output_dir (same structure, .csv extension)
         csv_path = output_dir / rel_path.with_suffix(".csv")
         
         if not process_single_trace(json_path, csv_path, specs_dir):
-            rc = 1
-    
+            rc += 1
+    print(f"Processed {len(json_files)} JSON files, {rc} failed")
     return rc
 
+
+def convert_traces_to_clear_csv(input_dir: Path, traces: List[str], output_dir: Path, specs_dir: Path) -> int:
+    # Validate arguments
+    if input_dir:
+        # input-dir mode: ignore traces argument
+        if traces:
+            print("[warn] --input-dir provided; ignoring positional trace arguments")
+        return process_directory_tree(input_dir, output_dir, specs_dir)
+    else:
+        # traces mode: require at least one trace file
+        if not traces:
+            print("either provide trace files or use --input-dir")
+            sys.exit(1)
+
+        rc = 0
+        for trace_path in traces:
+            out_path = output_dir / f"{sanitize_filename(trace_path.stem)}.csv"
+            if not process_single_trace(trace_path, out_path, specs_dir):
+                rc = 1
+        return rc
 
 def main(argv: list[str] | None = None) -> int:
     here = Path(__file__).resolve().parent
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("traces", nargs="*", type=Path, help="input trace JSON files (ignored if --input-dir is provided)")
-    ap.add_argument("--input-dir", type=Path, help="process all JSON files in this directory tree, mirroring structure in output-dir")
+    ap.add_argument("--input-dir", type=Path, help="process all JSON files in this directory tree, mirroring structure in output-dir", default="")
     ap.add_argument("--output-dir", type=Path, required=True, help="directory for CSV outputs")
     ap.add_argument("--specs-dir", type=Path, default=here / "tool_specs", help="dir containing <slug>[_<subset>].json tool specs")
     args = ap.parse_args(argv)
 
-    # Validate arguments
-    if args.input_dir:
-        # input-dir mode: ignore traces argument
-        if args.traces:
-            print("[warn] --input-dir provided; ignoring positional trace arguments")
-        return process_directory_tree(args.input_dir, args.output_dir, args.specs_dir)
-    else:
-        # traces mode: require at least one trace file
-        if not args.traces:
-            ap.error("either provide trace files or use --input-dir")
-        
-        rc = 0
-        for trace_path in args.traces:
-            out_path = args.output_dir / f"{sanitize_filename(trace_path.stem)}.csv"
-            if not process_single_trace(trace_path, out_path, args.specs_dir):
-                rc = 1
-        return rc
+    return convert_traces_to_clear_csv(args.input_dir, args.traces, args.output_dir, args.specs_dir)
 
 
 if __name__ == "__main__":
