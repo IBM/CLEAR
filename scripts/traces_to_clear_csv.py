@@ -548,4 +548,22 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    here = Path(__file__).resolve().parent
+    specs_dir = here / "tool_specs"
+    #sys.exit(main())
+    input_dir_patt = "/Users/lilache/Documents/agentic/new_otels/%s/openai_Azure_gpt-5.2-2025-12-11"
+    output_dir_patt = "/Users/lilache/PycharmProjects/CLEAR/scripts/runs/input/%s"
+    for bench in ["appworld_test_normal"]:# , "tau2_airline"
+        for agent in [ "openai_solo"]:#:, "smolagents_code", "tool_calling"]:#,]:
+             input_dir_patt_u = input_dir_patt
+             case = f"{bench}/{agent}/"
+             output_dir = Path(output_dir_patt % case)
+             if "appworld_test_normal" in case:
+                 case = case.replace("tool_calling", "tool_calling_with_shortlisting")
+                 if agent == "openai_solo":
+                     input_dir_patt_u = input_dir_patt.replace("openai_Azure_gpt-5.2-2025-12-11", "openai_gcp_gemini-3-pro-preview")
+
+             input_dir = Path(input_dir_patt_u % case)
+
+             convert_traces_to_clear_csv(input_dir, None, output_dir, specs_dir)
+

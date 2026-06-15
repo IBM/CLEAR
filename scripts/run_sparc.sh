@@ -19,7 +19,7 @@ root="$(dirname "$here")"
 cd "$root"
 
 track="slow_track"
-mode="runtime"   # runtime = fast prompts / no recommendations; eval = recs on
+mode="eval"   # runtime = fast prompts / no recommendations; eval = recs on
 agent_types=()   # list of agent types to process
 benches=()       # list of benchmarks to process
 
@@ -155,19 +155,22 @@ for bench in "${benches[@]}"; do
   fi
 
   for agent_type in "${current_agent_types[@]}"; do
-    data_dir="scripts/runs/input/$bench/$agent_type/"
-    results_dir="scripts/runs/output/$bench/$agent_type/${track}_${mode}"
+    for r in bad good; do
+        data_dir="scripts/runs/input/$bench/$agent_type/$r"
+        results_dir="scripts/runs/output/$bench/$agent_type/${track}_${mode}/$r"
 
-    if [ ! -d "$data_dir" ]; then
-      echo "warning: input directory not found: $data_dir, skipping" >&2
-      continue
-    fi
+        if [ ! -d "$data_dir" ]; then
+          echo "warning: input directory not found: $data_dir, skipping" >&2
+          continue
+        fi
 
-    echo "=== running SPARC ($track, $mode) on $bench / $agent_type ==="
-    python -m clear_eval.agentic.pipeline.run_clear_step_analysis \
-      --agentic-config-path "$tmp_cfg" \
-      --data-dir "$data_dir" \
-      --results-dir "$results_dir" \
-      --issues-format="$issues_format"
-  done
+        echo "=== running SPARC ($track, $mode, $r) on $bench / $agent_type ==="
+        python -m clear_eval.agentic.pipeline.run_clear_step_analysis \
+          --agentic-config-path "$tmp_cfg" \
+          --data-dir "$data_dir" \
+          --results-dir "$results_dir" \
+          --issues-format="$issues_format" \
+         # --run-name "20260610_171643"
+        done
+    done
 done

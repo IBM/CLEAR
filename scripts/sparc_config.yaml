@@ -1,9 +1,9 @@
 from_raw_traces: false
-overwrite: true
+overwrite: false
 max_workers: 10
 memory_only: false
 
-inference_backend: litellm
+inference_backend: langchain
 provider: watsonx
 eval_model_name: openai/gpt-oss-120b
 eval_model_params:
