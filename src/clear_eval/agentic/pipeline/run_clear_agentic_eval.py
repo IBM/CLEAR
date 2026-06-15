@@ -264,6 +264,7 @@ def run_full_trajectory_pipeline(
             overwrite=config.get('overwrite'),
             max_workers=config.get('max_workers'),
             max_files=config.get('max_files'),
+            predefined_issues=config.get('predefined_issues'),
         )
         
         logger.info(f"✓ Full trajectory evaluation complete (completed: {completed_evals or 0}, failed: {failed_evals or 0})")

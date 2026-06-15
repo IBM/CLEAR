@@ -378,6 +378,7 @@ def run_clear_analysis(
     clear_types: List[str],
     inference_config: InferenceConfig,
     overwrite: bool,
+    predefined_issues: Optional[list] = None,
 ) -> bool:
     """Run CLEAR analysis on evaluation results."""
     if not clear_types:
@@ -400,6 +401,7 @@ def run_clear_analysis(
                 output_dir=clear_output_dir,
                 inference_config=inference_config,
                 overwrite=overwrite,
+                predefined_issues=predefined_issues,
             )
             runner.run_analysis()
             logger.info("Root cause CLEAR analysis completed successfully")
@@ -416,6 +418,7 @@ def run_clear_analysis(
                 output_dir=clear_output_dir,
                 inference_config=inference_config,
                 overwrite=overwrite,
+                predefined_issues=predefined_issues,
             )
             runner.run_analysis()
             logger.info("Issues CLEAR analysis completed successfully")
@@ -517,6 +520,7 @@ def run_trajectory_evaluation_pipeline(
     overwrite: bool = False,
     max_workers: int = 10,
     max_files: Optional[int] = None,
+    predefined_issues: Optional[list] = None,
 ) -> tuple[List[str], List[str]]:
     """
     Run trajectory evaluation pipeline on CSV trajectory data.
@@ -536,6 +540,7 @@ def run_trajectory_evaluation_pipeline(
         overwrite: Re-run even if results exist
         max_workers: Number of parallel workers
         max_files: Limit files to process
+        predefined_issues: Predefined issues list to skip issue discovery in CLEAR analysis
 
     Returns:
         Tuple of (completed_evals, failed_evals)
@@ -662,6 +667,7 @@ def run_trajectory_evaluation_pipeline(
                 clear_types=clear_types,
                 inference_config=inference_config,
                 overwrite=overwrite,
+                predefined_issues=predefined_issues,
             )
 
     # Print summary
@@ -744,6 +750,7 @@ def main():
         overwrite=config.get('overwrite'),
         max_workers=config.get('max_workers'),
         max_files=config.get('max_files'),
+        predefined_issues=config.get('predefined_issues'),
     )
 
     if failed_evals:

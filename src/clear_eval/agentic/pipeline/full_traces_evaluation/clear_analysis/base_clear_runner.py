@@ -44,6 +44,7 @@ class BaseClearRunner(ABC):
         output_dir: Path,
         inference_config: InferenceConfig,
         overwrite: bool = False,
+        predefined_issues: list = None,
     ):
         """
         Initialize CLEAR runner.
@@ -53,11 +54,13 @@ class BaseClearRunner(ABC):
             output_dir: Base directory for CLEAR analysis outputs
             inference_config: LLM inference configuration
             overwrite: Whether to overwrite existing CLEAR results
+            predefined_issues: Predefined issues list to skip issue discovery
         """
         self.eval_results_dir = Path(eval_results_dir)
         self.output_dir = Path(output_dir)
         self.inference_config = inference_config
         self.overwrite = overwrite
+        self.predefined_issues = predefined_issues
 
     @abstractmethod
     def get_source_name(self) -> str:
@@ -218,6 +221,9 @@ class BaseClearRunner(ABC):
                 "inference_backend": self.inference_config.inference_backend,
                 "endpoint_url": self.inference_config.endpoint_url,
             }
+
+            if self.predefined_issues:
+                analysis_kwargs["predefined_issues"] = self.predefined_issues
 
             run_clear_eval_aggregation(**analysis_kwargs)
             logger.info(f"Completed: {group_key}")
