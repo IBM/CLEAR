@@ -5,22 +5,14 @@ import numpy as np
 from clear_eval.pipeline.caching_utils import save_dataframe_to_cache
 import pandas as pd
 from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
-    SHORTCOMING_PREFIX, SCORE_COL, ERROR_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE
+    SHORTCOMING_PREFIX, SCORE_COL, ERROR_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE, \
+    _SPARC_COLUMNS_PASSTHROUGH
 from clear_eval.pipeline.propmts import get_summarization_prompt, \
      get_shortcomings_clustering_prompt, get_issues_mapping_system_prompt, get_issues_mapping_human_prompt, get_synthesis_prompt, get_synthesis_prompt_cont
 import re
 from clear_eval.pipeline.inference_utils.llm_client import run_parallel, run_async, get_llm_client
 logger = logging.getLogger(__name__)
 
-# SPARC-specific per-row columns produced by the tool-call use case. They are
-# carried through analysis CSVs unchanged so downstream aggregation
-# (build_json_results) and dashboards can read per-row judgments without
-# re-running SPARC.
-_SPARC_COLUMNS_PASSTHROUGH = (
-    "sparc_decision",
-    "sparc_score_1_to_5",
-    "sparc_recommendations",
-)
 
 def is_missing_or_error(eval_text):
     if pd.isna(eval_text) or not eval_text or not eval_text.strip() or \
