@@ -230,12 +230,16 @@ def run_full_trajectory_pipeline(
 ) -> bool:
     """
     Run full trajectory evaluation pipeline using centralized traces_data.
-    
+
+    Passes configurable parameters from config:
+        - full_trace_evaluation_criteria: custom flat evaluation dimensions
+        - predefined_issues: skip issue discovery in CLEAR analysis
+
     Args:
         traces_data_dir: Path to centralized traces_data directory (CSV files)
         output_dir: Output directory for full trajectory results
         config: Configuration dict
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -264,6 +268,8 @@ def run_full_trajectory_pipeline(
             overwrite=config.get('overwrite'),
             max_workers=config.get('max_workers'),
             max_files=config.get('max_files'),
+            predefined_issues=config.get('predefined_issues'),
+            full_trace_evaluation_criteria=config.get('full_trace_evaluation_criteria'),
         )
         
         logger.info(f"✓ Full trajectory evaluation complete (completed: {completed_evals or 0}, failed: {failed_evals or 0})")

@@ -10,7 +10,7 @@ reusable argument groups that can be composed based on each script's needs.
 """
 
 import argparse
-from clear_eval.args import str2bool
+from clear_eval.args import str2bool, parse_dict
 
 
 def add_agentic_pipeline_args(parser: argparse.ArgumentParser) -> None:
@@ -131,6 +131,14 @@ def add_full_trajectory_args(parser: argparse.ArgumentParser) -> None:
         "--context-tokens",
         type=int,
         help="Model context window size (for full trajectory)"
+    )
+    group.add_argument(
+        "--full-trace-evaluation-criteria",
+        type=parse_dict,
+        default=None,
+        help="JSON dict of evaluation criteria for full trace evaluation. "
+             "Replaces all default dimensions when set. "
+             "Example: '{\"Correctness\": \"Accurate results\", \"Efficiency\": \"No redundant steps\"}'"
     )
     # Note: --max-files is defined in add_agentic_pipeline_args() (shared across pipelines)
     # Do not add it here to avoid conflicts

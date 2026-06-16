@@ -73,6 +73,9 @@ class TrajectoryEvaluator(ABC):
         - Parallel execution
         - Error handling and logging
     
+    Supports optional full_trace_evaluation_criteria for custom evaluation
+    dimensions (used by FullTrajectoryEvaluator).
+
     Subclasses implement evaluation-specific logic via abstract methods:
         - prepare_evaluation_data: Load/prepare evaluation-specific data
         - prepare_context: Build context dict for prompt
@@ -93,6 +96,7 @@ class TrajectoryEvaluator(ABC):
         max_workers: int = 7,
         max_files: int | None = None,
         checkpoint_every: int = 0,
+        full_trace_evaluation_criteria: dict | None = None,
     ):
         """
         Initialize evaluator with common configuration.
@@ -105,6 +109,8 @@ class TrajectoryEvaluator(ABC):
             overwrite: Whether to overwrite existing evaluation results
             max_workers: Number of parallel workers
             max_files: Maximum number of files to process (for testing)
+            full_trace_evaluation_criteria: Custom flat evaluation criteria dict
+                that replaces all default dimensions when set
             checkpoint_every: Save intermediate results every N items (0 = disabled)
         """
         self.inference_config = inference_config
@@ -115,6 +121,7 @@ class TrajectoryEvaluator(ABC):
         self.max_workers = max_workers
         self.max_files = max_files
         self.checkpoint_every = checkpoint_every
+        self.full_trace_evaluation_criteria = full_trace_evaluation_criteria
 
         # Create results directory: output_dir/evaluation_type[/model_subdir]
         eval_type = self.get_evaluation_type().replace(" ", "_").replace("/", "_")

@@ -314,7 +314,11 @@ See [`pipeline/setup/default_agentic_config.yaml`](pipeline/setup/default_agenti
 
 ### Advanced: Custom Evaluation Criteria
 
-By default, CLEAR uses built-in criteria suited for agentic interactions (`agent_mode: true`). You can override these with custom criteria that define **how every response in the step-by-step analysis is judged**. Each criterion is a name-description pair — the judge model scores every record against all specified criteria, and the discovered issues reflect these dimensions.
+CLEAR supports customizable evaluation criteria at two levels:
+
+#### Step-by-Step Analysis Criteria
+
+`evaluation_criteria` (alias: `step_evaluation_criteria`) defines **how individual steps are judged** in the step-by-step analysis. Each criterion is a name-description pair — the judge model scores every record against all specified criteria.
 
 ```yaml
 # In your config YAML
@@ -324,12 +328,42 @@ evaluation_criteria:
   instruction_following: "Agent follows the user's instructions accurately"
 ```
 
+When `null`, CLEAR applies default criteria appropriate for the mode (4 agentic criteria for `agent_mode`, 3 general criteria otherwise).
+
+#### Full Trace Evaluation Criteria
+
+`full_trace_evaluation_criteria` defines **how full trajectories are scored** in the full trajectory evaluation. When set, it replaces all 14 default dimensions (9 step-quality + 5 trajectory-level) with a flat list of custom dimensions.
+
+```yaml
+# In your config YAML
+full_trace_evaluation_criteria:
+  Correctness: "Responses produce accurate, logically sound results"
+  Goal_Alignment: "Agent stayed aligned with the user's high-level goal"
+  Efficiency: "Solution avoids unnecessary complexity or redundant steps"
+  Error_Recovery: "Agent recovers effectively from errors and unexpected states"
+```
+
+When `null`, CLEAR uses the default 14 dimensions grouped into step-quality and trajectory-level categories.
+
+#### Predefined Issues
+
+`predefined_issues` skips automatic issue discovery in CLEAR analysis and uses a provided list directly. This applies to both step-by-step and full trajectory CLEAR analysis pipelines.
+
+```yaml
+predefined_issues:
+  - "Incomplete reasoning - jumps to conclusions"
+  - "Incorrect tool selection for the task"
+  - "Fails to recover from API errors"
+```
+
+#### Parameters Summary
+
 | Parameter | CLI Flag | Default | Description |
 |-----------|----------|---------|-------------|
-| `evaluation_criteria` | `--evaluation-criteria` | `null` (uses built-in agent criteria) | Custom criteria dict: `{"name": "description", ...}` |
-| `predefined_issues` | `--predefined-issues` | `null` | List of known issues to use instead of automatic discovery |
-
-When `evaluation_criteria` is `null`, CLEAR applies default criteria appropriate for the mode (`agent_mode: true` for agentic, standard LLM criteria otherwise). When `predefined_issues` is set, CLEAR skips automatic issue discovery and uses the provided list directly.
+| `evaluation_criteria` | `--evaluation-criteria` | `null` (uses built-in agent criteria) | Step-by-step analysis criteria: `{"name": "description", ...}` |
+| `step_evaluation_criteria` | — | `null` | Alias for `evaluation_criteria` (config file only) |
+| `full_trace_evaluation_criteria` | `--full-trace-evaluation-criteria` | `null` (uses 14 default dimensions) | Full trace evaluation criteria: `{"name": "description", ...}` |
+| `predefined_issues` | `--predefined-issues` | `null` | List of known issues to skip automatic discovery |
 
 ### Configuration Precedence
 

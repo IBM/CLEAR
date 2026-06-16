@@ -2174,7 +2174,8 @@ def main_page():
                 # Try to get dimensions from parsed_evaluation first (preferred structure)
                 step_quality = parsed_eval.get("step_quality_dimensions", {})
                 trajectory_dims = parsed_eval.get("trajectory_dimensions", {})
-                
+                custom_dims = parsed_eval.get("dimensions", {})
+
                 # Collect step quality dimension scores
                 for criterion, details in step_quality.items():
                     score = details.get("score")
@@ -2183,7 +2184,7 @@ def main_page():
                             all_dimension_scores[f"Step Quality: {criterion}"].append(float(score))
                         except (ValueError, TypeError):
                             print(f"⚠️  Warning: Could not convert score to float for {criterion}: {score}")
-                
+
                 # Collect trace dimension scores
                 for criterion, details in trajectory_dims.items():
                     score = details.get("score")
@@ -2192,9 +2193,19 @@ def main_page():
                             all_dimension_scores[f"Trace: {criterion}"].append(float(score))
                         except (ValueError, TypeError):
                             print(f"⚠️  Warning: Could not convert score to float for {criterion}: {score}")
-                
+
+                # Collect custom flat dimension scores
+                if custom_dims and not step_quality and not trajectory_dims:
+                    for criterion, details in custom_dims.items():
+                        score = details.get("score")
+                        if score is not None:
+                            try:
+                                all_dimension_scores[criterion].append(float(score))
+                            except (ValueError, TypeError):
+                                print(f"⚠️  Warning: Could not convert score to float for {criterion}: {score}")
+
                 # Fallback: if no dimensions found in parsed_evaluation, try dimension_scores directly
-                if not step_quality and not trajectory_dims and dimension_scores:
+                if not step_quality and not trajectory_dims and not custom_dims and dimension_scores:
                     for criterion, score in dimension_scores.items():
                         if score is not None:
                             try:
@@ -3083,7 +3094,8 @@ def main_page():
                 # Separate step quality and trace dimensions
                 step_quality = parsed_eval.get("step_quality_dimensions", {})
                 trajectory_dims = parsed_eval.get("trajectory_dimensions", {})
-                
+                custom_dims = parsed_eval.get("dimensions", {})
+
                 if step_quality:
                     ui.html('<div style="font-weight: 600; color: #1E293B; margin: 12px 0 8px 0; font-size: 15px;">Step Quality Dimensions</div>')
                     for criterion, details in step_quality.items():
@@ -3091,7 +3103,7 @@ def main_page():
                         justification = details.get("justification", "No justification provided")
                         score_color = score_to_hex(score)
                         definition = get_dimension_definition(criterion)
-                        
+
                         with ui.row().classes("w-full items-center gap-2 mb-2"):
                             with ui.expansion(f"{criterion}: {score:.2f}", icon="check_circle").classes("flex-1").style(f"border-left: 4px solid {score_color};"):
                                 ui.html(f"""
@@ -3101,7 +3113,7 @@ def main_page():
                                 """)
                             with ui.button(icon="info", on_click=lambda: None).props("flat dense round size=sm").classes("text-blue-500"):
                                 ui.tooltip(definition).classes("bg-slate-800 text-white text-sm max-w-md")
-                
+
                 if trajectory_dims:
                     ui.html('<div style="font-weight: 600; color: #1E293B; margin: 20px 0 8px 0; font-size: 15px;">Trace-Level Dimensions</div>')
                     for criterion, details in trajectory_dims.items():
@@ -3109,7 +3121,7 @@ def main_page():
                         justification = details.get("justification", "No justification provided")
                         score_color = score_to_hex(score)
                         definition = get_dimension_definition(criterion)
-                        
+
                         with ui.row().classes("w-full items-center gap-2 mb-2"):
                             with ui.expansion(f"{criterion}: {score:.2f}", icon="check_circle").classes("flex-1").style(f"border-left: 4px solid {score_color};"):
                                 ui.html(f"""
@@ -3119,6 +3131,21 @@ def main_page():
                                 """)
                             with ui.button(icon="info", on_click=lambda: None).props("flat dense round size=sm").classes("text-blue-500"):
                                 ui.tooltip(definition).classes("bg-slate-800 text-white text-sm max-w-md")
+
+                if custom_dims and not step_quality and not trajectory_dims:
+                    ui.html('<div style="font-weight: 600; color: #1E293B; margin: 12px 0 8px 0; font-size: 15px;">Evaluation Dimensions</div>')
+                    for criterion, details in custom_dims.items():
+                        score = float(details.get("score", 0))
+                        justification = details.get("justification", "No justification provided")
+                        score_color = score_to_hex(score)
+
+                        with ui.row().classes("w-full items-center gap-2 mb-2"):
+                            with ui.expansion(f"{criterion}: {score:.2f}", icon="check_circle").classes("flex-1").style(f"border-left: 4px solid {score_color};"):
+                                ui.html(f"""
+                                    <div style="padding: 8px; background: #FAFAFA; border-radius: 6px; color: #475569; font-size: 13px; line-height: 1.5;">
+                                        {justification}
+                                    </div>
+                                """)
 
     def render_rubric_evaluation(rubric_eval):
         """Render the rubric-based trace evaluation."""

@@ -43,12 +43,24 @@ eval_model_params:
 
 memory_only: false              # If true, use temp dirs and return only JSON
 
-# Custom evaluation criteria (affects discovered issues)
+# Custom evaluation criteria for step-by-step analysis
+# Alias: step_evaluation_criteria (same parameter, for naming clarity)
 # Example:
 #   evaluation_criteria:
 #     reasoning_clarity: "Agent provides clear step-by-step reasoning"
 #     tool_selection: "Agent selects appropriate tools for the task"
 evaluation_criteria: null
+step_evaluation_criteria: null
+
+# Custom evaluation criteria for full trace evaluation
+# When set, replaces ALL default dimensions (both step-quality and trajectory-level)
+# with the provided flat list. When null, uses default 14 dimensions.
+# Example:
+#   full_trace_evaluation_criteria:
+#     Correctness: "Responses produce accurate, logically sound results"
+#     Goal_Alignment: "Agent stayed aligned with the user's goal"
+#     Efficiency: "Solution avoids unnecessary complexity or redundant steps"
+full_trace_evaluation_criteria: null
 
 # Predefined issues (skips issue discovery if set)
 # Example:
