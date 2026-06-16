@@ -73,11 +73,15 @@ def load_pipeline_config(
     Returns:
         Merged configuration dictionary
     """
-    return load_config(
+    config = load_config(
         DEFAULT_CONFIG_PATH,
         user_config_path,
         **cli_overrides
     )
+    # step_evaluation_criteria is an alias for evaluation_criteria
+    if config.get('step_evaluation_criteria') and not config.get('evaluation_criteria'):
+        config['evaluation_criteria'] = config['step_evaluation_criteria']
+    return config
 
 
 def get_run_output_dir(

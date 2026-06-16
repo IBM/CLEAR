@@ -99,6 +99,9 @@ Arguments:
         --overwrite: Re-run even if results exist
         --max-workers: Number of parallel workers (default: 7)
         --max-files: Limit files to process (for testing)
+        --full-trace-evaluation-criteria: JSON dict of custom evaluation criteria
+                                         Replaces all default dimensions when set
+        --predefined-issues: Predefined issues list for CLEAR analysis
 
 Output Structure:
     output_dir/
@@ -273,6 +276,7 @@ def run_full_trajectory_evaluation(
     overwrite: bool,
     max_workers: int,
     max_files: Optional[int],
+    full_trace_evaluation_criteria: Optional[dict] = None,
 ) -> bool:
     """Run full trajectory evaluation."""
     logger.info("=" * 80)
@@ -288,6 +292,7 @@ def run_full_trajectory_evaluation(
             overwrite=overwrite,
             max_workers=max_workers,
             max_files=max_files,
+            full_trace_evaluation_criteria=full_trace_evaluation_criteria,
         )
         evaluator.run_pipeline()
         logger.info("Full trajectory evaluation completed successfully")
@@ -380,7 +385,17 @@ def run_clear_analysis(
     overwrite: bool,
     predefined_issues: Optional[list] = None,
 ) -> bool:
-    """Run CLEAR analysis on evaluation results."""
+    """
+    Run CLEAR analysis on evaluation results.
+
+    Args:
+        eval_results_dir: Directory containing evaluation result files
+        clear_output_dir: Output directory for CLEAR analysis
+        clear_types: List of CLEAR analysis types to run
+        inference_config: LLM inference configuration
+        overwrite: Whether to overwrite existing results
+        predefined_issues: If set, skip issue discovery and use these issues directly
+    """
     if not clear_types:
         logger.info("Skipping CLEAR analysis (none requested)")
         return True
@@ -521,6 +536,7 @@ def run_trajectory_evaluation_pipeline(
     max_workers: int = 10,
     max_files: Optional[int] = None,
     predefined_issues: Optional[list] = None,
+    full_trace_evaluation_criteria: Optional[dict] = None,
 ) -> tuple[List[str], List[str]]:
     """
     Run trajectory evaluation pipeline on CSV trajectory data.
@@ -541,6 +557,7 @@ def run_trajectory_evaluation_pipeline(
         max_workers: Number of parallel workers
         max_files: Limit files to process
         predefined_issues: Predefined issues list to skip issue discovery in CLEAR analysis
+        full_trace_evaluation_criteria: Custom flat evaluation criteria dict for full trajectory eval
 
     Returns:
         Tuple of (completed_evals, failed_evals)
@@ -639,7 +656,10 @@ def run_trajectory_evaluation_pipeline(
             failed_evals.append(EVAL_TYPE_TASK_SUCCESS)
 
     if EVAL_TYPE_FULL_TRAJECTORY in eval_types:
-        if run_full_trajectory_evaluation(**eval_kwargs):
+        if run_full_trajectory_evaluation(
+            **eval_kwargs,
+            full_trace_evaluation_criteria=full_trace_evaluation_criteria,
+        ):
             completed_evals.append(EVAL_TYPE_FULL_TRAJECTORY)
         else:
             failed_evals.append(EVAL_TYPE_FULL_TRAJECTORY)
@@ -751,6 +771,7 @@ def main():
         max_workers=config.get('max_workers'),
         max_files=config.get('max_files'),
         predefined_issues=config.get('predefined_issues'),
+        full_trace_evaluation_criteria=config.get('full_trace_evaluation_criteria'),
     )
 
     if failed_evals:
