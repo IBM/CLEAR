@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import pandas as pd
 from tqdm.asyncio import tqdm_asyncio
 
 # Module-level event loop to avoid LiteLLM queue binding issues
@@ -373,6 +374,22 @@ def _load_cache(cache_path: str) -> Dict[str, ParallelResult]:
     return cache
 
 
+def _sanitize_for_json(obj: Any) -> Any:
+    """
+    Recursively sanitize an object for JSON serialization.
+    Converts pandas NA values to None and handles nested structures.
+    """
+    # Check for collection types first to avoid ambiguous truth value errors
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_sanitize_for_json(item) for item in obj]
+    elif pd.isna(obj):
+        return None
+    else:
+        return obj
+
+
 def _append_to_cache(cache_path: str, item_ids: List[str], results: List[ParallelResult]):
     """Append results to the JSON-lines cache file."""
     Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
@@ -381,8 +398,8 @@ def _append_to_cache(cache_path: str, item_ids: List[str], results: List[Paralle
             entry = {
                 "id": item_id,
                 "is_success": result.is_success,
-                "result": result.result,
-                "error": result.error,
+                "result": _sanitize_for_json(result.result),
+                "error": _sanitize_for_json(result.error),
             }
             f.write(json.dumps(entry) + "\n")
 
