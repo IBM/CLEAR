@@ -721,6 +721,9 @@ def main():
         config.get('run_name')
     )
 
+    # Update config with resolved run_name so downstream components use the same name
+    config['run_name'] = run_name
+
     # Convert paths
     traj_input_dir = Path(config['data_dir'])
     rubric_dir = Path(config['rubric_dir']) if config.get('rubric_dir') else None
