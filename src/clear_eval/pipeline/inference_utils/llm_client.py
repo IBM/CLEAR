@@ -1,8 +1,8 @@
 """
 Unified LLM client interface for CLEAR eval.
 
-Abstracts both the LLM backend (LangChain vs LiteLLM vs Endpoint) and execution model
-(threaded vs async), allowing eval_utils to use a single interface.
+Abstracts the LLM backend (LangChain vs LiteLLM vs Endpoint) and provides
+async parallel execution with optional result caching for crash recovery.
 
 Usage:
     from clear_eval.pipeline.inference_utils.llm_client import get_llm_client, run_parallel
@@ -14,23 +14,27 @@ Usage:
     content = client.invoke("What is 2+2?")
     content = client.invoke([{"role": "user", "content": "Hello"}])
 
-    # Parallel execution (auto-selects threaded vs async based on client type)
+    # Parallel execution with result caching
     results = run_parallel(
         func=my_func,
         inputs=input_list,
-        max_workers=10
+        max_workers=10,
+        checkpoint_every=50,
+        checkpoint_path="/path/to/cache.jsonl",
+        item_ids=["id_1", "id_2", ...],
     )
 """
 
 import asyncio
+import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from tqdm import tqdm
+import pandas as pd
 from tqdm.asyncio import tqdm_asyncio
 
 # Module-level event loop to avoid LiteLLM queue binding issues
@@ -299,52 +303,7 @@ class EndpointClient(LLMClient):
 # Parallel Execution
 # =============================================================================
 
-def _run_threaded(
-    func: Callable,
-    inputs: List[Any],
-    max_workers: int = 10,
-    task_timeout: float = 300,
-    error_prefix: str = "Error: ",
-    progress_desc: str = "Processing"
-) -> List[ParallelResult]:
-    """Run function over inputs using ThreadPoolExecutor."""
-    if not inputs:
-        return []
-
-    if len(inputs) == 1:
-        item = inputs[0]
-        try:
-            if isinstance(item, tuple):
-                result = func(*item)
-            else:
-                result = func(item)
-            return [ParallelResult(is_success=True, result=result)]
-        except Exception as e:
-            return [ParallelResult(is_success=False, error=f"{error_prefix}: {e}")]
-
-    results = [None] * len(inputs)
-    with ThreadPoolExecutor(max_workers) as executor:
-        future_to_idx = {}
-        for i, item in enumerate(inputs):
-            if isinstance(item, tuple):
-                future = executor.submit(func, *item)
-            else:
-                future = executor.submit(func, item)
-            future_to_idx[future] = i
-
-        for future in tqdm(as_completed(future_to_idx), total=len(inputs), desc=progress_desc):
-            idx = future_to_idx[future]
-            try:
-                result = future.result(timeout=task_timeout)
-                results[idx] = ParallelResult(is_success=True, result=result)
-            except Exception as e:
-                logger.error(f"Task {idx} failed: {e}")
-                results[idx] = ParallelResult(is_success=False, error=f"{error_prefix}item {idx}: {e}")
-
-    return results
-
-
-async def _run_async(
+async def _run_async_batch(
     func: Callable,
     inputs: List[Any],
     max_workers: int = 10,
@@ -387,40 +346,170 @@ def run_async(coro):
     return loop.run_until_complete(coro)
 
 
+# =============================================================================
+# Result Cache (JSON-lines)
+# =============================================================================
+
+def _load_cache(cache_path: str) -> Dict[str, ParallelResult]:
+    """Load cached results from a JSON-lines file. Returns {item_id: ParallelResult}."""
+    cache = {}
+    if not os.path.exists(cache_path):
+        return cache
+    try:
+        with open(cache_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                entry = json.loads(line)
+                cache[entry["id"]] = ParallelResult(
+                    is_success=entry["is_success"],
+                    result=entry.get("result"),
+                    error=entry.get("error"),
+                )
+        logger.info(f"Loaded {len(cache)} cached results from {cache_path}")
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.warning(f"Failed to load cache from {cache_path}: {e}. Starting fresh.")
+        cache = {}
+    return cache
+
+
+def _sanitize_for_json(obj: Any) -> Any:
+    """
+    Recursively sanitize an object for JSON serialization.
+    Converts pandas NA values to None and handles nested structures.
+    """
+    # Check for collection types first to avoid ambiguous truth value errors
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_sanitize_for_json(item) for item in obj]
+    elif pd.isna(obj):
+        return None
+    else:
+        return obj
+
+
+def _append_to_cache(cache_path: str, item_ids: List[str], results: List[ParallelResult]):
+    """Append results to the JSON-lines cache file."""
+    Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(cache_path, 'a') as f:
+        for item_id, result in zip(item_ids, results):
+            entry = {
+                "id": item_id,
+                "is_success": result.is_success,
+                "result": _sanitize_for_json(result.result),
+                "error": _sanitize_for_json(result.error),
+            }
+            f.write(json.dumps(entry) + "\n")
+
+
+# =============================================================================
+# Public API
+# =============================================================================
+
 def run_parallel(
     func: Callable,
     inputs: List[Any],
-    use_async: bool = True,
     max_workers: int = 10,
     task_timeout: float = 300,
     error_prefix: str = "Error: ",
-    progress_desc: str = "Processing"
+    progress_desc: str = "Processing",
+    checkpoint_every: int = 0,
+    checkpoint_path: Optional[str] = None,
+    item_ids: Optional[List[str]] = None,
 ) -> List[ParallelResult]:
     """
-    Run function over inputs in parallel.
+    Run async function over inputs in parallel, with optional result caching.
 
-    Automatically selects threaded or async execution based on use_async flag.
+    When caching is enabled (checkpoint_every > 0, checkpoint_path, and item_ids all
+    provided), results are cached to a JSON-lines file keyed by item_ids. On subsequent
+    runs, cached items are skipped and their results returned directly.
 
     Args:
-        func: Function to call. For async mode, must be async function.
+        func: Async function to call.
         inputs: List of inputs. Each is either a single value or tuple of args.
-        use_async: If True, use async execution. If False, use threads.
         max_workers: Maximum concurrent executions
         task_timeout: Timeout per task in seconds
         error_prefix: Prefix for error messages
         progress_desc: Progress bar description
+        checkpoint_every: Save results every N completed items (0 = disabled)
+        checkpoint_path: Path to JSON-lines cache file for result persistence
+        item_ids: List of unique string IDs parallel to inputs (used as cache keys)
 
     Returns:
         List of ParallelResult in same order as inputs
     """
-    if use_async:
-        return run_async(_run_async(
+    if not inputs:
+        return []
+
+    caching_enabled = bool(checkpoint_every and checkpoint_path and item_ids)
+
+    if caching_enabled and len(item_ids) != len(inputs):
+        raise ValueError(f"item_ids length ({len(item_ids)}) must match inputs length ({len(inputs)})")
+
+    # No caching: run everything in one shot
+    if not caching_enabled:
+        return run_async(_run_async_batch(
             func, inputs, max_workers, task_timeout, error_prefix, progress_desc
         ))
-    else:
-        return _run_threaded(
-            func, inputs, max_workers, task_timeout, error_prefix, progress_desc
-        )
+
+    # Load existing cache
+    cache = _load_cache(checkpoint_path)
+
+    # Separate cached from pending
+    all_results: List[Optional[ParallelResult]] = [None] * len(inputs)
+    pending_indices = []
+
+    for i, item_id in enumerate(item_ids):
+        if item_id in cache:
+            all_results[i] = cache[item_id]
+        else:
+            pending_indices.append(i)
+
+    cached_count = len(inputs) - len(pending_indices)
+    if cached_count:
+        logger.info(f"Loaded {cached_count}/{len(inputs)} results from cache, {len(pending_indices)} pending")
+
+    if not pending_indices:
+        # All items were cached — clean up the cache file
+        try:
+            os.remove(checkpoint_path)
+            logger.info(f"Cache file removed (all items were cached): {checkpoint_path}")
+        except OSError:
+            pass
+        return all_results
+
+    # Process pending items in batches
+    total_pending = len(pending_indices)
+    for batch_start in range(0, total_pending, checkpoint_every):
+        batch_end = min(batch_start + checkpoint_every, total_pending)
+        batch_indices = pending_indices[batch_start:batch_end]
+        batch_inputs = [inputs[i] for i in batch_indices]
+        batch_ids = [item_ids[i] for i in batch_indices]
+
+        done = cached_count + batch_start
+        batch_desc = f"{progress_desc} [{done+1}-{done+len(batch_inputs)}/{len(inputs)}]"
+
+        batch_results = run_async(_run_async_batch(
+            func, batch_inputs, max_workers, task_timeout, error_prefix, batch_desc
+        ))
+
+        # Place results and persist
+        for i, (orig_idx, result) in enumerate(zip(batch_indices, batch_results)):
+            all_results[orig_idx] = result
+
+        _append_to_cache(checkpoint_path, batch_ids, batch_results)
+        logger.info(f"Checkpoint saved: {done + len(batch_inputs)}/{len(inputs)} complete")
+
+    # All items processed — remove the cache file
+    try:
+        os.remove(checkpoint_path)
+        logger.info(f"Cache file removed after successful completion: {checkpoint_path}")
+    except OSError:
+        pass
+
+    return all_results
 
 
 # =============================================================================

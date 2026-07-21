@@ -9,10 +9,12 @@ Creates a structured JSON with all issues mapped to spans, including:
 """
 
 import ast
+import hashlib
 import json
 import logging
 import math
 import os
+import re
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +29,9 @@ logger = logging.getLogger(__name__)
 # Subdirectory name for tool-call evaluation results under each agent dir.
 # Must match the subdir name used in run_clear_step_analysis.run_analysis_for_agent.
 TOOL_CALLS_SUBDIR = "tool_calls"
+
+# SPARC recommendation targets that scope to a specific tool (vs. system prompt)
+_TOOL_SCOPED_TARGETS = ("tool_description", "parameter_description", "parameter_examples")
 
 
 def build_workflow_graph(traj_df):
@@ -140,6 +145,126 @@ def _parse_meta_data(meta_data_str):
         return json.loads(meta_data_str)
     except (json.JSONDecodeError, TypeError):
         return {}
+
+
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _normalize_diff(diff: str) -> str:
+    """Whitespace-normalize a unified diff for stable hashing/dedup."""
+    if not isinstance(diff, str):
+        return ""
+    return _WHITESPACE_RE.sub(" ", diff).strip()
+
+
+def _diff_hash(diff: str) -> str:
+    """Stable short hash of the normalized diff text for grouping."""
+    return hashlib.sha1(_normalize_diff(diff).encode("utf-8")).hexdigest()[:16]
+
+
+def _parse_recs(cell: Any) -> List[Dict[str, Any]]:
+    """Parse a ``sparc_recommendations`` cell into a list of rec dicts.
+
+    Accepts JSON arrays (the canonical form), already-parsed lists, or
+    ``"[]"``/empty/NaN. Anything else returns an empty list."""
+    if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+        return []
+    if isinstance(cell, list):
+        return [r for r in cell if isinstance(r, dict)]
+    if isinstance(cell, str) and cell.strip():
+        try:
+            parsed = json.loads(cell)
+        except (json.JSONDecodeError, TypeError):
+            return []
+        if isinstance(parsed, list):
+            return [r for r in parsed if isinstance(r, dict)]
+    return []
+
+
+def _aggregate_recommendations(results_df: pd.DataFrame) -> Optional[Dict[str, Any]]:
+    """Group per-row SPARC recommendations into ``by_tool`` and
+    ``by_system_prompt`` buckets.
+
+    Returns ``None`` if the DataFrame has no ``sparc_recommendations`` column
+    or if no row produced any recommendation (runtime mode / static-only)."""
+    if "sparc_recommendations" not in results_df.columns:
+        return None
+
+    # by_tool: {tool_name: {hash: accumulator}}
+    by_tool: Dict[str, Dict[str, Dict[str, Any]]] = defaultdict(dict)
+    # by_system_prompt: {hash: accumulator}
+    by_system: Dict[str, Dict[str, Any]] = {}
+    total = 0
+
+    for _, row in results_df.iterrows():
+        for rec in _parse_recs(row.get("sparc_recommendations")):
+            target = rec.get("target")
+            diff = rec.get("diff") or ""
+            if not target or not diff:
+                continue
+            try:
+                importance = max(0.0, min(1.0, float(rec.get("importance", 0.0))))
+            except (TypeError, ValueError):
+                importance = 0.0
+            h = _diff_hash(diff)
+            entry_template = {
+                "hash": h,
+                "target": target,
+                "diff": diff,
+                "rationale": rec.get("rationale", ""),
+                "tool_name": rec.get("tool_name"),
+                "parameter_name": rec.get("parameter_name"),
+                "count": 0,
+                "importance_sum": 0.0,
+                "importance_max": 0.0,
+            }
+
+            if target == "system_prompt":
+                bucket = by_system.setdefault(h, dict(entry_template))
+            elif target in _TOOL_SCOPED_TARGETS:
+                tool_name = rec.get("tool_name") or "<unknown>"
+                bucket = by_tool[tool_name].setdefault(h, dict(entry_template))
+            else:
+                continue
+
+            bucket["count"] += 1
+            bucket["importance_sum"] += importance
+            if importance > bucket["importance_max"]:
+                bucket["importance_max"] = importance
+            total += 1
+
+    if total == 0:
+        return None
+
+    def _finalize(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        out = []
+        for e in entries:
+            mean = e["importance_sum"] / e["count"] if e["count"] else 0.0
+            out.append({
+                "hash": e["hash"],
+                "target": e["target"],
+                "diff": e["diff"],
+                "rationale": e["rationale"],
+                "tool_name": e["tool_name"],
+                "parameter_name": e["parameter_name"],
+                "count": e["count"],
+                "importance_mean": round(mean, 4),
+                "importance_max": round(e["importance_max"], 4),
+            })
+        out.sort(key=lambda r: (-r["importance_mean"], -r["count"], r["target"]))
+        return out
+
+    by_tool_out: Dict[str, List[Dict[str, Any]]] = {
+        tool: _finalize(list(entries.values()))
+        for tool, entries in by_tool.items()
+    }
+    by_system_out = _finalize(list(by_system.values()))
+
+    return {
+        "by_tool": by_tool_out,
+        "by_system_prompt": by_system_out,
+        "total": total,
+    }
 
 
 def _parse_issues_list(recurring_issues_str):
@@ -314,6 +439,12 @@ def _process_results_dir(
         })
 
     result["no_issues"] = no_issue_spans
+
+    # Aggregate SPARC actionable recommendations (tool-call results only carry
+    # the column; reasoning_eval CSVs don't, so this is a no-op there).
+    recs = _aggregate_recommendations(results_df)
+    if recs is not None:
+        result["recommendations"] = recs
 
     # Attach scores and weighted severity for pass/fail calculation
     result["_scores"] = [_safe_float(row.get('score', 0)) for _, row in results_df.iterrows()]

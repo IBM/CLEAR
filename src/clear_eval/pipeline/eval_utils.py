@@ -5,12 +5,14 @@ import numpy as np
 from clear_eval.pipeline.caching_utils import save_dataframe_to_cache
 import pandas as pd
 from clear_eval.pipeline.constants import IDENTIFIED_SHORTCOMING_COL, EVALUATION_TEXT_COL, EVALUATION_SUMMARY_COL, \
-    SHORTCOMING_PREFIX, SCORE_COL, ERROR_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE
+    SHORTCOMING_PREFIX, SCORE_COL, ERROR_COL, MAPPING_NO_ISSUES, ANALYSIS_SKIPPED, DEFAULT_ISSUES_FORMAT_MODE, \
+    _SPARC_COLUMNS_PASSTHROUGH
 from clear_eval.pipeline.propmts import get_summarization_prompt, \
      get_shortcomings_clustering_prompt, get_issues_mapping_system_prompt, get_issues_mapping_human_prompt, get_synthesis_prompt, get_synthesis_prompt_cont
 import re
 from clear_eval.pipeline.inference_utils.llm_client import run_parallel, run_async, get_llm_client
 logger = logging.getLogger(__name__)
+
 
 def is_missing_or_error(eval_text):
     if pd.isna(eval_text) or not eval_text or not eval_text.strip() or \
@@ -30,6 +32,16 @@ async def evaluate_row(row, config, llm, generate_evaluation_model_prompt_func):
         return prompt, pd.NA
     content = await llm.ainvoke(prompt)
     return parse_evaluation_response(content)
+
+
+def _get_checkpoint_cache_path(config, stage_suffix):
+    """Build a cache file path for run_parallel checkpointing."""
+    checkpoint_path = config.get('checkpoint_path', '')
+    if checkpoint_path:
+        # Derive cache path from the main checkpoint CSV path
+        return checkpoint_path.replace('.csv', f'_cache_{stage_suffix}.jsonl')
+    output_dir = config.get('output_dir', '.')
+    return os.path.join(output_dir, f"cache_{stage_suffix}.jsonl")
 
 
 def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_col=SCORE_COL):
@@ -52,13 +64,19 @@ def evaluate_single_records(df, llm, config, get_evaluation_prompt_func, score_c
     for idx, row in df.iterrows():
         inputs.append((row, config, llm, get_evaluation_prompt_func))
 
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "eval") if checkpoint_every else None
+
     results = run_parallel(
         func=evaluate_row,
         inputs=inputs,
-        use_async=True,
         max_workers=config['max_workers'],
         error_prefix="Evaluation: ",
-        progress_desc="Evaluating predictions"
+        progress_desc="Evaluating predictions",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
     )
 
     for i, result in enumerate(results):
@@ -83,18 +101,24 @@ def produce_summaries_per_record(df, llm, config):
 
     logger.info(f"Generating evaluation summaries for {len(inputs)} items ...")
 
-    results = run_parallel(
-        func=generate_evaluation_summary,
-        inputs=inputs,
-        use_async=True,
-        max_workers=config['max_workers'],
-        error_prefix="Summary: ",
-        progress_desc="Generating evaluation summaries"
-    )
-
     df[EVALUATION_SUMMARY_COL] = ""
     if ERROR_COL not in df.columns:
         df[ERROR_COL] = [[] for _ in range(len(df))]
+
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "summary") if checkpoint_every else None
+
+    results = run_parallel(
+        func=generate_evaluation_summary,
+        inputs=inputs,
+        max_workers=config['max_workers'],
+        error_prefix="Summary: ",
+        progress_desc="Generating evaluation summaries",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
+    )
 
     for i, result in enumerate(results):
         if result.is_success:
@@ -383,7 +407,9 @@ async def analyze_shortcoming_row(eval_text, question_id, shortcomings_list, llm
 
 
 def map_shortcomings_to_records(df, llm, shortcomings_list,
-                                use_full_text, qid_col, max_workers, high_score_threshold, score_col = SCORE_COL, format_mode=DEFAULT_ISSUES_FORMAT_MODE):
+                                use_full_text, qid_col, max_workers, high_score_threshold,
+                                score_col = SCORE_COL, format_mode=DEFAULT_ISSUES_FORMAT_MODE,
+                                checkpoint_every = 0, cache_path = None):
     """Analyzes evaluation text for the dynamically generated shortcomings."""
     logger.info(f"\n--- Analyzing Shortcomings based on Synthesized List ---")
     df[IDENTIFIED_SHORTCOMING_COL] = ""
@@ -420,13 +446,17 @@ def map_shortcomings_to_records(df, llm, shortcomings_list,
             inputs.append((str(row[evaluation_text_col]), row.get(qid_col, f"row_{idx}"), shortcomings_list, llm, system_prompt, format_mode))
     logger.info(f"Mapping {n_records_to_map}/{len(df)} records to {len(shortcomings_list)} discovered shortcomings.")
 
+    item_ids = [row.get(qid_col, f"row_{idx}") for idx, row in df.iterrows()] if checkpoint_every else None
+
     results = run_parallel(
         func=analyze_shortcoming_row,
         inputs=inputs,
-        use_async=True,
         max_workers=max_workers,
         error_prefix="Mapping: ",
-        progress_desc="Analyzing shortcomings"
+        progress_desc="Analyzing shortcomings",
+        checkpoint_every = checkpoint_every,
+        checkpoint_path = cache_path,
+        item_ids = item_ids,
     )
 
     for i, result in enumerate(results):
@@ -509,13 +539,19 @@ def generate_model_predictions(df, llm, config):
     for i, row in df.iterrows():
         inputs.append((llm, row[config['model_input_column']], row[config['qid_column']]))
 
+    checkpoint_every = config.get('checkpoint_every', 0)
+    item_ids = [str(row[config['qid_column']]) for _, row in df.iterrows()] if checkpoint_every else None
+    cache_path = _get_checkpoint_cache_path(config, "gen") if checkpoint_every else None
+
     results = run_parallel(
         func=predict_row,
         inputs=inputs,
-        use_async=True,
         max_workers=config["max_workers"],
         error_prefix="Prediction: ",
-        progress_desc="Generating predictions"
+        progress_desc="Generating predictions",
+        checkpoint_every=checkpoint_every,
+        checkpoint_path=cache_path,
+        item_ids=item_ids,
     )
 
     for i, result in enumerate(results):
@@ -606,10 +642,17 @@ def convert_results_to_ui_input(df, config, task_data):
         df.loc[:, "recurring_issues_str"] = df.apply(lambda r: get_recurring_issues_list(r), axis=1)
         custom_output_df["recurring_issues_str"] = df["recurring_issues_str"]
 
+        # Carry SPARC per-row columns through unchanged. Aggregation happens
+        # in build_json_results._process_results_dir, which reads these.
+        for col in _SPARC_COLUMNS_PASSTHROUGH:
+            if col in df.columns:
+                custom_output_df[col] = df[col]
+
         required_cols =[config.get(r, r) for r in required_input_fields] + config.get("input_columns", []) + \
                          ["question_id", 'model_input', 'response',
                          'score', 'evaluation_text', 'evaluation_summary',
-                         'recurring_issues', 'recurring_issues_str', 'ground_truth', 'error']
+                         'recurring_issues', 'recurring_issues_str', 'ground_truth', 'error'] + \
+                         [c for c in _SPARC_COLUMNS_PASSTHROUGH if c in df.columns]
         required_cols = list(dict.fromkeys(required_cols))
 
         for col in required_cols:

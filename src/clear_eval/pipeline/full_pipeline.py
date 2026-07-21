@@ -16,10 +16,11 @@ from clear_eval.pipeline.constants import (GENERATION_FILE_PREFIX, SHORTCOMING_L
 from clear_eval.pipeline.caching_utils import load_dataframe_from_cache, save_dataframe_to_cache, save_json_to_cache, \
     ensure_dir, \
     load_json_from_cache, resolve_data_path
-from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, convert_results_to_ui_input, \
+from clear_eval.pipeline.eval_utils import map_shortcomings_to_records, get_model_name_for_file, \
+    convert_results_to_ui_input, \
     load_inputs, synthesize_shortcomings_from_df, \
     remove_duplicates_shortcomings, run_predictions_generation_save_results, produce_summaries_per_record, \
-    generate_model_predictions
+    generate_model_predictions, _get_checkpoint_cache_path
 from clear_eval.pipeline.inference_utils.llm_client import get_llm_client
 from clear_eval.pipeline.config_loader import load_yaml
 
@@ -100,6 +101,7 @@ def convert_to_ui_format(mapped_data_df, output_dir, config, file_name_info):
     save_dataframe_to_cache(output_df, output_path)
     logger.info(f"Custom formatted analysis results saved to {output_path}")
     save_ui_input_results(output_df, output_path, config)
+
 
 def save_ui_input_results(output_df, output_path, config):
     parquet_bytes = get_parquet_bytes(output_df)
@@ -223,9 +225,13 @@ def resolve_issues_and_map(df, config, eval_llm, resume_enabled, checkpoint_path
     use_full_text = config['use_full_text_for_analysis']
     qid_col = config['qid_column']
     max_workers = config['max_workers']
+    checkpoint_every = config.get("checkpoint_every", 0)
+    cache_path =_get_checkpoint_cache_path(config, "map") if checkpoint_every else None
+
     high_score_threshold = config.get("high_score_threshold", 1)
     df = map_shortcomings_to_records(df, eval_llm, shortcoming_list, use_full_text,
-                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode)
+                                     qid_col, max_workers, high_score_threshold, format_mode=format_mode,
+                                     checkpoint_every = checkpoint_every, cache_path=cache_path)
     save_dataframe_to_cache(df, checkpoint_path)
     return df
 
@@ -240,6 +246,7 @@ def run_aggregation_from_df(config, df, file_name_info, eval_llm=None):
     resume_enabled = config['resume_enabled']
     format_mode = get_issues_format(config)
     checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{file_name_info}.csv"
+    config['checkpoint_path'] = checkpoint_path
     shortcoming_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}.json"
     deduplicated_shortcomings_list_output_path = f"{output_dir}/{SHORTCOMING_LIST_FILE_PREFIX}_{file_name_info}_dedup.json"
     zip_path = f"{output_dir}/analysis_results_{file_name_info}.zip"
@@ -270,6 +277,7 @@ def run_eval_pipeline(config):
 
     generate_issues = config.get("generate_issues", True)
     checkpoint_path = f"{output_dir}/{CHECKPOINT_FILE_PREFIX}_{run_info}.csv"
+    config['checkpoint_path'] = checkpoint_path
     zip_path = f"{output_dir}/analysis_results_{run_info}.zip"
 
     # If final output exists, nothing to do

@@ -95,6 +95,7 @@ class TrajectoryEvaluator(ABC):
         overwrite: bool = False,
         max_workers: int = 7,
         max_files: int | None = None,
+        checkpoint_every: int = 0,
         full_trace_evaluation_criteria: dict | None = None,
     ):
         """
@@ -110,6 +111,7 @@ class TrajectoryEvaluator(ABC):
             max_files: Maximum number of files to process (for testing)
             full_trace_evaluation_criteria: Custom flat evaluation criteria dict
                 that replaces all default dimensions when set
+            checkpoint_every: Save intermediate results every N items (0 = disabled)
         """
         self.inference_config = inference_config
         self.traj_input_dir = Path(traj_input_dir)
@@ -118,6 +120,7 @@ class TrajectoryEvaluator(ABC):
         self.overwrite = overwrite
         self.max_workers = max_workers
         self.max_files = max_files
+        self.checkpoint_every = checkpoint_every
         self.full_trace_evaluation_criteria = full_trace_evaluation_criteria
 
         # Create results directory: output_dir/evaluation_type[/model_subdir]
@@ -543,14 +546,20 @@ class TrajectoryEvaluator(ABC):
             for entry in entries
         ]
 
+        # Caching params
+        item_ids = [entry["traj_name"] for entry in entries] if self.checkpoint_every else None
+        cache_path = str(self.results_dir / "run_cache.jsonl") if self.checkpoint_every else None
+
         # Use pipeline's parallel execution with progress bar (always async)
         start = time.time()
         parallel_results = run_parallel(
             func=self.evaluate_single,
             inputs=inputs,
-            use_async=True,
             max_workers=self.max_workers,
-            progress_desc=f"Evaluating trajectories ({self.__class__.__name__})"
+            progress_desc=f"Evaluating trajectories ({self.__class__.__name__})",
+            checkpoint_every=self.checkpoint_every,
+            checkpoint_path=cache_path,
+            item_ids=item_ids,
         )
         elapsed = time.time() - start
 

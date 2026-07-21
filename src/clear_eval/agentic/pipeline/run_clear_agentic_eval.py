@@ -337,6 +337,9 @@ def main():
         config.get('run_name')
     )
 
+    # Update config with resolved run_name so downstream components use the same name
+    config['run_name'] = run_name
+
     # Extract parameters
     data_dir = Path(config['data_dir'])
     from_raw_traces = config.get('from_raw_traces')
