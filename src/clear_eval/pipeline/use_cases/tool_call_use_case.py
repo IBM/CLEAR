@@ -4,7 +4,7 @@ from importlib.resources import files
 from typing import Any, Dict, Tuple, List, Optional
 import pandas as pd
 from clear_eval.pipeline.use_cases.eval_use_case import EvalUseCase
-from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL, DEFAULT_ISSUES_FORMAT_MODE
+from clear_eval.pipeline.constants import EVALUATION_TEXT_COL, SCORE_COL, DEFAULT_ISSUES_FORMAT_MODE, DEFAULT_SPARC_TRACK
 from altk.pre_tool.sparc import SPARCReflectionComponent
 from altk.core.toolkit import AgentPhase, ComponentConfig
 from altk.pre_tool.core import SPARCReflectionRunInput, Track, SPARCReflectionResult, SPARCExecutionMode
@@ -81,7 +81,7 @@ class ToolCallEvalUseCase(EvalUseCase):
             df=df,
             llm_client=altk_llm_client,
             config=config,
-            track_name=config.get("track", "slow_track"),
+            track_name=config.get("sparc_track", DEFAULT_SPARC_TRACK),
             runtime_pipeline=runtime_pipeline
         )
 
@@ -274,7 +274,7 @@ class ToolCallEvalUseCase(EvalUseCase):
         df: pd.DataFrame,
         llm_client: BaseLLMClient,
         config: dict,
-        track_name: str = "slow_track",
+        track_name: str,
         runtime_pipeline: bool = True,
     ) -> List[SPARCReflectionResult]:
         """Evaluate all rows in a single parallel pass, selecting track per row."""

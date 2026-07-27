@@ -12,6 +12,7 @@ MAPPING_FILE_PREFIX = "mapping_results"
 MAPPING_NO_ISSUES = "NO_ISSUES"
 ANALYSIS_SKIPPED = "Analysis Skipped"
 DEFAULT_ISSUES_FORMAT_MODE = "shortcomings"
+DEFAULT_SPARC_TRACK = "fast_track"
 
 # SPARC-specific per-row columns produced by the tool-call use case. They are
 # carried through analysis CSVs unchanged so downstream aggregation

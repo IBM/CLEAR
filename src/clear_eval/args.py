@@ -76,6 +76,8 @@ def add_clear_args_to_parser(parser: argparse.ArgumentParser | None = None, grou
                         help="Predefined issues to use")
     target.add_argument("--issues-format", choices=["shortcomings", "recommendations"], default=None,
                         help="Output format for identified issues: 'shortcomings' (problem-focused, default) or 'recommendations' (solution-focused)")
+    target.add_argument("--sparc-track", choices=["slow_track", "fast_track", "spec_free", "syntax", "transformations_only"], default=None,
+                        help="SPARC pipeline track for tool-call evaluation: 'fast_track' (default), 'slow_track', 'spec_free', 'syntax', or 'transformations_only'")
 
     # External judge arguments (used when task is 'external')
     target.add_argument("--external-judge-path", default=None,
