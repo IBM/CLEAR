@@ -318,19 +318,30 @@ def _finalize_shortcoming_list(overall_shortcoming_list, min_shortcomings):
         return []
 
 
+# A list item is a quoted string whose body may contain the quote character
+# only when it is not followed by a separator (`,` or `]`). Keeping the
+# alternation disjoint ([^"] vs ") makes the item boundary unambiguous, so the
+# pattern matches in linear time; the earlier `".*?"(?:\s*,\s*".*?")*` form
+# backtracked exponentially on inputs like '[""' + '","' * n (CodeQL py/redos).
+_DQ_ITEM = r'"(?:[^"]|"(?!\s*[,\]]))*"'
+_SQ_ITEM = r"'(?:[^']|'(?!\s*[,\]]))*'"
+_DOUBLE_QUOTED_LIST_RE = re.compile(rf'\[\s*({_DQ_ITEM}(?:\s*,\s*{_DQ_ITEM})*)\s*\]')
+_SINGLE_QUOTED_LIST_RE = re.compile(rf"\[\s*({_SQ_ITEM}(?:\s*,\s*{_SQ_ITEM})*)\s*\]")
+
+
 def parse_shortcoming_list_response(response_content):
     """Parses LLM response expected to be a Python list of strings."""
     shortcomings = None
     try:
         # Find the list within the response
-        list_match = re.search(r'\[\s*(".*?"(?:\s*,\s*".*?")*)\s*\]', response_content, re.DOTALL)
+        list_match = _DOUBLE_QUOTED_LIST_RE.search(response_content)
         if list_match:
             list_content = list_match.group(1)
             # Split by comma, handling potential commas inside quotes carefully
             shortcomings = re.findall(r'"(.*?)"', list_content)
         else:
             #extract list with single quotes:
-            list_match = re.search(r"\[\s*('.*?'(?:\s*,\s*'.*?')*)\s*\]", response_content, re.DOTALL)
+            list_match = _SINGLE_QUOTED_LIST_RE.search(response_content)
             if list_match:
                 list_content = list_match.group(1)
                 # Match quotes, but allow apostrophes inside unless right before , or end of str
