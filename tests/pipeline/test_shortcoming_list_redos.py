@@ -3,7 +3,12 @@
 The quoted-list patterns used to let `".*?"` span item separators, so an
 unterminated input such as '[""' + '","' * n could be split into items in 2**n
 ways, all tried before the match failed. The expected values below were checked
-against the pre-fix patterns: the rewrite must change speed, not results.
+against the pre-fix patterns, which give the same results except where noted in
+test_quote_before_comma_inside_item_no_longer_parses.
+
+Only the list-finding patterns changed. The double-quoted items are still split
+with `"(.*?)"`, which breaks an item at any embedded quote; that is pre-existing
+behaviour, pinned in test_embedded_double_quotes_split_item.
 """
 
 import time
@@ -51,8 +56,6 @@ def test_long_valid_list_parses_fast():
         pytest.param('["uses ] oddly", "b"]', ["uses ] oddly", "b"], id="close-bracket-inside-item"),
         pytest.param('Here is the list:\n["a", "b"]\nHope this helps.', ["a", "b"], id="prose-around-list"),
         pytest.param('["a"] and later ["b"]', ["a"], id="first-list-wins"),
-        # Lenient, as before: a quote not followed by `,` or `]` is item text.
-        pytest.param('["a" "b"]', ["a", "b"], id="missing-separator"),
         pytest.param('See [1]. ["a", "b"]', ["a", "b"], id="skips-non-string-list"),
         pytest.param('["", "  ", "a"]', ["a"], id="drops-blank-items"),
         pytest.param('["  padded  "]', ["padded"], id="strips-items"),
@@ -63,7 +66,7 @@ def test_long_valid_list_parses_fast():
         pytest.param("[  \n ]", [], id="empty-list-with-whitespace"),
     ],
 )
-def test_parsing_results_unchanged(response, expected):
+def test_parsing_results_match_pre_fix_patterns(response, expected):
     assert parse_shortcoming_list_response(response) == expected
 
 
@@ -77,6 +80,35 @@ def test_parsing_results_unchanged(response, expected):
     ],
 )
 def test_unparseable_responses_return_none(response):
+    assert parse_shortcoming_list_response(response) is None
+
+
+@pytest.mark.parametrize(
+    "response, expected",
+    [
+        pytest.param('["he said "hi" ok", "b"]', ["he said", "ok", "b"], id="inner-quotes"),
+        pytest.param('["uses "quotes"", "b"]', ["uses", "b"], id="quoted-word-at-end"),
+        pytest.param('["escaped \\"hi\\" ok", "b"]', ["escaped \\", "ok", "b"], id="backslash-escapes"),
+        # The list pattern captures `"a" "b"` as one item; the split then cuts it in two.
+        pytest.param('["a" "b"]', ["a", "b"], id="missing-separator"),
+    ],
+)
+def test_embedded_double_quotes_split_item(response, expected):
+    # Pre-existing, unchanged by the fix.
+    assert parse_shortcoming_list_response(response) == expected
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        pytest.param('["he said "hi", then left"]', id="double-quoted"),
+        pytest.param("['say 'hi', ok', 'b']", id="single-quoted"),
+    ],
+)
+def test_quote_before_comma_inside_item_no_longer_parses(response):
+    # The one behaviour change: a quote followed by `,` must close an item, so
+    # the remainder is not a valid list. The old patterns let `.*?` run past
+    # the separator and returned fragments such as ['he said', ', then left'].
     assert parse_shortcoming_list_response(response) is None
 
 
